@@ -1,0 +1,347 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+    var input = Enumerable.Range(2, 7)
+        .Select(i => new
+        {
+            N = i,
+            Names = Enumerable.Range(1, i)
+                .Select(j => new
+                {
+                    Index = j - 1,
+                    GenArg = "T" + j,
+                    Source = "source" + j,
+                    Ae = "_ae" + j
+                })
+                .ToList()
+        })
+        .Select(i => new 
+        {
+            i.N,
+            i.Names,
+            GenArgList = $"<{ string.Join(", ", i.Names.Select(n => n.GenArg)) }, TResult>"
+        });
+#>
+namespace Linx.Reactive
+{
+    using System;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Runtime.CompilerServices;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Coroutines;
+
+    partial class LinxReactive
+    {
+<#
+    foreach(var i in input)
+    {
+#>
+        /// <summary>
+        /// Merges sequences into one sequence by combining corresponding elements.
+        /// </summary>
+        public static IAsyncEnumerable<TResult> Zip<#= i.GenArgList #>(this
+<#
+    foreach(var n in i.Names)
+    {
+#>
+            IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
+<#
+    }
+#>
+            Func<#= i.GenArgList #> resultSelector)
+            => new ZipEnumerable<#= i.GenArgList #>(<#= string.Join(", ", i.Names.Select(n => n.Source)) #>, resultSelector);
+
+        private sealed class ZipEnumerable<#= i.GenArgList #> : IAsyncEnumerable<TResult>
+        {
+<#
+    foreach(var n in i.Names)
+    {
+#>
+            private readonly IAsyncEnumerable<<#= n.GenArg #>> _<#= n.Source #>;
+<#
+    }
+#>
+            private readonly Func<#= i.GenArgList #> _resultSelector;
+
+            public ZipEnumerable(
+<#
+    foreach(var n in i.Names)
+    {
+#>
+                IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
+<#
+    }
+#>
+                Func<#= i.GenArgList #> resultSelector)
+            {
+<#
+    foreach(var n in i.Names)
+    {
+#>
+                _<#= n.Source #> = <#= n.Source #> ?? throw new ArgumentNullException(nameof(<#= n.Source #>));
+<#
+    }
+#>
+                _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
+            }
+
+            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            {
+                private const int _n = <#= i.N #>;
+
+                private const int _sInitial = 0;
+                private const int _sPulling = 1;
+                private const int _sPushing = 2;
+                private const int _sCanceling = 3;
+                private const int _sCancelingPulling = 4;
+                private const int _sFinal = 5;
+
+                private readonly ZipEnumerable<#= i.GenArgList #> _enumerable;
+                private ErrorHandler _eh = ErrorHandler.Init();
+                private AsyncTaskMethodBuilder _atmbDisposed = default;
+                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private int _active;
+<#
+    foreach(var n in i.Names)
+    {
+#>
+                private IAsyncEnumerator<<#= n.GenArg #>> <#= n.Ae #>;
+<#
+    }
+#>
+                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private uint _ccssPushingMask;
+                private int _state;
+
+                public Enumerator(ZipEnumerable<#= i.GenArgList #> enumerable, CancellationToken token)
+                {
+                    _enumerable = enumerable;
+                    if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
+                }
+
+                public TResult Current { get; private set; }
+
+                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                {
+                    _ccsMoveNext.Reset(continueOnCapturedContext);
+
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _active = _n;
+                            _state = _sPulling;
+<#
+    foreach(var n in i.Names)
+    {
+#>
+                            Produce(_enumerable._<#= n.Source #>, <#= n.Index #>, (e, ae) => e.<#= n.Ae #> = ae);
+<#
+    }
+#>
+                            break;
+                        case _sPushing:
+                            Debug.Assert(_ccssPushingMask == (1U << _n) - 1);
+                            _ccssPushingMask = 0;
+                            _state = _sPulling;
+                            foreach (var ccs in _ccssPushing)
+                                ccs.SetCompleted(null);
+                            break;
+                        case _sCanceling:
+                            _state = _sCancelingPulling;
+                            break;
+                        case _sFinal:
+                            _state = _sFinal;
+                            Current = default;
+                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            break;
+                        default: // Pulling, CancelingPulling
+                            _state = state;
+                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            break;
+                    }
+
+                    return _ccsMoveNext.Awaiter;
+                }
+
+                public Task DisposeAsync()
+                {
+                    Cancel(null);
+                    return _atmbDisposed.Task;
+                }
+
+                private void Cancel(OperationCanceledException error)
+                {
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _eh.SetExternalError(error);
+                            _state = _sFinal;
+                            _eh.Cancel();
+                            _atmbDisposed.SetResult();
+                            break;
+
+                        case _sPulling:
+                        case _sPushing:
+                            Debug.Assert(_active > 0);
+                            var m = _ccssPushingMask;
+                            _ccssPushingMask = 0;
+                            _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
+                            _eh.Cancel();
+                            if (m != 0)
+                            {
+                                var ex = new OperationCanceledException(_eh.InternalToken);
+                                foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    ccs.SetCompleted(ex);
+                            }
+                            break;
+
+                        case _sCanceling:
+                        case _sCancelingPulling:
+                        case _sFinal:
+                            _state = state;
+                            break;
+
+                        default:
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
+                }
+
+                private void OnCompleted(Exception error)
+                {
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sPulling:
+                            Debug.Assert(_active > 0);
+                            _eh.SetInternalError(error);
+                            if (--_active == 0)
+                            {
+                                Debug.Assert(_ccssPushingMask == 0);
+                                _state = _sFinal;
+                                _eh.Cancel();
+                                _atmbDisposed.SetResult();
+                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            }
+                            else
+                            {
+                                var m = _ccssPushingMask;
+                                _ccssPushingMask = 0;
+                                _state = _sCancelingPulling;
+                                _eh.Cancel();
+                                if (m != 0)
+                                {
+                                    var ex = new OperationCanceledException(_eh.InternalToken);
+                                    foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                        ccs.SetCompleted(ex);
+                                }
+                            }
+                            break;
+
+                        case _sCanceling:
+                        case _sCancelingPulling:
+                            Debug.Assert(_active > 0);
+                            _eh.SetInternalError(error);
+                            if (--_active == 0)
+                            {
+                                Debug.Assert(_ccssPushingMask == 0);
+                                _state = _sFinal;
+                                _atmbDisposed.SetResult();
+                                if (state == _sCancelingPulling)
+                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            }
+                            else
+                            {
+                                var m = _ccssPushingMask;
+                                _ccssPushingMask = 0;
+                                _state = state;
+                                if (m != 0)
+                                {
+                                    var ex = new OperationCanceledException(_eh.InternalToken);
+                                    foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                        ccs.SetCompleted(ex);
+                                }
+                            }
+                            break;
+
+                        default: // Initial, Pushing, Final???
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
+                }
+
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                {
+                    Exception error;
+                    try
+                    {
+                        _eh.InternalToken.ThrowIfCancellationRequested();
+
+                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var flag = 1U << index;
+                        var ae = source.GetAsyncEnumerator(_eh.InternalToken);
+                        try
+                        {
+                            setEnumerator(this, ae);
+
+                            while (await ae.MoveNextAsync())
+                            {
+                                var state = Atomic.Lock(ref _state);
+                                switch (state)
+                                {
+                                    case _sPulling:
+                                        ccsPushing.Reset(false);
+                                        _ccssPushingMask |= flag;
+                                        if (_ccssPushingMask == (1U << _n) - 1)
+                                        {
+                                            try { Current = _enumerable._resultSelector(<#= string.Join(", ", i.Names.Select(n => n.Ae + ".Current")) #>); }
+                                            catch
+                                            {
+                                                _ccssPushingMask &= ~flag;
+                                                _state = _sPulling;
+                                                throw;
+                                            }
+                                            _state = _sPushing;
+                                            _ccsMoveNext.SetCompleted(null, true);
+                                        }
+                                        else
+                                            _state = _sPulling;
+                                        await ccsPushing.Awaiter;
+                                        _eh.InternalToken.ThrowIfCancellationRequested();
+                                        break;
+
+                                    case _sCanceling:
+                                    case _sCancelingPulling:
+                                        _state = state;
+                                        throw new OperationCanceledException(_eh.InternalToken);
+
+                                    default: // Initial, Pushing, Final???
+                                        _state = state;
+                                        throw new Exception(state + "???");
+                                }
+                            }
+                        }
+                        finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                        error = null;
+                    }
+                    catch (Exception ex) { error = ex; }
+
+                    OnCompleted(error);
+                }
+            }
+        }
+
+<#
+    }
+#>
+    }
+}
