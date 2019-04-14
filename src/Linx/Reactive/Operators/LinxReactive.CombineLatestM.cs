@@ -43,7 +43,7 @@
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource();
                 private readonly Func<T1, T2, TResult> _resultSelector;
                 private CancellationTokenRegistration _ctr;
-                private CoroutineCompletionSource<bool> _ccsPull = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccsPull = CoAwaiterCompleter<bool>.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state;
                 private TResult _current;
@@ -237,7 +237,7 @@
 
                 private TResult GetResult() => _resultSelector(_next.Value1, _next.Value2);
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
                 {
                     _ccsPull.Reset(continueOnCapturedContext);
 

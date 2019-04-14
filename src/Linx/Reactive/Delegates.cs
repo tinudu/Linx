@@ -7,12 +7,17 @@
     /// <summary>
     /// Function that accepts sequence elements.
     /// </summary>
-    public delegate ICoroutineAwaiter AcceptDelegate<in T>(T value, bool continueOnCapturedContext = false);
+    public delegate ICoAwaiter AcceptDelegate<in T>(T value, bool continueOnCapturedContext = false);
 
     /// <summary>
-    /// Delegate to produce a result from a sequence.
+    /// Delegate to produce an aggregate from a sequence.
     /// </summary>
-    public delegate Task<TResult> AggregatorDelegate<in TSource, TResult>(IAsyncEnumerable<TSource> source, CancellationToken token);
+    public delegate Task<TAggregate> AggregatorDelegate<in TSource, TAggregate>(IAsyncEnumerable<TSource> source, CancellationToken token);
+
+    /// <summary>
+    /// Delegate to consume a sequence.
+    /// </summary>
+    public delegate Task ConsumerDelegate<in TSource>(IAsyncEnumerable<TSource> source, CancellationToken token);
 
     /// <summary>
     /// Coroutine to asynchronously produce sequence elements.

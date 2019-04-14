@@ -5,7 +5,7 @@
     /// <summary>
     /// Asynchronous result of a coroutine call.
     /// </summary>
-    public interface ICoroutineAwaiter : INotifyCompletion
+    public interface ICoAwaiter : INotifyCompletion
     {
         /// <summary>
         /// Gets whether the result is awailable.
@@ -21,13 +21,13 @@
         /// Supports async/await syntax.
         /// </summary>
         /// <returns>This instance.</returns>
-        ICoroutineAwaiter GetAwaiter();
+        ICoAwaiter GetAwaiter();
     }
 
     /// <summary>
-    /// Generic <see cref="ICoroutineAwaiter"/>.
+    /// Generic <see cref="ICoAwaiter"/>.
     /// </summary>
-    public interface ICoroutineAwaiter<out T> : ICoroutineAwaiter
+    public interface ICoAwaiter<out T> : ICoAwaiter
     {
         /// <summary>
         /// Gets the result or throws an exception.
@@ -38,6 +38,6 @@
         /// Supports async/await syntax.
         /// </summary>
         /// <returns>This instance.</returns>
-        new ICoroutineAwaiter<T> GetAwaiter();
+        new ICoAwaiter<T> GetAwaiter();
     }
 }

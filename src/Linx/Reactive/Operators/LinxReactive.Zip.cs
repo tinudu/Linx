@@ -51,11 +51,11 @@
                 private readonly ZipEnumerable<T1, T2, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
                 private int _active;
                 private IAsyncEnumerator<T1> _ae1;
                 private IAsyncEnumerator<T2> _ae2;
-                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private readonly CoAwaiterCompleter[] _ccssPushing = new CoAwaiterCompleter[_n];
                 private uint _ccssPushingMask;
                 private int _state;
 
@@ -67,7 +67,7 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -219,7 +219,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var ccsPushing = _ccssPushing[index] = CoAwaiterCompleter.Init();
                         var flag = 1U << index;
                         var ae = source.GetAsyncEnumerator(_eh.InternalToken);
                         try
@@ -318,12 +318,12 @@
                 private readonly ZipEnumerable<T1, T2, T3, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
                 private int _active;
                 private IAsyncEnumerator<T1> _ae1;
                 private IAsyncEnumerator<T2> _ae2;
                 private IAsyncEnumerator<T3> _ae3;
-                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private readonly CoAwaiterCompleter[] _ccssPushing = new CoAwaiterCompleter[_n];
                 private uint _ccssPushingMask;
                 private int _state;
 
@@ -335,7 +335,7 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -488,7 +488,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var ccsPushing = _ccssPushing[index] = CoAwaiterCompleter.Init();
                         var flag = 1U << index;
                         var ae = source.GetAsyncEnumerator(_eh.InternalToken);
                         try
@@ -591,13 +591,13 @@
                 private readonly ZipEnumerable<T1, T2, T3, T4, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
                 private int _active;
                 private IAsyncEnumerator<T1> _ae1;
                 private IAsyncEnumerator<T2> _ae2;
                 private IAsyncEnumerator<T3> _ae3;
                 private IAsyncEnumerator<T4> _ae4;
-                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private readonly CoAwaiterCompleter[] _ccssPushing = new CoAwaiterCompleter[_n];
                 private uint _ccssPushingMask;
                 private int _state;
 
@@ -609,7 +609,7 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -763,7 +763,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var ccsPushing = _ccssPushing[index] = CoAwaiterCompleter.Init();
                         var flag = 1U << index;
                         var ae = source.GetAsyncEnumerator(_eh.InternalToken);
                         try
@@ -870,14 +870,14 @@
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
                 private int _active;
                 private IAsyncEnumerator<T1> _ae1;
                 private IAsyncEnumerator<T2> _ae2;
                 private IAsyncEnumerator<T3> _ae3;
                 private IAsyncEnumerator<T4> _ae4;
                 private IAsyncEnumerator<T5> _ae5;
-                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private readonly CoAwaiterCompleter[] _ccssPushing = new CoAwaiterCompleter[_n];
                 private uint _ccssPushingMask;
                 private int _state;
 
@@ -889,7 +889,7 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -1044,7 +1044,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var ccsPushing = _ccssPushing[index] = CoAwaiterCompleter.Init();
                         var flag = 1U << index;
                         var ae = source.GetAsyncEnumerator(_eh.InternalToken);
                         try
@@ -1155,7 +1155,7 @@
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
                 private int _active;
                 private IAsyncEnumerator<T1> _ae1;
                 private IAsyncEnumerator<T2> _ae2;
@@ -1163,7 +1163,7 @@
                 private IAsyncEnumerator<T4> _ae4;
                 private IAsyncEnumerator<T5> _ae5;
                 private IAsyncEnumerator<T6> _ae6;
-                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private readonly CoAwaiterCompleter[] _ccssPushing = new CoAwaiterCompleter[_n];
                 private uint _ccssPushingMask;
                 private int _state;
 
@@ -1175,7 +1175,7 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -1331,7 +1331,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var ccsPushing = _ccssPushing[index] = CoAwaiterCompleter.Init();
                         var flag = 1U << index;
                         var ae = source.GetAsyncEnumerator(_eh.InternalToken);
                         try
@@ -1446,7 +1446,7 @@
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
                 private int _active;
                 private IAsyncEnumerator<T1> _ae1;
                 private IAsyncEnumerator<T2> _ae2;
@@ -1455,7 +1455,7 @@
                 private IAsyncEnumerator<T5> _ae5;
                 private IAsyncEnumerator<T6> _ae6;
                 private IAsyncEnumerator<T7> _ae7;
-                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private readonly CoAwaiterCompleter[] _ccssPushing = new CoAwaiterCompleter[_n];
                 private uint _ccssPushingMask;
                 private int _state;
 
@@ -1467,7 +1467,7 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -1624,7 +1624,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var ccsPushing = _ccssPushing[index] = CoAwaiterCompleter.Init();
                         var flag = 1U << index;
                         var ae = source.GetAsyncEnumerator(_eh.InternalToken);
                         try
@@ -1743,7 +1743,7 @@
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
                 private int _active;
                 private IAsyncEnumerator<T1> _ae1;
                 private IAsyncEnumerator<T2> _ae2;
@@ -1753,7 +1753,7 @@
                 private IAsyncEnumerator<T6> _ae6;
                 private IAsyncEnumerator<T7> _ae7;
                 private IAsyncEnumerator<T8> _ae8;
-                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private readonly CoAwaiterCompleter[] _ccssPushing = new CoAwaiterCompleter[_n];
                 private uint _ccssPushingMask;
                 private int _state;
 
@@ -1765,7 +1765,7 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -1923,7 +1923,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var ccsPushing = _ccssPushing[index] = CoAwaiterCompleter.Init();
                         var flag = 1U << index;
                         var ae = source.GetAsyncEnumerator(_eh.InternalToken);
                         try

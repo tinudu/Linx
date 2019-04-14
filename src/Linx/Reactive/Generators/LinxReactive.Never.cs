@@ -30,7 +30,7 @@
                 private const int _sPulling = 1;
                 private const int _sFinal = 2;
 
-                private CoroutineCompletionSource<bool> _ccs = CoroutineCompletionSource<bool>.Init();
+                private CoAwaiterCompleter<bool> _ccs = CoAwaiterCompleter<bool>.Init();
                 private CancellationTokenRegistration _ctr;
                 private int _state;
                 private Exception _error;
@@ -42,7 +42,7 @@
 
                 public T Current => default;
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
                 {
                     _ccs.Reset(continueOnCapturedContext);
 

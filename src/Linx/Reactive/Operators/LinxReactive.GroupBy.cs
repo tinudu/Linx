@@ -53,7 +53,7 @@
 
                 public IGroupedAsyncEnumerable<TKey, TSource> Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
                 {
                     throw new NotImplementedException();
                 }

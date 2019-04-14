@@ -11,7 +11,7 @@
         /// <summary>
         /// Get the next element.
         /// </summary>
-        ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false);
+        ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false);
 
         /// <summary>
         /// Gets the current item after <see cref="MoveNextAsync"/> returned true.

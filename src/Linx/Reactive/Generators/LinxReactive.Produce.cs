@@ -49,8 +49,8 @@
                 private readonly ProduceEnumerable<T> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
-                private CoroutineCompletionSource _ccsOnNext = CoroutineCompletionSource.Init();
+                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
+                private CoAwaiterCompleter _ccsOnNext = CoAwaiterCompleter.Init();
                 private int _state;
 
                 public Enumerator(ProduceEnumerable<T> enumerable, CancellationToken token)
@@ -61,7 +61,7 @@
 
                 public T Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -98,7 +98,7 @@
                     return _atmbDisposed.Task;
                 }
 
-                private ICoroutineAwaiter OnNext(T value, bool continueOnCapturedContext)
+                private ICoAwaiter OnNext(T value, bool continueOnCapturedContext)
                 {
                     _ccsOnNext.Reset(continueOnCapturedContext);
 

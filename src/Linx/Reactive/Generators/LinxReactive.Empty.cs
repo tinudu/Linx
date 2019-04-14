@@ -24,7 +24,7 @@
             IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken token) => this;
 
             T IAsyncEnumerator<T>.Current => default;
-            ICoroutineAwaiter<bool> IAsyncEnumerator<T>.MoveNextAsync(bool continueOnCapturedContext) => CoroutineAwaiter.False;
+            ICoAwaiter<bool> IAsyncEnumerator<T>.MoveNextAsync(bool continueOnCapturedContext) => CoAwaiter.False;
             Task IAsyncEnumerator<T>.DisposeAsync() => Task.CompletedTask;
         }
     }

@@ -61,8 +61,8 @@
                 private readonly ParallelEnumerable<TSource, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsPulling = CoroutineCompletionSource<bool>.Init();
-                private CoroutineCompletionSource _ccsIncrementing = CoroutineCompletionSource.Init();
+                private CoAwaiterCompleter<bool> _ccsPulling = CoAwaiterCompleter<bool>.Init();
+                private CoAwaiterCompleter _ccsIncrementing = CoAwaiterCompleter.Init();
                 private int _state;
                 private int _active; // #started tasks + _queue.Count + (Producing ? 1 : 0)
                 private Queue<TResult> _queue;
@@ -75,7 +75,7 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsPulling.Reset(continueOnCapturedContext);
 
