@@ -61,8 +61,8 @@
                 private readonly ParallelEnumerable<TSource, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoAwaiterCompleter<bool> _ccsPulling = CoAwaiterCompleter<bool>.Init();
-                private CoAwaiterCompleter _ccsIncrementing = CoAwaiterCompleter.Init();
+                private CoCompletionSource<bool> _ccsPulling = CoCompletionSource<bool>.Init();
+                private CoCompletionSource _ccsIncrementing = CoCompletionSource.Init();
                 private int _state;
                 private int _active; // #started tasks + _queue.Count + (Producing ? 1 : 0)
                 private Queue<TResult> _queue;
@@ -134,7 +134,7 @@
 
                 public Task DisposeAsync()
                 {
-                    Cancel(null);
+                    Cancel(ErrorHandler.EnumeratorDisposedException);
                     return _atmbDisposed.Task;
                 }
 
@@ -259,7 +259,7 @@
                     }
                 }
 
-                private void Cancel(OperationCanceledException error)
+                private void Cancel(Exception error)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state & _stateMask)

@@ -1,0 +1,103 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ output extension=".cs" #>
+<#
+    const int min = 2;
+    const int max = 8;
+    var args = Enumerable.Range(min, max - min + 1)
+        .Select(n => new
+        {
+            N = n,
+            Names = Enumerable.Range(1, n).Select(i => new
+            {
+                GenArg = "TAggregate" + i,
+                Aggregator = "aggregator" + i,
+                AggrTask = "a" + i,
+                Consumer = "consumer" + i
+            }).ToList()
+        })
+        .Select(n => new
+        {
+            n.N,
+            n.Names,
+            GenArgs = string.Join(", ", n.Names.Select(ns => ns.GenArg))
+        })
+        .ToList();
+#>
+namespace Linx.Reactive
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    partial class LinxReactive
+    {
+<# foreach(var arg in args) { #>
+        /// <summary>
+        /// Multiple aggregators sharing a subscription.
+        /// </summary>
+        public static async Task<TResult> MultiAggregate<TSource, <#= arg.GenArgs #>, TResult>(
+            this IAsyncEnumerable<TSource> source,
+<# foreach(var n in arg.Names) { #>
+            AggregatorDelegate<TSource, <#= n.GenArg #>> <#= n.Aggregator #>,
+<# } #>
+            Func<<#= arg.GenArgs #>, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+<# foreach(var n in arg.Names) { #>
+            if (<#= n.Aggregator #> == null) throw new ArgumentNullException(nameof(<#= n.Aggregator #>));
+<# } #>
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            token.ThrowIfCancellationRequested();
+
+            var ctx = new MultiContext<TSource>(<#= arg.N #>, token);
+<# foreach(var n in arg.Names) { #>
+            var <#= n.AggrTask #> = ctx.Aggregate(<#= n.Aggregator #>);
+<# } #>
+            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            return resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.AggrTask + ".Result")) #>);
+        }
+
+        /// <summary>
+        /// Multiple aggregators sharing a subscription.
+        /// </summary>
+        /// <remarks>Blocking. Intended to be used with synchronous aggregators only.</remarks>
+        public static TResult MultiAggregate<TSource, <#= arg.GenArgs #>, TResult>(
+            this IEnumerable<TSource> source,
+<# foreach(var n in arg.Names) { #>
+            AggregatorDelegate<TSource, <#= n.GenArg #>> <#= n.Aggregator #>,
+<# } #>
+            Func<<#= arg.GenArgs #>, TResult> resultSelector)
+            => source.Async()
+                .MultiAggregate(<#= string.Join(", ", arg.Names.Select(n => n.Aggregator)) #>, resultSelector, default)
+                .GetAwaiter().GetResult();
+
+        /// <summary>
+        /// Multiple consumers sharing a subscription.
+        /// </summary>
+        public static async Task MultiConsume<TSource>(
+            this IAsyncEnumerable<TSource> source,
+<# foreach(var n in arg.Names) { #>
+            ConsumerDelegate<TSource> <#= n.Consumer #>,
+<# } #>
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+<# foreach(var n in arg.Names) { #>
+            if (<#= n.Consumer #> == null) throw new ArgumentNullException(nameof(<#= n.Consumer #>));
+<# } #>
+            token.ThrowIfCancellationRequested();
+
+            var ctx = new MultiContext<TSource>(<#= arg.N #>, token);
+<# foreach(var n in arg.Names) { #>
+            ctx.Consume(<#= n.Consumer #>);
+<# } #>
+            await ctx.SubscribeTo(source).ConfigureAwait(false);
+        }
+
+<# } #>
+    }
+}

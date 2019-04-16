@@ -8,6 +8,10 @@
     /// </summary>
     public sealed class ColdSubject<T> : ISubject<T>
     {
+        public ColdSubject() => throw new NotImplementedException();
+
+        public ColdSubject(int capacity) => throw new NotImplementedException();
+
         /// <inheritdoc />
         public IAsyncEnumerable<T> Sink => throw new NotImplementedException();
 

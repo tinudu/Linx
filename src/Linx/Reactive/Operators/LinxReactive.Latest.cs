@@ -52,7 +52,7 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private CoAwaiterCompleter<bool> _ccsPull = CoAwaiterCompleter<bool>.Init();
+                private CoCompletionSource<bool> _ccsPull = CoCompletionSource<bool>.Init();
                 private T _current, _next;
 
                 public Enumerator(LatestOneEnumerable<T> enumerable, CancellationToken token)
@@ -122,11 +122,11 @@
 
                 public Task DisposeAsync()
                 {
-                    Cancel(null);
+                    Cancel(ErrorHandler.EnumeratorDisposedException);
                     return _atmbDisposed.Task;
                 }
 
-                private void Cancel(OperationCanceledException error)
+                private void Cancel(Exception error)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -302,7 +302,7 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private CoAwaiterCompleter<bool> _ccsPull = CoAwaiterCompleter<bool>.Init();
+                private CoCompletionSource<bool> _ccsPull = CoCompletionSource<bool>.Init();
                 private T _current;
                 private Queue<T> _next;
 
@@ -380,11 +380,11 @@
 
                 public Task DisposeAsync()
                 {
-                    Cancel(null);
+                    Cancel(ErrorHandler.EnumeratorDisposedException);
                     return _atmbDisposed.Task;
                 }
 
-                private void Cancel(OperationCanceledException error)
+                private void Cancel(Exception error)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)

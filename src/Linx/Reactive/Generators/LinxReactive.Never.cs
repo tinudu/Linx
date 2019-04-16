@@ -30,7 +30,7 @@
                 private const int _sPulling = 1;
                 private const int _sFinal = 2;
 
-                private CoAwaiterCompleter<bool> _ccs = CoAwaiterCompleter<bool>.Init();
+                private CoCompletionSource<bool> _ccs = CoCompletionSource<bool>.Init();
                 private CancellationTokenRegistration _ctr;
                 private int _state;
                 private Exception _error;
@@ -66,22 +66,22 @@
 
                 public Task DisposeAsync()
                 {
-                    Cancel(null);
+                    Cancel(ErrorHandler.EnumeratorDisposedException);
                     return Task.CompletedTask;
                 }
 
-                private void Cancel(OperationCanceledException error)
+                private void Cancel(Exception error)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sInitial:
-                            _error = (Exception)error ?? new ObjectDisposedException(nameof(IAsyncEnumerator<T>));
+                            _error = error;
                             _state = _sFinal;
                             _ctr.Dispose();
                             break;
                         case _sPulling:
-                            _error = (Exception)error ?? new ObjectDisposedException(nameof(IAsyncEnumerator<T>));
+                            _error = error;
                             _state = _sFinal;
                             _ctr.Dispose();
                             _ccs.SetCompleted(error, false);

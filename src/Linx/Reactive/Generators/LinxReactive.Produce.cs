@@ -10,29 +10,29 @@
     partial class LinxReactive
     {
         /// <summary>
-        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProduceDelegate{T}"/> coroutine.
+        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Produce<T>(ProduceDelegate<T> produce)
+        public static IAsyncEnumerable<T> Produce<T>(ProducerDelegate<T> producer)
         {
-            if (produce == null) throw new ArgumentNullException(nameof(produce));
-            return new ProduceEnumerable<T>(produce);
+            if (producer == null) throw new ArgumentNullException(nameof(producer));
+            return new ProduceEnumerable<T>(producer);
         }
 
         /// <summary>
-        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProduceDelegate{T}"/> coroutine.
+        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Produce<T>(T sample, ProduceDelegate<T> produce)
+        public static IAsyncEnumerable<T> Produce<T>(T sample, ProducerDelegate<T> producer)
         {
-            if (produce == null) throw new ArgumentNullException(nameof(produce));
-            return new ProduceEnumerable<T>(produce);
+            if (producer == null) throw new ArgumentNullException(nameof(producer));
+            return new ProduceEnumerable<T>(producer);
         }
 
         [DebuggerNonUserCode]
         private sealed class ProduceEnumerable<T> : IAsyncEnumerable<T>
         {
-            private readonly ProduceDelegate<T> _produce;
+            private readonly ProducerDelegate<T> _producer;
 
-            public ProduceEnumerable(ProduceDelegate<T> produce) => _produce = produce;
+            public ProduceEnumerable(ProducerDelegate<T> producer) => _producer = producer;
 
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
@@ -49,8 +49,8 @@
                 private readonly ProduceEnumerable<T> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoAwaiterCompleter<bool> _ccsMoveNext = CoAwaiterCompleter<bool>.Init();
-                private CoAwaiterCompleter _ccsOnNext = CoAwaiterCompleter.Init();
+                private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
+                private CoCompletionSource _ccsOnNext = CoCompletionSource.Init();
                 private int _state;
 
                 public Enumerator(ProduceEnumerable<T> enumerable, CancellationToken token)
@@ -94,7 +94,7 @@
 
                 public Task DisposeAsync()
                 {
-                    Cancel(null);
+                    Cancel(ErrorHandler.EnumeratorDisposedException);
                     return _atmbDisposed.Task;
                 }
 
@@ -124,7 +124,7 @@
                     return _ccsOnNext.Awaiter;
                 }
 
-                private void Cancel(OperationCanceledException error)
+                private void Cancel(Exception error)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -162,7 +162,7 @@
                     Exception error;
                     try
                     {
-                        await _enumerable._produce(OnNext, _eh.InternalToken).ConfigureAwait(false);
+                        await _enumerable._producer(OnNext, _eh.InternalToken).ConfigureAwait(false);
                         error = null;
                     }
                     catch (Exception ex) { error = ex; }

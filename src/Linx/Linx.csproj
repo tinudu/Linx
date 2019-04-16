@@ -15,6 +15,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Reactive\Aggregators\LinxReactive.Multi.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxReactive.Multi.tt</DependentUpon>
+    </None>
     <None Include="Reactive\Operators\LinxReactive.Zip.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -36,6 +41,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxReactive.MinMax.tt</DependentUpon>
     </Compile>
+    <Compile Update="Reactive\Aggregators\LinxReactive.Multi.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxReactive.Multi.tt</DependentUpon>
+    </Compile>
     <Compile Update="Reactive\Aggregators\LinxReactive.Sum.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -52,6 +62,10 @@
     <None Update="Reactive\Aggregators\LinxReactive.MinMax.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxReactive.MinMax.cs</LastGenOutput>
+    </None>
+    <None Update="Reactive\Aggregators\LinxReactive.Multi.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxReactive.Multi.cs</LastGenOutput>
     </None>
     <None Update="Reactive\Aggregators\LinxReactive.Sum.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

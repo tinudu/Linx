@@ -106,7 +106,7 @@ namespace Linx.Reactive
                 private readonly ZipEnumerable<#= i.GenArgList #> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoroutineCompletionSource<bool> _ccsMoveNext = CoroutineCompletionSource<bool>.Init();
+                private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
                 private int _active;
 <#
     foreach(var n in i.Names)
@@ -116,7 +116,7 @@ namespace Linx.Reactive
 <#
     }
 #>
-                private readonly CoroutineCompletionSource[] _ccssPushing = new CoroutineCompletionSource[_n];
+                private readonly CoCompletionSource[] _ccssPushing = new CoCompletionSource[_n];
                 private uint _ccssPushingMask;
                 private int _state;
 
@@ -128,7 +128,7 @@ namespace Linx.Reactive
 
                 public TResult Current { get; private set; }
 
-                public ICoroutineAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
                 {
                     _ccsMoveNext.Reset(continueOnCapturedContext);
 
@@ -173,11 +173,11 @@ namespace Linx.Reactive
 
                 public Task DisposeAsync()
                 {
-                    Cancel(null);
+                    Cancel(ErrorHandler.EnumeratorDisposedException);
                     return _atmbDisposed.Task;
                 }
 
-                private void Cancel(OperationCanceledException error)
+                private void Cancel(Exception error)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -286,7 +286,7 @@ namespace Linx.Reactive
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var ccsPushing = _ccssPushing[index] = CoroutineCompletionSource.Init();
+                        var ccsPushing = _ccssPushing[index] = CoCompletionSource.Init();
                         var flag = 1U << index;
                         var ae = source.GetAsyncEnumerator(_eh.InternalToken);
                         try

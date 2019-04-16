@@ -11,61 +11,8 @@
     partial class LinxReactive
     {
         /// <summary>
-        /// Build multiple aggregates in one run.
+        /// Multiple consumers/aggregators per subscription.
         /// </summary>
-        public static async Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TResult>(
-            this IAsyncEnumerable<TSource> source,
-            AggregatorDelegate<TSource, TAggregate1> aggregator1,
-            AggregatorDelegate<TSource, TAggregate2> aggregator2,
-            Func<TAggregate1, TAggregate2, TResult> resultSelector,
-            CancellationToken token)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
-            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
-            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            token.ThrowIfCancellationRequested();
-
-            var ctx = new MultiContext<TSource>(2, token);
-            var a1 = ctx.Aggregate(aggregator1);
-            var a2 = ctx.Aggregate(aggregator2);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
-            return resultSelector(a1.Result, a2.Result);
-        }
-
-        /// <summary>
-        /// Multiple aggregators sharing a subscription.
-        /// </summary>
-        /// <remarks>Blocking - intended to be used with synchronous aggregators only.</remarks>
-        public static TResult MultiAggregate<TSource, TAggregate1, TAggregate2, TResult>(
-            this IEnumerable<TSource> source,
-            AggregatorDelegate<TSource, TAggregate1> aggregator1,
-            AggregatorDelegate<TSource, TAggregate2> aggregator2,
-            Func<TAggregate1, TAggregate2, TResult> resultSelector)
-            => source.Async()
-                .MultiAggregate(aggregator1, aggregator2, resultSelector, default)
-                .GetAwaiter().GetResult();
-
-        /// <summary>
-        /// Multiple consumers sharing a subscription.
-        /// </summary>
-        public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
-            ConsumerDelegate<TSource> consumer1,
-            ConsumerDelegate<TSource> consumer2,
-            CancellationToken token)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (consumer1 == null) throw new ArgumentNullException(nameof(consumer1));
-            if (consumer2 == null) throw new ArgumentNullException(nameof(consumer2));
-            token.ThrowIfCancellationRequested();
-
-            var ctx = new MultiContext<TSource>(2, token);
-            ctx.Consume(consumer1);
-            ctx.Consume(consumer2);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
-        }
-
         private sealed class MultiContext<T> : IAsyncEnumerable<T>
         {
             private const int _sInitial = 0;
@@ -77,6 +24,11 @@
             private ErrorHandler _eh = ErrorHandler.Init();
             private AsyncTaskMethodBuilder _atmbDone = default;
 
+            /// <summary>
+            /// Initialize.
+            /// </summary>
+            /// <param name="capacity">Expected number of subscribers.</param>
+            /// <param name="token">Token to cancel the whole operation.</param>
             public MultiContext(int capacity, CancellationToken token)
             {
                 _enumerators = new List<Enumerator>(capacity);
@@ -112,7 +64,7 @@
                 return result;
             }
 
-            public async void Consume(ConsumerDelegate<T> consumer)
+            public async Task Consume(ConsumerDelegate<T> consumer)
             {
                 var state = Atomic.Lock(ref _state);
                 if (state != _sInitial)
@@ -222,7 +174,7 @@
             private sealed class Enumerator : IAsyncEnumerator<T>
             {
                 private readonly MultiContext<T> _context;
-                public readonly CoAwaiterCompleter<bool> AcPulling = CoAwaiterCompleter<bool>.Init();
+                public readonly CoCompletionSource<bool> AcPulling = CoCompletionSource<bool>.Init();
                 public readonly T Current;
                 public Exception Error;
 

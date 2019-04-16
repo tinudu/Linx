@@ -43,7 +43,7 @@
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource();
                 private readonly Func<T1, T2, TResult> _resultSelector;
                 private CancellationTokenRegistration _ctr;
-                private CoAwaiterCompleter<bool> _ccsPull = CoAwaiterCompleter<bool>.Init();
+                private CoCompletionSource<bool> _ccsPull = CoCompletionSource<bool>.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state;
                 private TResult _current;

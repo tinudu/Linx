@@ -49,8 +49,8 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private CoAwaiterCompleter<bool> _ccsPull = CoAwaiterCompleter<bool>.Init();
-                private CoAwaiterCompleter _ccsPush = CoAwaiterCompleter.Init();
+                private CoCompletionSource<bool> _ccsPull = CoCompletionSource<bool>.Init();
+                private CoCompletionSource _ccsPush = CoCompletionSource.Init();
                 private Queue<T> _queue;
 
                 public Enumerator(BufferEnumerable<T> enumerable, CancellationToken token)
@@ -127,7 +127,7 @@
 
                 public Task DisposeAsync()
                 {
-                    Cancel(null);
+                    Cancel(ErrorHandler.EnumeratorDisposedException);
                     return _atmbDisposed.Task;
                 }
 

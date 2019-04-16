@@ -6,25 +6,25 @@
     using System.Threading;
 
     /// <summary>
-    /// Represents the producer side of a <see cref="ICoAwaiter{T}"/>.
+    /// Represents the producer side of a <see cref="ICoAwaiter"/>.
     /// </summary>
     [DebuggerNonUserCode]
-    public struct CoAwaiterCompleter<T>
+    public struct CoCompletionSource
     {
         /// <summary>
-        /// Initialize with a new <see cref="ICoAwaiter{T}"/>.
+        /// Initialize with a new <see cref="ICoAwaiter"/>.
         /// </summary>
-        public static CoAwaiterCompleter<T> Init() => new CoAwaiterCompleter<T>(default);
+        public static CoCompletionSource Init() => new CoCompletionSource(default);
 
         private readonly CoAwaiter _awaiter;
 
         /// <summary>
         /// The awaiter controlled by this instance.
         /// </summary>
-        public ICoAwaiter<T> Awaiter => _awaiter;
+        public ICoAwaiter Awaiter => _awaiter;
 
         // ReSharper disable once UnusedParameter.Local
-        private CoAwaiterCompleter(Unit _) => _awaiter = new CoAwaiter();
+        private CoCompletionSource(Unit _) => _awaiter = new CoAwaiter();
 
         /// <summary>
         /// Reset the awaiter.
@@ -32,12 +32,12 @@
         public void Reset(bool continueOnCapturedContext) => _awaiter.Reset(continueOnCapturedContext);
 
         /// <summary>
-        /// Complete with the specified <paramref name="exception"/> (if not null), or set the specified <paramref name="result"/>.
+        /// Complete with the specified <paramref name="exception"/> (if not null), or normally otherwise.
         /// </summary>
-        public void SetCompleted(Exception exception, T result) => _awaiter.SetCompleted(exception, result);
+        public void SetCompleted(Exception exception) => _awaiter.SetCompleted(exception);
 
         [DebuggerNonUserCode]
-        private sealed class CoAwaiter : ICoAwaiter<T>
+        private sealed class CoAwaiter : ICoAwaiter
         {
             private const int _sInitial = 0;
             private const int _sPending = 1;
@@ -46,7 +46,6 @@
             private int _state;
             private SynchronizationContext _capturedContext;
             private Action _continuation;
-            private T _result;
             private Exception _exception;
 
             #region CoAwaiterCompleter implementation
@@ -70,14 +69,13 @@
                 _state = _sPending;
             }
 
-            public void SetCompleted(Exception exception, T result)
+            public void SetCompleted(Exception exception)
             {
                 // Pending -> Completed
                 if (Atomic.TestAndSet(ref _state, _sPending, _sCompleted | Atomic.LockBit) != _sPending) throw new InvalidOperationException();
 
-                // set exception or result
-                if (exception != null) _exception = exception;
-                else _result = result;
+                // set exception
+                _exception = exception;
 
                 if (_continuation == null)
                 {
@@ -127,7 +125,7 @@
                 }
             }
 
-            public T GetResult()
+            public void GetResult()
             {
                 while (true)
                 {
@@ -139,10 +137,8 @@
                         case _sCompleted: // set Initial and return or throw
                             if (_exception == null)
                             {
-                                var result = _result;
-                                _result = default;
                                 _state = _sInitial;
-                                return result;
+                                return;
                             }
 
                             var exception = _exception;
@@ -170,9 +166,6 @@
                 }
             }
 
-            void ICoAwaiter.GetResult() => GetResult();
-
-            ICoAwaiter<T> ICoAwaiter<T>.GetAwaiter() => this;
             ICoAwaiter ICoAwaiter.GetAwaiter() => this;
 
             #endregion
