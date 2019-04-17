@@ -54,11 +54,11 @@
             var result = Enumerable.Range(1, 3).MultiAggregate(
                 (s, t) => s.Sum(t),
                 (s, t) => s.First(t),
-                (s, t) => s.Take(2).ToList(t),
-                (sum, first, first2) => new { sum, first, first2 });
+                (s, t) => s.ElementAt(1, t),
+                (sum, first, second) => new { sum, first, second });
             Assert.Equal(6, result.sum);
             Assert.Equal(1, result.first);
-            Assert.True(new[] { 1, 2 }.SequenceEqual(result.first2));
+            Assert.Equal(2, result.second);
         }
 
         [Fact]
@@ -71,6 +71,27 @@
                 (first, all, sumInv) => new { first, all, sumInv },
                 default);
             await Assert.ThrowsAsync<DivideByZeroException>(async () => await tResult);
+        }
+
+        [Fact]
+        public async Task TestMultiAggregateCancel()
+        {
+            SynchronizationContext.SetSynchronizationContext(null);
+            var cts = new CancellationTokenSource();
+            var src = LinxReactive.Produce<int>(async (yield, token) =>
+            {
+                await yield(1);
+                await yield(2);
+                cts.Cancel();
+                await yield(3);
+            });
+            var tResult = src.MultiAggregate(
+                (s, t) => s.ToList(t),
+                (s, t) => s.Sum(t),
+                (all, sum) => new { all, sum },
+                cts.Token);
+            var oce = await Assert.ThrowsAsync<OperationCanceledException>(() => tResult);
+            Assert.Equal(cts.Token, oce.CancellationToken);
         }
 
         [Fact]

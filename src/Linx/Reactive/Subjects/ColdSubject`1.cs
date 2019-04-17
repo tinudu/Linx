@@ -100,7 +100,6 @@
                 finally { await ae.DisposeAsync().ConfigureAwait(false); }
                 error = null;
             }
-            catch (OperationCanceledException oce) when (oce.CancellationToken == _cts.Token) { error = null; }
             catch (Exception ex) { error = ex; }
 
             // set pulling enumerators final
@@ -119,11 +118,7 @@
             }
             _state = 1;
 
-            if (_enumerators.Count == 0)
-            {
-                if (error != null) throw error; // dispose error?
-                return;
-            }
+            if (_enumerators.Count == 0) return;
 
             // complete pulling
             foreach (var e in _enumerators)
@@ -165,7 +160,7 @@
                         try
                         {
                             if (subjState != 0) throw new InvalidOperationException("Subject already subscribed.");
-                            _subject._enumerators.Add(this);
+                            _subject._enumerators.Insert(0, this);
                             State = EnumeratorState.Pulling;
                             _subject._state = 0;
                         }
