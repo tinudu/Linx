@@ -26,7 +26,7 @@
             var ctx = new MultiContext<TSource>(2, token);
             var a1 = ctx.Aggregate(aggregator1);
             var a2 = ctx.Aggregate(aggregator2);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(a1, a2, ctx.SubscribeTo(source)).ConfigureAwait(false);
             return resultSelector(a1.Result, a2.Result);
         }
 
@@ -58,9 +58,7 @@
             token.ThrowIfCancellationRequested();
 
             var ctx = new MultiContext<TSource>(2, token);
-            ctx.Consume(consumer1);
-            ctx.Consume(consumer2);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(ctx.Consume(consumer1), ctx.Consume(consumer2), ctx.SubscribeTo(source)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -85,7 +83,7 @@
             var a1 = ctx.Aggregate(aggregator1);
             var a2 = ctx.Aggregate(aggregator2);
             var a3 = ctx.Aggregate(aggregator3);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(a1, a2, a3, ctx.SubscribeTo(source)).ConfigureAwait(false);
             return resultSelector(a1.Result, a2.Result, a3.Result);
         }
 
@@ -120,10 +118,7 @@
             token.ThrowIfCancellationRequested();
 
             var ctx = new MultiContext<TSource>(3, token);
-            ctx.Consume(consumer1);
-            ctx.Consume(consumer2);
-            ctx.Consume(consumer3);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(ctx.Consume(consumer1), ctx.Consume(consumer2), ctx.Consume(consumer3), ctx.SubscribeTo(source)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -151,7 +146,7 @@
             var a2 = ctx.Aggregate(aggregator2);
             var a3 = ctx.Aggregate(aggregator3);
             var a4 = ctx.Aggregate(aggregator4);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(a1, a2, a3, a4, ctx.SubscribeTo(source)).ConfigureAwait(false);
             return resultSelector(a1.Result, a2.Result, a3.Result, a4.Result);
         }
 
@@ -189,11 +184,7 @@
             token.ThrowIfCancellationRequested();
 
             var ctx = new MultiContext<TSource>(4, token);
-            ctx.Consume(consumer1);
-            ctx.Consume(consumer2);
-            ctx.Consume(consumer3);
-            ctx.Consume(consumer4);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(ctx.Consume(consumer1), ctx.Consume(consumer2), ctx.Consume(consumer3), ctx.Consume(consumer4), ctx.SubscribeTo(source)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -224,7 +215,7 @@
             var a3 = ctx.Aggregate(aggregator3);
             var a4 = ctx.Aggregate(aggregator4);
             var a5 = ctx.Aggregate(aggregator5);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(a1, a2, a3, a4, a5, ctx.SubscribeTo(source)).ConfigureAwait(false);
             return resultSelector(a1.Result, a2.Result, a3.Result, a4.Result, a5.Result);
         }
 
@@ -265,12 +256,7 @@
             token.ThrowIfCancellationRequested();
 
             var ctx = new MultiContext<TSource>(5, token);
-            ctx.Consume(consumer1);
-            ctx.Consume(consumer2);
-            ctx.Consume(consumer3);
-            ctx.Consume(consumer4);
-            ctx.Consume(consumer5);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(ctx.Consume(consumer1), ctx.Consume(consumer2), ctx.Consume(consumer3), ctx.Consume(consumer4), ctx.Consume(consumer5), ctx.SubscribeTo(source)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -304,7 +290,7 @@
             var a4 = ctx.Aggregate(aggregator4);
             var a5 = ctx.Aggregate(aggregator5);
             var a6 = ctx.Aggregate(aggregator6);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(a1, a2, a3, a4, a5, a6, ctx.SubscribeTo(source)).ConfigureAwait(false);
             return resultSelector(a1.Result, a2.Result, a3.Result, a4.Result, a5.Result, a6.Result);
         }
 
@@ -348,13 +334,7 @@
             token.ThrowIfCancellationRequested();
 
             var ctx = new MultiContext<TSource>(6, token);
-            ctx.Consume(consumer1);
-            ctx.Consume(consumer2);
-            ctx.Consume(consumer3);
-            ctx.Consume(consumer4);
-            ctx.Consume(consumer5);
-            ctx.Consume(consumer6);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(ctx.Consume(consumer1), ctx.Consume(consumer2), ctx.Consume(consumer3), ctx.Consume(consumer4), ctx.Consume(consumer5), ctx.Consume(consumer6), ctx.SubscribeTo(source)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -391,7 +371,7 @@
             var a5 = ctx.Aggregate(aggregator5);
             var a6 = ctx.Aggregate(aggregator6);
             var a7 = ctx.Aggregate(aggregator7);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(a1, a2, a3, a4, a5, a6, a7, ctx.SubscribeTo(source)).ConfigureAwait(false);
             return resultSelector(a1.Result, a2.Result, a3.Result, a4.Result, a5.Result, a6.Result, a7.Result);
         }
 
@@ -438,14 +418,7 @@
             token.ThrowIfCancellationRequested();
 
             var ctx = new MultiContext<TSource>(7, token);
-            ctx.Consume(consumer1);
-            ctx.Consume(consumer2);
-            ctx.Consume(consumer3);
-            ctx.Consume(consumer4);
-            ctx.Consume(consumer5);
-            ctx.Consume(consumer6);
-            ctx.Consume(consumer7);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(ctx.Consume(consumer1), ctx.Consume(consumer2), ctx.Consume(consumer3), ctx.Consume(consumer4), ctx.Consume(consumer5), ctx.Consume(consumer6), ctx.Consume(consumer7), ctx.SubscribeTo(source)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -485,7 +458,7 @@
             var a6 = ctx.Aggregate(aggregator6);
             var a7 = ctx.Aggregate(aggregator7);
             var a8 = ctx.Aggregate(aggregator8);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(a1, a2, a3, a4, a5, a6, a7, a8, ctx.SubscribeTo(source)).ConfigureAwait(false);
             return resultSelector(a1.Result, a2.Result, a3.Result, a4.Result, a5.Result, a6.Result, a7.Result, a8.Result);
         }
 
@@ -535,15 +508,7 @@
             token.ThrowIfCancellationRequested();
 
             var ctx = new MultiContext<TSource>(8, token);
-            ctx.Consume(consumer1);
-            ctx.Consume(consumer2);
-            ctx.Consume(consumer3);
-            ctx.Consume(consumer4);
-            ctx.Consume(consumer5);
-            ctx.Consume(consumer6);
-            ctx.Consume(consumer7);
-            ctx.Consume(consumer8);
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(ctx.Consume(consumer1), ctx.Consume(consumer2), ctx.Consume(consumer3), ctx.Consume(consumer4), ctx.Consume(consumer5), ctx.Consume(consumer6), ctx.Consume(consumer7), ctx.Consume(consumer8), ctx.SubscribeTo(source)).ConfigureAwait(false);
         }
 
     }

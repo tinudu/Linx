@@ -49,6 +49,17 @@
         }
 
         [Fact]
+        public void TestMultiAggregate()
+        {
+            var result = Enumerable.Range(1, 3).MultiAggregate(
+                (s, t) => s.Sum(t),
+                (s, t) => s.Take(2).ToList(t),
+                (sum, list) => new { sum, list });
+            Assert.Equal(6, result.sum);
+            Assert.True(new[] { 1, 2 }.SequenceEqual(result.list));
+        }
+
+        [Fact]
         public async Task TestSingle()
         {
             var result = await new[] { 42 }.Async().Single(CancellationToken.None);

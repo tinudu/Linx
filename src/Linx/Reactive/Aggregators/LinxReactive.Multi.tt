@@ -57,7 +57,7 @@ namespace Linx.Reactive
 <# foreach(var n in arg.Names) { #>
             var <#= n.AggrTask #> = ctx.Aggregate(<#= n.Aggregator #>);
 <# } #>
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(<#= string.Join(", ", arg.Names.Select(n => n.AggrTask)) #>, ctx.SubscribeTo(source)).ConfigureAwait(false);
             return resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.AggrTask + ".Result")) #>);
         }
 
@@ -92,10 +92,7 @@ namespace Linx.Reactive
             token.ThrowIfCancellationRequested();
 
             var ctx = new MultiContext<TSource>(<#= arg.N #>, token);
-<# foreach(var n in arg.Names) { #>
-            ctx.Consume(<#= n.Consumer #>);
-<# } #>
-            await ctx.SubscribeTo(source).ConfigureAwait(false);
+            await ctx.WhenAll(<#= string.Join(", ", arg.Names.Select(n => $"ctx.Consume({n.Consumer})")) #>, ctx.SubscribeTo(source)).ConfigureAwait(false);
         }
 
 <# } #>
