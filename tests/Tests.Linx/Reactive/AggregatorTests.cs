@@ -66,9 +66,9 @@
         {
             var tResult = new[] { 2, 0, 1 }.Async().MultiAggregate(
                 (s, t) => s.First(t),
-                (s, t) => s.Take(2).ToList(t),
+                (s, t) => s.ToList(t),
                 (s, t) => s.Select(i => 1 / i).Sum(t),
-                (first, first2, sumInv) => new { first, first2, sumInv },
+                (first, all, sumInv) => new { first, all, sumInv },
                 default);
             await Assert.ThrowsAsync<DivideByZeroException>(async () => await tResult);
         }
