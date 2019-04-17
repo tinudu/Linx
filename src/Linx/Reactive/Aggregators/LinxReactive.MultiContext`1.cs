@@ -14,7 +14,6 @@
         {
             private readonly ColdSubject<T> _subject;
             private ErrorHandler _eh = ErrorHandler.Init();
-            private int _state; // 0: Initial, 1: Canceling
 
             /// <summary>
             /// Initialize.
@@ -26,14 +25,8 @@
                 _subject = new ColdSubject<T>(capacity);
                 if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() =>
                 {
-                    if (Atomic.Set(ref _state, 1 | Atomic.LockBit) == 0)
-                    {
-                        _eh.SetExternalError(new OperationCanceledException(token));
-                        _state = 1;
-                        _eh.Cancel();
-                    }
-                    else
-                        _state = 1;
+                    _eh.SetExternalError(new OperationCanceledException(token));
+                    _eh.Cancel();
                 });
             }
 
@@ -41,45 +34,28 @@
             {
                 _eh.InternalToken.ThrowIfCancellationRequested();
                 try { return await aggregator(_subject.Output, _eh.InternalToken).ConfigureAwait(false); }
-                catch
-                {
-                    if (Atomic.TestAndSet(ref _state, 0, 1) == 0) _eh.Cancel();
-                    throw;
-                }
+                catch { _eh.Cancel(); throw; }
             }
 
             public async Task Consume(ConsumerDelegate<T> consumer)
             {
                 _eh.InternalToken.ThrowIfCancellationRequested();
                 try { await consumer(_subject.Output, _eh.InternalToken).ConfigureAwait(false); }
-                catch
-                {
-                    if (Atomic.TestAndSet(ref _state, 0, 1) == 0) _eh.Cancel();
-                    throw;
-                }
+                catch { _eh.Cancel(); throw; }
             }
 
             public async Task SubscribeTo(IAsyncEnumerable<T> source)
             {
+                _eh.InternalToken.ThrowIfCancellationRequested();
                 try { await _subject.SubscribeTo(source).ConfigureAwait(false); }
-                catch
-                {
-                    if (Atomic.TestAndSet(ref _state, 0, 1) == 0) _eh.Cancel();
-                    throw;
-                }
+                catch { _eh.Cancel(); throw; }
             }
 
             public async Task WhenAll(params Task[] tasks)
             {
-                foreach (var task in tasks)
-                    try { await task.ConfigureAwait(false); }
-                    catch (Exception ex)
-                    {
-                        var state = Atomic.Lock(ref _state);
-                        _eh.SetInternalError(ex);
-                        _state = 1;
-                        if (state == 0) _eh.Cancel();
-                    }
+                try { await Task.WhenAll(tasks).ConfigureAwait(false); }
+                catch (Exception ex) { _eh.SetInternalError(ex); }
+                _eh.Cancel();
                 _eh.ThrowIfError();
             }
         }

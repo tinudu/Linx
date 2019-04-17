@@ -48,7 +48,7 @@
         /// Set the external error.
         /// </summary>
         /// <param name="error">Optional. Defaults to <see cref="EnumeratorDisposedException"/>.</param>
-        public void SetExternalError(Exception error = null) => _externalError = error ?? EnumeratorDisposedException;
+        public void SetExternalError(Exception error = null) => _externalError = error;
 
         /// <summary>
         /// Set the internal error.
