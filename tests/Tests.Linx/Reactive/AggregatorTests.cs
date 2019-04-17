@@ -53,10 +53,24 @@
         {
             var result = Enumerable.Range(1, 3).MultiAggregate(
                 (s, t) => s.Sum(t),
+                (s, t) => s.First(t),
                 (s, t) => s.Take(2).ToList(t),
-                (sum, list) => new { sum, list });
+                (sum, first, first2) => new { sum, first, first2 });
             Assert.Equal(6, result.sum);
-            Assert.True(new[] { 1, 2 }.SequenceEqual(result.list));
+            Assert.Equal(1, result.first);
+            Assert.True(new[] { 1, 2 }.SequenceEqual(result.first2));
+        }
+
+        [Fact]
+        public async Task TestMultiAggregateFail()
+        {
+            var tResult = new[] { 2, 0, 1 }.Async().MultiAggregate(
+                (s, t) => s.First(t),
+                (s, t) => s.Take(2).ToList(t),
+                (s, t) => s.Select(i => 1 / i).Sum(t),
+                (first, first2, sumInv) => new { first, first2, sumInv },
+                default);
+            await Assert.ThrowsAsync<DivideByZeroException>(async () => await tResult);
         }
 
         [Fact]

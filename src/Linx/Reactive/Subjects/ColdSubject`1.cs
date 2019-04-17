@@ -66,36 +66,34 @@
                         var current = ae.Current;
 
                         // set pulling enumerators pushing
-                        Atomic.Lock(ref _state);
                         for (var ix = _enumerators.Count - 1; ix >= 0; ix--)
                         {
                             var e = _enumerators[ix];
+                            Atomic.Lock(ref _state);
                             if (e.State == EnumeratorState.Pulling)
                             {
                                 e.CcsPushing.Reset(false);
                                 e.Current = current;
                                 e.State = EnumeratorState.Pushing;
+                                _state = 1;
+                                e.CcsPulling.SetCompleted(null, true);
                             }
                             else // final
-                                _enumerators.RemoveAt(ix); // mo exception assumed
+                            {
+                                _enumerators.RemoveAt(ix); // no exception assumed
+                                _state = 1;
+                            }
                         }
-                        _state = 1;
                         if (_enumerators.Count == 0) return;
 
-                        // complete pulling
-                        foreach (var e in _enumerators)
-                            e.CcsPulling.SetCompleted(null, true);
-
                         // await all pushed
-                        foreach (var e in _enumerators)
-                            await e.CcsPushing.Awaiter;
-
-                        // remove finals
-                        Atomic.Lock(ref _state);
                         for (var ix = _enumerators.Count - 1; ix >= 0; ix--)
-                            if (_enumerators[ix].State != EnumeratorState.Pulling)
-                                _enumerators.RemoveAt(ix); // mo exception assumed
-                        _state = 1;
+                        {
+                            var e = _enumerators[ix];
+                            await e.CcsPushing.Awaiter;
+                            if (e.State != EnumeratorState.Pulling)
+                                _enumerators.RemoveAt(ix); // no exception assumed
+                        }
                         if (_enumerators.Count == 0) return;
                     }
                 }
@@ -117,7 +115,7 @@
                     e.State = EnumeratorState.Final;
                 }
                 else
-                    _enumerators.RemoveAt(ix); // mo exception assumed
+                    _enumerators.RemoveAt(ix); // no exception assumed
             }
             _state = 1;
 
