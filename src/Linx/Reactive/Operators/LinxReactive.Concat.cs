@@ -15,15 +15,7 @@
             return Produce<T>(async (yield, token) =>
             {
                 foreach (var source in sources)
-                {
-                    var ae = source.GetAsyncEnumerator(token);
-                    try
-                    {
-                        while (await ae.MoveNextAsync())
-                            await yield(ae.Current);
-                    }
-                    finally { await ae.DisposeAsync().ConfigureAwait(false); }
-                }
+                    await source.CopyTo(yield, token).ConfigureAwait(false);
             });
         }
 
