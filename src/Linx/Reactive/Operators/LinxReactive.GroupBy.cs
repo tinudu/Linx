@@ -57,16 +57,16 @@
                 private const int _sCancelingAccepting = 4;
                 private const int _sFinal = 5;
 
-                private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-                private readonly GroupByEnumerable<TSource, TKey> _enumerable;
                 private readonly Dictionary<TKey, Group> _groups;
-                private AsyncTaskMethodBuilder _atmbDisposed = default;
+                private readonly CancellationTokenSource _cts = new CancellationTokenSource(); // request cancellation when Canceling[Accepting] and _nGroups == 0
+                private readonly GroupByEnumerable<TSource, TKey> _enumerable;
                 private CancellationTokenRegistration _ctr;
-                private CoCompletionSource _ccsEmitting = CoCompletionSource.Init();
-                private CoCompletionSource<bool> _ccsAccepting = CoCompletionSource<bool>.Init();
+                private CoCompletionSource<bool> _ccsAccepting = CoCompletionSource<bool>.Init(); // pending MoveNextAsync
+                private CoCompletionSource _ccsEmitting = CoCompletionSource.Init(); // await MoveNextAsync either on the group enumerator or a group
+                private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private Exception _error;
-                private int _nGroups;
+                private Exception _error; // while canceling or when final
+                private int _nGroups; // number of groups that are not final
 
                 public Enumerator(GroupByEnumerable<TSource, TKey> enumerable, CancellationToken token)
                 {
@@ -184,7 +184,7 @@
                                     _ccsEmitting.Reset(false);
                                     _state = _sEmitting;
                                     Current = group;
-                                    _ccsAccepting.SetCompleted(null, false);
+                                    _ccsAccepting.SetCompleted(null, true);
                                     await _ccsEmitting.Awaiter;
 
                                     state = Atomic.Lock(ref _state);
@@ -240,22 +240,24 @@
                             _error = error;
                         _state = _sFinal;
                         if (state == _sAccepting || state == _sCancelingAccepting)
+                        {
+                            Current = null;
                             _ccsAccepting.SetCompleted(_error, false);
-                        foreach (var g in _groups.Values)
-                            switch (g.State)
-                            {
-                                case GroupState.Enumerating:
-                                    g.Error = error;
-                                    g.State = GroupState.Final;
-                                    g.Ctr.Dispose();
-                                    break;
-                                case GroupState.Accepting:
-                                    g.Error = error;
-                                    g.State = GroupState.Final;
-                                    g.CcsAccepting.SetCompleted(error, false);
-                                    g.Ctr.Dispose();
-                                    break;
-                            }
+                        }
+                        _atmbDisposed.SetResult();
+
+                        foreach (var group in _groups.Values)
+                        {
+                            if (group.State == GroupState.Final) continue;
+                            group.Error = error;
+                            var s = group.State;
+                            group.State = GroupState.Final;
+                            group.Ctr.Dispose();
+                            if (s != GroupState.Accepting) continue;
+                            group.Current = default;
+                            group.CcsAccepting.SetCompleted(error, false);
+                        }
+
                         _groups.Clear();
                     }
                 }
@@ -264,9 +266,9 @@
                 {
                     Initial, // GetAsyncEnumerator not called
                     TooLate, // GetAsyncEnumerator not called, will throw
-                    Enumerating, // GetAsyncEnumerator called, not accepting
                     Accepting, // pending MoveNextAsync
-                    Emitting, // same as Enumerating, but Produce() waits for Accepting or Final
+                    Enumerating, // enumeration started, not accepting
+                    Emitting, // same as Enumerating, but Produce() awaits _ccsEmitting
                     Final // final state with or without error
                 }
 
@@ -359,12 +361,6 @@
                     private void Cancel(Exception error)
                     {
                         var state = Atomic.Lock(ref _enumerator._state);
-                        if (state == _sFinal) // let Produce() do the cleanup
-                        {
-                            _enumerator._state = state;
-                            return;
-                        }
-
                         switch (State)
                         {
                             case GroupState.Initial:
@@ -376,6 +372,12 @@
                             case GroupState.Enumerating:
                             case GroupState.Emitting:
                             case GroupState.Accepting:
+                                if (state == _sFinal) // let Produce() do the finalization
+                                {
+                                    _enumerator._state = state;
+                                    return;
+                                }
+
                                 Error = error;
                                 var s = State;
                                 State = GroupState.Final;
@@ -385,18 +387,19 @@
                                 var cancel = --_enumerator._nGroups == 0 && (state == _sCanceling || state == _sCancelingAccepting);
                                 _enumerator._state = state;
                                 Ctr.Dispose();
+                                if (cancel)
+                                    try { _enumerator._cts.Cancel(); }
+                                    catch { /**/ }
                                 switch (s)
                                 {
                                     case GroupState.Emitting:
                                         _enumerator._ccsEmitting.SetCompleted(null);
                                         break;
                                     case GroupState.Accepting:
+                                        Current = default;
                                         CcsAccepting.SetCompleted(Error, false);
                                         break;
                                 }
-                                if (cancel)
-                                    try { _enumerator._cts.Cancel(); }
-                                    catch { /**/ }
                                 break;
 
                             case GroupState.Final:
