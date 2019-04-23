@@ -71,6 +71,8 @@
             public Exception Error => null;
 
             public OnNextNotification(T value) => Value = value;
+
+            public override string ToString() => $"OnNext({Value})";
         }
 
         private sealed class OnErrorNotification<T> : INotification<T>
@@ -80,6 +82,8 @@
             public Exception Error { get; }
 
             public OnErrorNotification(Exception error) => Error = error ?? throw new ArgumentNullException(nameof(error));
+
+            public override string ToString() => $"OnError({Error})";
         }
 
         private sealed class OnCompletedNotification<T> : INotification<T>
@@ -90,6 +94,8 @@
             public NotificationKind Kind => NotificationKind.OnCompleted;
             public T Value => default;
             public Exception Error => null;
+
+            public override string ToString() => $"OnCompleted()";
         }
     }
 }
