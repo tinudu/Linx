@@ -14,26 +14,26 @@
         /// <summary>
         /// Initialize with a new <see cref="ICoAwaiter{T}"/>.
         /// </summary>
-        public static CoCompletionSource<T> Init() => new CoCompletionSource<T>(default);
+        public static CoCompletionSource<T> Init() => new CoCompletionSource<T>(new CoAwaiter());
 
         private readonly CoAwaiter _awaiter;
+        private CoCompletionSource(CoAwaiter awaiter) => _awaiter = awaiter;
 
         /// <summary>
-        /// The awaiter controlled by this instance.
+        /// Gets the awaiter controlled by this instance.
         /// </summary>
         public ICoAwaiter<T> Awaiter => _awaiter;
-
-        // ReSharper disable once UnusedParameter.Local
-        private CoCompletionSource(Unit _) => _awaiter = new CoAwaiter();
 
         /// <summary>
         /// Reset the awaiter.
         /// </summary>
+        /// <exception cref="InvalidOperationException">Previous use of the awaiter in progress.</exception>
         public void Reset(bool continueOnCapturedContext) => _awaiter.Reset(continueOnCapturedContext);
 
         /// <summary>
         /// Complete with the specified <paramref name="exception"/> (if not null), or set the specified <paramref name="result"/>.
         /// </summary>
+        /// <exception cref="InvalidOperationException">Call not preceded by <see cref="Reset"/>.</exception>
         public void SetCompleted(Exception exception, T result) => _awaiter.SetCompleted(exception, result);
 
         [DebuggerNonUserCode]
@@ -49,10 +49,17 @@
             private T _result;
             private Exception _exception;
 
-            #region CoAwaiterCompleter implementation
+            #region CoCompletionSource implementation
 
             public void Reset(bool continueOnCapturedContext)
             {
+                var state = Atomic.Lock(ref _state);
+                if (state != _sInitial)
+                {
+                    _state = state;
+                    throw new InvalidOperationException();
+                }
+
                 // capture the synchronization context
                 SynchronizationContext cc;
                 if (continueOnCapturedContext)
@@ -64,16 +71,18 @@
                 else
                     cc = null;
 
-                // Initial -> Pending with captured context
-                if (Atomic.TestAndSet(ref _state, _sInitial, _sPending | Atomic.LockBit) != _sInitial) throw new InvalidOperationException();
                 _capturedContext = cc;
                 _state = _sPending;
             }
 
             public void SetCompleted(Exception exception, T result)
             {
-                // Pending -> Completed
-                if (Atomic.TestAndSet(ref _state, _sPending, _sCompleted | Atomic.LockBit) != _sPending) throw new InvalidOperationException();
+                var state = Atomic.Lock(ref _state);
+                if (state != _sPending)
+                {
+                    _state = state;
+                    throw new InvalidOperationException();
+                }
 
                 // set exception or result
                 if (exception != null) _exception = exception;
@@ -110,7 +119,7 @@
                         if (_continuation != null)
                         {
                             _state = _sPending;
-                            throw new InvalidOperationException("Continuation already registered.");
+                            throw new InvalidOperationException();
                         }
 
                         _continuation = continuation;
@@ -129,45 +138,38 @@
 
             public T GetResult()
             {
-                while (true)
+                var state = Atomic.Lock(ref _state);
+                if (state == _sPending)
                 {
-                    ManualResetEventSlim mres; // block here if pending
-
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
+                    if (_continuation != null)
                     {
-                        case _sCompleted: // set Initial and return or throw
-                            if (_exception == null)
-                            {
-                                var result = _result;
-                                _result = default;
-                                _state = _sInitial;
-                                return result;
-                            }
-
-                            var exception = _exception;
-                            _exception = null;
-                            _state = _sInitial;
-                            throw exception;
-
-                        case _sPending:
-                            try
-                            {
-                                if (_continuation != null) throw new InvalidOperationException("Continuation already registered.");
-
-                                mres = new ManualResetEventSlim(false);
-                                _continuation = mres.Set;
-                                _capturedContext = null;
-                            }
-                            finally { _state = _sPending; }
-                            break;
-                        default: // Initial
-                            _state = state;
-                            throw new InvalidOperationException();
+                        _state = _sPending;
+                        throw new InvalidOperationException();
                     }
 
+                    var mres = new ManualResetEventSlim();
+                    _continuation = mres.Set;
+                    _capturedContext = null;
+                    _state = _sPending;
                     mres.Wait();
+                    state = Atomic.Lock(ref _state);
                 }
+
+                if (state != _sCompleted)
+                {
+                    _state = state;
+                    throw new InvalidOperationException();
+                }
+
+                var exception = _exception;
+                _exception = null;
+                var result = _result;
+                _result = default;
+                _capturedContext = null;
+                Debug.Assert(_continuation == null);
+                _state = _sInitial;
+                if (exception == null) return result;
+                throw exception;
             }
 
             void ICoAwaiter.GetResult() => GetResult();

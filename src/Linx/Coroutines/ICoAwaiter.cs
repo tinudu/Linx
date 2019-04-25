@@ -5,6 +5,7 @@
     /// <summary>
     /// Asynchronous result of a coroutine call.
     /// </summary>
+    /// <remarks>Can be awaited only once to enable recycling.</remarks>
     public interface ICoAwaiter : INotifyCompletion
     {
         /// <summary>

@@ -40,7 +40,7 @@
         /// <inheritdoc />
         public async Task SubscribeTo(IAsyncEnumerable<T> input)
         {
-            if (Atomic.Set(ref _state, 1 | Atomic.LockBit) != 0)
+            if (Atomic.Lock(ref _state) != 0)
             {
                 _state = 1;
                 throw new InvalidOperationException("Already subscribed.");

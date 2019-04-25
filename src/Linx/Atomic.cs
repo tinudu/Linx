@@ -35,26 +35,6 @@
         }
 
         /// <summary>
-        /// Spin wait until the lock bit is cleared, then set state to <paramref name="set"/>.
-        /// </summary>
-        /// <param name="state">The state to update.</param>
-        /// <param name="set">The new state (may include the lock bit).</param>
-        /// <returns>The previous state.</returns>
-        public static int Set(ref int state, int set)
-        {
-            var oldState = state;
-            if ((oldState & LockBit) == 0 && Interlocked.CompareExchange(ref state, set, oldState) == oldState) return oldState;
-
-            var sw = new SpinWait();
-            do
-            {
-                sw.SpinOnce();
-                oldState = state;
-                if ((oldState & LockBit) == 0 && Interlocked.CompareExchange(ref state, set, oldState) == oldState) return oldState;
-            } while (true);
-        }
-
-        /// <summary>
         /// Spin wait until the lock bit is cleared, then set state to <paramref name="set"/> iff <paramref name="test"/>.
         /// </summary>
         /// <param name="state">The state to update.</param>

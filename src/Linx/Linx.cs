@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     /// <summary>
     /// Static Linx methods.
@@ -9,13 +10,27 @@
     public static class Linx
     {
         /// <summary>
+        /// Clears the specified storage location.
+        /// </summary>
+        /// <returns>The value at that location before clearing.</returns>
+        [DebuggerNonUserCode]
+        public static T Clear<T>(ref T storageLocation)
+        {
+            var value = storageLocation;
+            storageLocation = default;
+            return value;
+        }
+
+        /// <summary>
         /// Invoke the specified action with the specified argument.
         /// </summary>
+        [DebuggerNonUserCode]
         public static void Invoke<TArgument>(this TArgument argument, Action<TArgument> action) => action(argument);
 
         /// <summary>
         /// Invoke the specified function with the specified argument and return the result.
         /// </summary>
+        [DebuggerNonUserCode]
         public static TResult Invoke<TArgument, TResult>(this TArgument argument, Func<TArgument, TResult> function) => function(argument);
 
         /// <summary>
@@ -47,6 +62,5 @@
             public bool Equals(KeyValuePair<TKey, TValue> x, KeyValuePair<TKey, TValue> y) => _keyComparer.Equals(x.Key, y.Key) && _valueComparer.Equals(x.Value, y.Value);
             public int GetHashCode(KeyValuePair<TKey, TValue> obj) => _keyComparer.GetHashCode(obj.Key) ^ ~_valueComparer.GetHashCode(obj.Value);
         }
-
     }
 }
