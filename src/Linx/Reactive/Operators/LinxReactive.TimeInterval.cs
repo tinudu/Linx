@@ -6,7 +6,7 @@
     partial class LinxReactive
     {
         /// <summary>
-        /// Records the timestamp for each value.
+        /// Records the time interval between consecutive values.
         /// </summary>
         public static IAsyncEnumerable<TimeInterval<T>> TimeInterval<T>(this IAsyncEnumerable<T> source)
         {

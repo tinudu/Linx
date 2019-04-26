@@ -17,16 +17,28 @@
             {
                 var time = Time.Current;
                 var ae = source
-                    .Select(value => (Value: value, Due: time.Now + delay))
+                    .Materialize()
+                    .Timestamp()
                     .Buffer()
                     .GetAsyncEnumerator(token);
                 try
                 {
                     while (await ae.MoveNextAsync())
                     {
-                        var (value, due) = ae.Current;
-                        await time.Wait(due, token).ConfigureAwait(false);
-                        await yield(value);
+                        var current = ae.Current;
+                        await time.Wait(current.Timestamp + delay, token).ConfigureAwait(false);
+                        switch (current.Value.Kind)
+                        {
+                            case NotificationKind.OnNext:
+                                await yield(current.Value.Value);
+                                break;
+                            case NotificationKind.OnError:
+                                throw current.Value.Error;
+                            case NotificationKind.OnCompleted:
+                                return;
+                            default:
+                                throw new Exception(current.Value.Kind + "???");
+                        }
                     }
                 }
                 finally { await ae.DisposeAsync().ConfigureAwait(false); }
