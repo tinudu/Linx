@@ -197,6 +197,39 @@
         }
 
         [Fact]
+        public async Task TestTimeout()
+        {
+            using (var time = new VirtualTime())
+            {
+                time.Start();
+                var source = LinxReactive.Produce<int>(async (yield, token) =>
+                {
+                    // ReSharper disable AccessToDisposedClosure
+                    var t = time.Now;
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var due = t + TimeSpan.FromTicks(i * TimeSpan.TicksPerSecond);
+                        t = due;
+                        await time.Wait(t, default).ConfigureAwait(false);
+                        await yield(i);
+                    }
+                    // ReSharper restore AccessToDisposedClosure
+                });
+
+                var testee = source.Timeout(TimeSpan.FromSeconds(2.5));
+                var ae = testee.GetAsyncEnumerator(default);
+                try
+                {
+                    Assert.True(await ae.MoveNextAsync() && ae.Current == 0);
+                    Assert.True(await ae.MoveNextAsync() && ae.Current == 1);
+                    Assert.True(await ae.MoveNextAsync() && ae.Current == 2);
+                    await Assert.ThrowsAsync<TimeoutException>(async () => await ae.MoveNextAsync());
+                }
+                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+            }
+        }
+
+        [Fact]
         public async Task TestZip()
         {
             using (var vt = new VirtualTime())

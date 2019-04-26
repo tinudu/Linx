@@ -4,6 +4,9 @@
 
     partial class LinxReactive
     {
+        /// <summary>
+        /// Invokes the specified action when the sequence terminates.
+        /// </summary>
         public static IAsyncEnumerable<T> Finally<T>(this IAsyncEnumerable<T> source, Action @finally)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));

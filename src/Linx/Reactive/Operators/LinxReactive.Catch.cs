@@ -5,7 +5,7 @@
     partial class LinxReactive
     {
         /// <summary>
-        /// Calls the specified <paramref name="handler"/> if an error of type <typeparamref name="TException"/> occurs.
+        /// Invokes the specified action when the sequence terminates with an exception of type <typeparamref name="TException"/>.
         /// </summary>
         public static IAsyncEnumerable<TSource> Catch<TSource, TException>(this IAsyncEnumerable<TSource> source, Action<TException> handler) where TException : Exception
         {
