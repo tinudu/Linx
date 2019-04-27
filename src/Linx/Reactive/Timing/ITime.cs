@@ -23,5 +23,11 @@
         /// Wait until <paramref name="due"/> is reached.
         /// </summary>
         Task Wait(DateTimeOffset due, CancellationToken token);
+
+        /// <summary>
+        /// Create a new timer.
+        /// </summary>
+        /// <param name="onElapsed">Delegate to be called when the timer elapses.</param>
+        ITimer CreateTimer(TimerElapsedDelegte onElapsed);
     }
 }
