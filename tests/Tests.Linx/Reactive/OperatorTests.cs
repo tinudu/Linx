@@ -20,7 +20,7 @@
                 while (await ae.MoveNextAsync())
                 {
                     Debug.WriteLine($"Next@{Time.Current.Now.TimeOfDay.TotalSeconds}");
-                    await time.Wait(delay, token).ConfigureAwait(false);
+                    await time.Delay(delay, token).ConfigureAwait(false);
                     Debug.WriteLine($"Observing {ae.Current}@{Time.Current.Now.TimeOfDay.TotalSeconds}");
                     await yield(ae.Current);
                 }
@@ -37,7 +37,7 @@
                 while (await ae.MoveNextAsync())
                 {
                     var current = ae.Current;
-                    await time.Wait(delay, token).ConfigureAwait(false);
+                    await time.Delay(delay, token).ConfigureAwait(false);
                     Assert.Equal(current, ae.Current);
                     await yield(current);
                 }
@@ -205,7 +205,7 @@
                     {
                         var due = t + TimeSpan.FromTicks(i * TimeSpan.TicksPerSecond);
                         t = due;
-                        await vt.Wait(t, default).ConfigureAwait(false);
+                        await vt.Delay(t, default).ConfigureAwait(false);
                         await yield(i);
                     }
                     // ReSharper restore AccessToDisposedClosure

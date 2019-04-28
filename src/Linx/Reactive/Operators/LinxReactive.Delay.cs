@@ -26,7 +26,7 @@
                     while (await ae.MoveNextAsync())
                     {
                         var current = ae.Current;
-                        await time.Wait(current.Timestamp + delay, token).ConfigureAwait(false);
+                        await time.Delay(current.Timestamp + delay, token).ConfigureAwait(false);
                         switch (current.Value.Kind)
                         {
                             case NotificationKind.OnNext:

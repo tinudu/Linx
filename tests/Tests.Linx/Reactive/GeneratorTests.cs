@@ -36,7 +36,7 @@
             {
                 var tResult = LinxReactive.Return(async () =>
                 {
-                    await Time.Current.Wait(delay, default).ConfigureAwait(false);
+                    await Time.Current.Delay(delay, default).ConfigureAwait(false);
                     return 42;
                 }).Single(default);
                 Assert.Equal(42, await tResult);

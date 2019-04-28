@@ -84,7 +84,7 @@
                 while (true)
                     try
                     {
-                        await time.Wait(waitTime, token).ConfigureAwait(false);
+                        await time.Delay(waitTime, token).ConfigureAwait(false);
                         await source.CopyTo(yield, token).ConfigureAwait(false);
                         return;
                     }
@@ -118,7 +118,7 @@
                 foreach (var waitTime in waitTimes)
                     try
                     {
-                        await time.Wait(waitTime, token).ConfigureAwait(false);
+                        await time.Delay(waitTime, token).ConfigureAwait(false);
                         await source.CopyTo(yield, token).ConfigureAwait(false);
                         return;
                     }

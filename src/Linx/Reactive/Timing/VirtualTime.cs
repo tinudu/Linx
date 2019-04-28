@@ -39,7 +39,7 @@
         public DateTimeOffset Now { get; private set; }
 
         /// <inheritdoc />
-        public Task Wait(DateTimeOffset due, CancellationToken token)
+        public Task Delay(DateTimeOffset due, CancellationToken token)
         {
             lock (_queue)
             {
@@ -80,7 +80,7 @@
         }
 
         /// <inheritdoc />
-        public async Task Wait(TimeSpan delay, CancellationToken token) => await Wait(Now + delay, token).ConfigureAwait(false);
+        public async Task Delay(TimeSpan delay, CancellationToken token) => await Delay(Now + delay, token).ConfigureAwait(false);
 
         /// <inheritdoc />
         public ITimer CreateTimer(TimerElapsedDelegte onElapsed) => new Timer(this, onElapsed);

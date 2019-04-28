@@ -17,12 +17,12 @@
         /// <summary>
         /// Wait for the specified amount of time.
         /// </summary>
-        Task Wait(TimeSpan delay, CancellationToken token);
+        Task Delay(TimeSpan delay, CancellationToken token);
 
         /// <summary>
-        /// Wait until <paramref name="due"/> is reached.
+        /// Delay until <paramref name="due"/> is reached.
         /// </summary>
-        Task Wait(DateTimeOffset due, CancellationToken token);
+        Task Delay(DateTimeOffset due, CancellationToken token);
 
         /// <summary>
         /// Create a new timer.

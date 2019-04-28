@@ -31,13 +31,13 @@
         {
             public DateTimeOffset Now => DateTimeOffset.Now;
 
-            public async Task Wait(TimeSpan delay, CancellationToken token)
+            public async Task Delay(TimeSpan delay, CancellationToken token)
             {
                 token.ThrowIfCancellationRequested();
                 if (delay > TimeSpan.Zero) await Task.Delay(delay, token).ConfigureAwait(false);
             }
 
-            public async Task Wait(DateTimeOffset due, CancellationToken token) => await Wait(due - DateTimeOffset.Now, token).ConfigureAwait(false);
+            public async Task Delay(DateTimeOffset due, CancellationToken token) => await Delay(due - DateTimeOffset.Now, token).ConfigureAwait(false);
 
             public ITimer CreateTimer(TimerElapsedDelegte onElapsed) => new Timer(onElapsed);
 
