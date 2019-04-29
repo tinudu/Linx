@@ -8,6 +8,25 @@
         /// <summary>
         /// Concats the elements of the specified sequences.
         /// </summary>
+        public static IAsyncEnumerable<T> Concat<T>(this IAsyncEnumerable<IAsyncEnumerable<T>> sources)
+        {
+            if (sources == null) throw new ArgumentNullException(nameof(sources));
+
+            return Produce<T>(async (yield, token) =>
+            {
+                var aeOuter = sources.GetAsyncEnumerator(token);
+                try
+                {
+                    while (await aeOuter.MoveNextAsync())
+                        await aeOuter.Current.CopyTo(yield, token).ConfigureAwait(false);
+                }
+                finally { await aeOuter.DisposeAsync().ConfigureAwait(false); }
+            });
+        }
+
+        /// <summary>
+        /// Concats the elements of the specified sequences.
+        /// </summary>
         public static IAsyncEnumerable<T> Concat<T>(this IEnumerable<IAsyncEnumerable<T>> sources)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
