@@ -1,13 +1,15 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Produce side effects while enumerating a sequence.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Do<T>(this IAsyncEnumerableObs<T> source, Action<T> onNext = null, Action<Exception> onError = null, Action onCompleted = null)
+        public static IAsyncEnumerable<T> Do<T>(this IAsyncEnumerable<T> source, Action<T> onNext = null, Action<Exception> onError = null, Action onCompleted = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -23,7 +25,7 @@
             {
                 try
                 {
-                    var ae = source.GetAsyncEnumerator(token);
+                    var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                     try
                     {
                         while (await ae.MoveNextAsync())
@@ -33,7 +35,7 @@
                             await yield(current);
                         }
                     }
-                    finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                    finally { await ae.DisposeAsync(); }
 
                     if (onCompleted != null) try { onCompleted(); } catch { /**/ }
                 }

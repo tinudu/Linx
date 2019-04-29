@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Coroutines;
+    using System.Threading.Tasks.Sources;
 
     partial class LinxReactive
     {
@@ -17,8 +17,8 @@
         /// <param name="selector">A delegate to create a task.</param>
         /// <param name="preserveOrder">true to emit result items in the order of their source items, false to emit them as soon as available.</param>
         /// <param name="maxConcurrent">Maximum number of concurrent tasks.</param>
-        public static IAsyncEnumerableObs<TResult> Parallel<TSource, TResult>(
-            this IAsyncEnumerableObs<TSource> source,
+        public static IAsyncEnumerable<TResult> Parallel<TSource, TResult>(
+            this IAsyncEnumerable<TSource> source,
             Func<TSource, CancellationToken, Task<TResult>> selector,
             bool preserveOrder = false,
             int maxConcurrent = int.MaxValue)
@@ -30,14 +30,14 @@
             return maxConcurrent == 1 ? source.Select(selector) : new ParallelEnumerable<TSource, TResult>(source, selector, preserveOrder, maxConcurrent);
         }
 
-        private sealed class ParallelEnumerable<TSource, TResult> : IAsyncEnumerableObs<TResult>
+        private sealed class ParallelEnumerable<TSource, TResult> : IAsyncEnumerable<TResult>
         {
-            private readonly IAsyncEnumerableObs<TSource> _source;
+            private readonly IAsyncEnumerable<TSource> _source;
             private readonly Func<TSource, CancellationToken, Task<TResult>> _selector;
             private readonly bool _preserveOrder;
             private readonly int _maxConcurrent;
 
-            public ParallelEnumerable(IAsyncEnumerableObs<TSource> source, Func<TSource, CancellationToken, Task<TResult>> selector, bool preserveOrder, int maxConcurrent)
+            public ParallelEnumerable(IAsyncEnumerable<TSource> source, Func<TSource, CancellationToken, Task<TResult>> selector, bool preserveOrder, int maxConcurrent)
             {
                 _source = source;
                 _selector = selector;
@@ -45,9 +45,9 @@
                 _maxConcurrent = maxConcurrent;
             }
 
-            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
+            private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
                 private const int _sInitial = 0;
                 private const int _sActive = 1;
@@ -61,8 +61,8 @@
                 private readonly ParallelEnumerable<TSource, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoCompletionSource<bool> _ccsPulling = CoCompletionSource<bool>.Init();
-                private CoCompletionSource _ccsIncrementing = CoCompletionSource.Init();
+                private readonly ManualResetValueTaskSource<bool> _vtsPulling = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource _vtsIncrementing = new ManualResetValueTaskSource();
                 private int _state;
                 private int _active; // #started tasks + _queue.Count + (Producing ? 1 : 0)
                 private Queue<TResult> _queue;
@@ -75,9 +75,9 @@
 
                 public TResult Current { get; private set; }
 
-                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ValueTask<bool> MoveNextAsync()
                 {
-                    _ccsPulling.Reset(continueOnCapturedContext);
+                    _vtsPulling.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     Debug.Assert((state & _fPulling) == 0);
@@ -102,7 +102,7 @@
                                 if ((state & _fIncrementing) != 0)
                                 {
                                     _state = _sActive;
-                                    _ccsIncrementing.SetResult();
+                                    _vtsIncrementing.SetResult();
                                 }
                                 else if (--_active == 0) // this was the last item
                                 {
@@ -113,7 +113,7 @@
                                 }
                                 else
                                     _state = _sActive;
-                                _ccsPulling.SetResult(true);
+                                _vtsPulling.SetResult(true);
                             }
                             break;
                         case _sCanceling:
@@ -122,20 +122,20 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _eh.SetResultOrError(_ccsPulling, false);
+                            _eh.SetResultOrError(_vtsPulling, false);
                             break;
                         default:
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsPulling.Task;
+                    return _vtsPulling.Task;
                 }
 
-                public Task DisposeAsync()
+                public ValueTask DisposeAsync()
                 {
                     Cancel(ErrorHandler.EnumeratorDisposedException);
-                    return _atmbDisposed.Task;
+                    return new ValueTask(_atmbDisposed.Task);
                 }
 
                 private void Emit(TResult result)
@@ -151,7 +151,7 @@
                                 if ((state & _fIncrementing) != 0)
                                 {
                                     _state = _sActive;
-                                    _ccsIncrementing.SetResult();
+                                    _vtsIncrementing.SetResult();
                                 }
                                 else if (--_active == 0) // this was the last item
                                 {
@@ -164,7 +164,7 @@
                                     _state = _sActive;
 
                                 Current = result;
-                                _ccsPulling.SetResult(true);
+                                _vtsPulling.SetResult(true);
                             }
                             else // enqueue
                                 try
@@ -187,7 +187,7 @@
                                 if ((state & _fPulling) != 0)
                                 {
                                     Current = default;
-                                    _eh.SetResultOrError(_ccsPulling, false);
+                                    _eh.SetResultOrError(_vtsPulling, false);
                                 }
                             }
                             break;
@@ -228,14 +228,14 @@
                                 if ((state & _fPulling) != 0)
                                 {
                                     Current = default;
-                                    _eh.SetResultOrError(_ccsPulling, false);
+                                    _eh.SetResultOrError(_vtsPulling, false);
                                 }
                             }
                             else // go canceled
                             {
                                 _state = _sCanceling | (state & _fPulling);
                                 _eh.Cancel();
-                                if ((state & _fIncrementing) != 0) _ccsIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
+                                if ((state & _fIncrementing) != 0) _vtsIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
                             }
                             break;
                         case _sCanceling:
@@ -249,7 +249,7 @@
                                 if ((state & _fPulling) != 0)
                                 {
                                     Current = default;
-                                    _eh.SetResultOrError(_ccsPulling, false);
+                                    _eh.SetResultOrError(_vtsPulling, false);
                                 }
                             }
                             break;
@@ -284,14 +284,14 @@
                                 if ((state & _fPulling) != 0)
                                 {
                                     Current = default;
-                                    _eh.SetResultOrError(_ccsPulling, false);
+                                    _eh.SetResultOrError(_vtsPulling, false);
                                 }
                             }
                             else // go canceling
                             {
                                 _state = _sCanceling | (state & _fPulling);
                                 _eh.Cancel();
-                                if ((state & _fIncrementing) != 0) _ccsIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
+                                if ((state & _fIncrementing) != 0) _vtsIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
                             }
                             break;
                         default: // Canceled, Final
@@ -306,7 +306,7 @@
 
                     try
                     {
-                        var ae = _enumerable._source.GetAsyncEnumerator(_eh.InternalToken);
+                        var ae = _enumerable._source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
                         {
                             Action start;
@@ -314,11 +314,17 @@
                             {
                                 var predecessor = Task.CompletedTask;
                                 start = () => predecessor = Start(predecessor);
+
                                 async Task Start(Task p)
                                 {
                                     TResult result;
                                     try { result = await _enumerable._selector(ae.Current, _eh.InternalToken).ConfigureAwait(false); }
-                                    catch (Exception ex) { Throw(ex); return; }
+                                    catch (Exception ex)
+                                    {
+                                        Throw(ex);
+                                        return;
+                                    }
+
                                     await p.ConfigureAwait(false);
                                     Emit(result);
                                 }
@@ -329,7 +335,12 @@
                                 {
                                     TResult result;
                                     try { result = await _enumerable._selector(ae.Current, _eh.InternalToken).ConfigureAwait(false); }
-                                    catch (Exception ex) { Throw(ex); return; }
+                                    catch (Exception ex)
+                                    {
+                                        Throw(ex);
+                                        return;
+                                    }
+
                                     Emit(result);
                                 };
                             }
@@ -343,9 +354,9 @@
                                     case _sActive:
                                         if (_active > _enumerable._maxConcurrent)
                                         {
-                                            _ccsIncrementing.Reset(false);
+                                            _vtsIncrementing.Reset();
                                             _state = state | _fIncrementing;
-                                            await _ccsIncrementing.Task;
+                                            await _vtsIncrementing.Task;
                                         }
                                         else
                                         {
@@ -361,11 +372,12 @@
                                         _state = state;
                                         throw new Exception(state + "???");
                                 }
+
                                 start();
                                 _eh.InternalToken.ThrowIfCancellationRequested();
                             }
                         }
-                        finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                        finally { await ae.DisposeAsync(); }
                     }
                     catch (Exception ex) { Throw(ex); return; }
 
@@ -385,7 +397,7 @@
                                     if ((state & _fPulling) != 0)
                                     {
                                         Current = default;
-                                        _eh.SetResultOrError(_ccsPulling, false);
+                                        _eh.SetResultOrError(_vtsPulling, false);
                                     }
                                 }
                                 else
@@ -401,7 +413,7 @@
                                     if ((state & _fPulling) != 0)
                                     {
                                         Current = default;
-                                        _eh.SetResultOrError(_ccsPulling, false);
+                                        _eh.SetResultOrError(_vtsPulling, false);
                                     }
                                 }
                                 else

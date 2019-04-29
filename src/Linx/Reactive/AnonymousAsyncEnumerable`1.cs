@@ -1,22 +1,23 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
 
     /// <summary>
-    /// Anonymous <see cref="IAsyncEnumerableObs{T}"/> implementation.
+    /// Anonymous <see cref="IAsyncEnumerable{T}"/> implementation.
     /// </summary>
-    public sealed class AnonymousAsyncEnumerable<T> : IAsyncEnumerableObs<T>
+    public sealed class AnonymousAsyncEnumerable<T> : IAsyncEnumerable<T>
     {
-        private readonly Func<CancellationToken, IAsyncEnumeratorObs<T>> _getEnumerator;
+        private readonly Func<CancellationToken, IAsyncEnumerator<T>> _getEnumerator;
 
         /// <summary>
-        /// Initialize with a <see cref="IAsyncEnumerableObs{T}.GetAsyncEnumerator(CancellationToken)"/> implementation.
+        /// Initialize with a <see cref="IAsyncEnumerable{T}.GetAsyncEnumerator(CancellationToken)"/> implementation.
         /// </summary>
         /// <param name="getEnumerator"></param>
-        public AnonymousAsyncEnumerable(Func<CancellationToken, IAsyncEnumeratorObs<T>> getEnumerator) => _getEnumerator = getEnumerator ?? throw new ArgumentNullException(nameof(getEnumerator));
+        public AnonymousAsyncEnumerable(Func<CancellationToken, IAsyncEnumerator<T>> getEnumerator) => _getEnumerator = getEnumerator ?? throw new ArgumentNullException(nameof(getEnumerator));
 
         /// <inheritdoc />
-        public IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token) => _getEnumerator(token);
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => _getEnumerator(token);
     }
 }

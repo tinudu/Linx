@@ -1,20 +1,22 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Returns a specified number of contiguous elements from the start of a sequence.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Take<T>(this IAsyncEnumerableObs<T> source, int count)
+        public static IAsyncEnumerable<T> Take<T>(this IAsyncEnumerable<T> source, int count)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (count <= 0) return Empty<T>();
 
             return Produce<T>(async (yield, token) =>
             {
-                var ae = source.GetAsyncEnumerator(token);
+                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 var remaining = count;
                 try
                 {
@@ -24,7 +26,7 @@
                         if (--remaining == 0) break;
                     }
                 }
-                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                finally { await ae.DisposeAsync(); }
             });
         }
     }

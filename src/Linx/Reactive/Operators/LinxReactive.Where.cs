@@ -1,6 +1,7 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -9,14 +10,14 @@
         /// <summary>
         /// Filters a sequence of values based on a predicate.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Where<T>(this IAsyncEnumerableObs<T> source, Func<T, bool> predicate)
+        public static IAsyncEnumerable<T> Where<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
             return Produce<T>(async (yield, token) =>
             {
-                var ae = source.GetAsyncEnumerator(token);
+                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
                     while (await ae.MoveNextAsync())
@@ -26,21 +27,21 @@
                             await yield(current);
                     }
                 }
-                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                finally { await ae.DisposeAsync(); }
             });
         }
 
         /// <summary>
         /// Filters a sequence of values based on a predicate.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Where<T>(this IAsyncEnumerableObs<T> source, Func<T, CancellationToken, Task<bool>> predicate)
+        public static IAsyncEnumerable<T> Where<T>(this IAsyncEnumerable<T> source, Func<T, CancellationToken, Task<bool>> predicate)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
             return Produce<T>(async (yield, token) =>
             {
-                var ae = source.GetAsyncEnumerator(token);
+                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
                     while (await ae.MoveNextAsync())
@@ -50,7 +51,7 @@
                             await yield(current);
                     }
                 }
-                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                finally { await ae.DisposeAsync(); }
             });
         }
     }

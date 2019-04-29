@@ -1,6 +1,8 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
     using Timing;
 
     partial class LinxReactive
@@ -8,7 +10,7 @@
         /// <summary>
         /// Indicates the sequence by <paramref name="delay"/>.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Delay<T>(this IAsyncEnumerableObs<T> source, TimeSpan delay)
+        public static IAsyncEnumerable<T> Delay<T>(this IAsyncEnumerable<T> source, TimeSpan delay)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (delay <= TimeSpan.Zero) return source;
@@ -20,7 +22,9 @@
                     .Materialize()
                     .Timestamp()
                     .Buffer()
-                    .GetAsyncEnumerator(token);
+                    .WithCancellation(token)
+                    .ConfigureAwait(false)
+                    .GetAsyncEnumerator();
                 try
                 {
                     while (await ae.MoveNextAsync())
@@ -41,7 +45,7 @@
                         }
                     }
                 }
-                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                finally { await ae.DisposeAsync(); }
             });
         }
     }

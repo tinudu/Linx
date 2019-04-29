@@ -2,7 +2,7 @@
 {
     using System;
     using System.Threading;
-    using Coroutines;
+    using System.Threading.Tasks.Sources;
 
     /// <summary>
     /// Provides common error handling.
@@ -10,7 +10,7 @@
     internal struct ErrorHandler
     {
         /// <summary>
-        /// <see cref="ObjectDisposedException"/> singleton that says a <see cref="IAsyncEnumeratorObs{T}"/> was disposed.
+        /// <see cref="ObjectDisposedException"/> singleton that says a <see cref="System.Collections.Generic.IAsyncEnumerator{T}"/> was disposed.
         /// </summary>
         public static ObjectDisposedException EnumeratorDisposedException { get; } = new ObjectDisposedException("IAsyncEnumerator");
 
@@ -79,18 +79,18 @@
             if (error != null) throw error;
         }
 
-        public void SetResultOrError(CoCompletionSource ccs)
+        public void SetResultOrError(ManualResetValueTaskSource vts)
         {
             var error = Error;
-            if (error == null) ccs.SetResult();
-            else ccs.SetException(error);
+            if (error == null) vts.SetResult();
+            else vts.SetException(error);
         }
 
-        public void SetResultOrError<T>(CoCompletionSource<T> ccs, T result)
+        public void SetResultOrError<T>(ManualResetValueTaskSource<T> vts, T result)
         {
             var error = Error;
-            if (error == null) ccs.SetResult(result);
-            else ccs.SetException(error);
+            if (error == null) vts.SetResult(result);
+            else vts.SetException(error);
         }
     }
 }

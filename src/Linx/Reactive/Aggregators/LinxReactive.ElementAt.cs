@@ -1,6 +1,7 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -9,13 +10,13 @@
         /// <summary>
         /// Returns the element at a specified index in a sequence.
         /// </summary>
-        public static async Task<T> ElementAt<T>(this IAsyncEnumerableObs<T> source, int index, CancellationToken token)
+        public static async Task<T> ElementAt<T>(this IAsyncEnumerable<T> source, int index, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (index < 0) throw new IndexOutOfRangeException();
 
             token.ThrowIfCancellationRequested();
-            var ae = source.GetAsyncEnumerator(token);
+            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
                 var i = 0;
@@ -25,7 +26,7 @@
 
                 throw new IndexOutOfRangeException();
             }
-            finally { await ae.DisposeAsync().ConfigureAwait(false); }
+            finally { await ae.DisposeAsync(); }
         }
     }
 }

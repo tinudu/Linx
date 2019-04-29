@@ -9,7 +9,7 @@
         /// <summary>
         /// Retry the sequence until it terminates successfully.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Retry<T>(this IAsyncEnumerableObs<T> source)
+        public static IAsyncEnumerable<T> Retry<T>(this IAsyncEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -28,7 +28,7 @@
         /// <summary>
         /// Retry the sequence up to <paramref name="retryCount"/> times.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Retry<T>(this IAsyncEnumerableObs<T> source, int retryCount)
+        public static IAsyncEnumerable<T> Retry<T>(this IAsyncEnumerable<T> source, int retryCount)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -67,7 +67,7 @@
         /// <summary>
         /// Retry the sequence until it terminates successfully, waiting <paramref name="waitTime"/> between retries.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Retry<T>(this IAsyncEnumerableObs<T> source, TimeSpan waitTime)
+        public static IAsyncEnumerable<T> Retry<T>(this IAsyncEnumerable<T> source, TimeSpan waitTime)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -95,7 +95,7 @@
         /// <summary>
         /// Retry the sequence, waiting between retries for each element in <paramref name="waitTimes"/>.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Retry<T>(this IAsyncEnumerableObs<T> source, IEnumerable<TimeSpan> waitTimes)
+        public static IAsyncEnumerable<T> Retry<T>(this IAsyncEnumerable<T> source, IEnumerable<TimeSpan> waitTimes)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (waitTimes == null) throw new ArgumentNullException(nameof(waitTimes));

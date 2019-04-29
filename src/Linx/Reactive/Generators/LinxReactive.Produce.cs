@@ -1,43 +1,44 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Coroutines;
+    using System.Threading.Tasks.Sources;
 
     partial class LinxReactive
     {
         /// <summary>
-        /// Create a <see cref="IAsyncEnumerableObs{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
+        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Produce<T>(ProducerDelegate<T> producer)
+        public static IAsyncEnumerable<T> Produce<T>(ProducerDelegate<T> producer)
         {
             if (producer == null) throw new ArgumentNullException(nameof(producer));
             return new ProduceEnumerable<T>(producer);
         }
 
         /// <summary>
-        /// Create a <see cref="IAsyncEnumerableObs{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
+        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Produce<T>(T sample, ProducerDelegate<T> producer)
+        public static IAsyncEnumerable<T> Produce<T>(T sample, ProducerDelegate<T> producer)
         {
             if (producer == null) throw new ArgumentNullException(nameof(producer));
             return new ProduceEnumerable<T>(producer);
         }
 
         [DebuggerNonUserCode]
-        private sealed class ProduceEnumerable<T> : IAsyncEnumerableObs<T>
+        private sealed class ProduceEnumerable<T> : IAsyncEnumerable<T>
         {
             private readonly ProducerDelegate<T> _producer;
 
             public ProduceEnumerable(ProducerDelegate<T> producer) => _producer = producer;
 
-            public IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
             [DebuggerNonUserCode]
-            private sealed class Enumerator : IAsyncEnumeratorObs<T>
+            private sealed class Enumerator : IAsyncEnumerator<T>
             {
                 private const int _sInitial = 0;
                 private const int _sPulling = 1;
@@ -49,8 +50,8 @@
                 private readonly ProduceEnumerable<T> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
-                private CoCompletionSource _ccsOnNext = CoCompletionSource.Init();
+                private readonly ManualResetValueTaskSource<bool> _vtsMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource _vtsOnNext = new ManualResetValueTaskSource();
                 private int _state;
 
                 public Enumerator(ProduceEnumerable<T> enumerable, CancellationToken token)
@@ -61,9 +62,9 @@
 
                 public T Current { get; private set; }
 
-                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
+                public ValueTask<bool> MoveNextAsync()
                 {
-                    _ccsMoveNext.Reset(continueOnCapturedContext);
+                    _vtsMoveNext.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -74,7 +75,7 @@
                             break;
                         case _sPushing:
                             _state = _sPulling;
-                            _ccsOnNext.SetResult();
+                            _vtsOnNext.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -82,25 +83,25 @@
                         case _sFinal:
                             Current = default;
                             _state = _sFinal;
-                            _eh.SetResultOrError(_ccsMoveNext, false);
+                            _eh.SetResultOrError(_vtsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsMoveNext.Task;
+                    return _vtsMoveNext.Task;
                 }
 
-                public Task DisposeAsync()
+                public ValueTask DisposeAsync()
                 {
                     Cancel(ErrorHandler.EnumeratorDisposedException);
-                    return _atmbDisposed.Task;
+                    return new ValueTask(_atmbDisposed.Task);
                 }
 
-                private ICoAwaiter OnNext(T value, bool continueOnCapturedContext)
+                private ValueTask OnNext(T value)
                 {
-                    _ccsOnNext.Reset(continueOnCapturedContext);
+                    _vtsOnNext.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -108,20 +109,20 @@
                         case _sPulling:
                             Current = value;
                             _state = _sPushing;
-                            _ccsMoveNext.SetResult(true);
+                            _vtsMoveNext.SetResult(true);
                             break;
                         case _sCanceling:
                         case _sCancelingPulling:
                             _state = state;
                             Atomic.WaitCanceled(_eh.InternalToken);
-                            _ccsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _vtsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
                         default: // Initial, Pushing, Final ???
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsOnNext.Task;
+                    return _vtsOnNext.Task;
                 }
 
                 private void Cancel(Exception error)
@@ -144,7 +145,7 @@
                             _eh.SetExternalError(error);
                             _state = _sCanceling;
                             _eh.Cancel();
-                            _ccsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _vtsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
                         case _sCanceling:
                         case _sCancelingPulling:
@@ -176,14 +177,14 @@
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
                             Current = default;
-                            _eh.SetResultOrError(_ccsMoveNext, false);
+                            _eh.SetResultOrError(_vtsMoveNext, false);
                             break;
 
                         case _sPushing:
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
-                            _ccsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _vtsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
 
                         case _sCanceling:
@@ -195,7 +196,7 @@
                             _state = _sFinal;
                             _atmbDisposed.SetResult();
                             Current = default;
-                            _eh.SetResultOrError(_ccsMoveNext, false);
+                            _eh.SetResultOrError(_vtsMoveNext, false);
                             break;
 
                         default: // Initial, Final??

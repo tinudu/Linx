@@ -5,7 +5,7 @@
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
-    using Coroutines;
+    using System.Threading.Tasks.Sources;
 
     /// <summary>
     /// A <see cref="ISubject{T}"/> that disallowes late subscribers.
@@ -35,10 +35,10 @@
         }
 
         /// <inheritdoc />
-        public IAsyncEnumerableObs<T> Output { get; }
+        public IAsyncEnumerable<T> Output { get; }
 
         /// <inheritdoc />
-        public async Task SubscribeTo(IAsyncEnumerableObs<T> input)
+        public async Task SubscribeTo(IAsyncEnumerable<T> input)
         {
             if (Atomic.Lock(ref _state) != 0)
             {
@@ -58,7 +58,7 @@
             Exception error;
             try
             {
-                var ae = input.GetAsyncEnumerator(_cts.Token);
+                var ae = input.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
                     while (await ae.MoveNextAsync())
@@ -72,11 +72,11 @@
                             Atomic.Lock(ref _state);
                             if (e.State == EnumeratorState.Pulling)
                             {
-                                e.CcsPushing.Reset(false);
+                                e.VtsPushing.Reset();
                                 e.Current = current;
                                 e.State = EnumeratorState.Pushing;
                                 _state = 1;
-                                e.CcsPulling.SetResult(true);
+                                e.VtsPulling.SetResult(true);
                             }
                             else // final
                             {
@@ -90,14 +90,14 @@
                         for (var ix = _enumerators.Count - 1; ix >= 0; ix--)
                         {
                             var e = _enumerators[ix];
-                            await e.CcsPushing.Task;
+                            await e.VtsPushing.Task;
                             if (e.State != EnumeratorState.Pulling)
                                 _enumerators.RemoveAt(ix); // no exception assumed
                         }
                         if (_enumerators.Count == 0) return;
                     }
                 }
-                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                finally { await ae.DisposeAsync(); }
                 error = null;
             }
             catch (Exception ex) { error = ex; }
@@ -124,8 +124,8 @@
             foreach (var e in _enumerators)
             {
                 e.Ctr.Dispose();
-                if (error == null) e.CcsPulling.SetResult(false);
-                else e.CcsPulling.SetException(error);
+                if (error == null) e.VtsPulling.SetResult(false);
+                else e.VtsPulling.SetException(error);
             }
             _enumerators.Clear();
             try { _cts.Cancel(); } catch {  /**/ }
@@ -133,14 +133,14 @@
 
         private enum EnumeratorState { Initial, Pulling, Pushing, Final }
 
-        private sealed class Enumerator : IAsyncEnumeratorObs<T>
+        private sealed class Enumerator : IAsyncEnumerator<T>
         {
             private readonly ColdSubject<T> _subject;
 
             public CancellationTokenRegistration Ctr;
             public EnumeratorState State;
-            public CoCompletionSource<bool> CcsPulling = CoCompletionSource<bool>.Init();
-            public CoCompletionSource CcsPushing = CoCompletionSource.Init();
+            public readonly ManualResetValueTaskSource<bool> VtsPulling = new ManualResetValueTaskSource<bool>();
+            public readonly ManualResetValueTaskSource VtsPushing = new ManualResetValueTaskSource();
             public T Current { get; set; }
             public Exception Error;
 
@@ -150,9 +150,9 @@
                 if (token.CanBeCanceled) Ctr = token.Register(() => Cancel(new OperationCanceledException(token)));
             }
 
-            ICoAwaiter<bool> IAsyncEnumeratorObs<T>.MoveNextAsync(bool continueOnCapturedContext)
+            ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync()
             {
-                CcsPulling.Reset(continueOnCapturedContext);
+                VtsPulling.Reset();
 
                 var subjState = Atomic.Lock(ref _subject._state);
                 switch (State)
@@ -171,7 +171,7 @@
                             State = EnumeratorState.Final;
                             _subject._state = subjState;
                             Ctr.Dispose();
-                            CcsPulling.SetException(ex);
+                            VtsPulling.SetException(ex);
                         }
                         break;
 
@@ -179,13 +179,13 @@
                         Debug.Assert(subjState == 1);
                         State = EnumeratorState.Pulling;
                         _subject._state = 1;
-                        CcsPushing.SetResult();
+                        VtsPushing.SetResult();
                         break;
 
                     case EnumeratorState.Final:
                         _subject._state = subjState;
-                        if (Error != null) CcsPulling.SetResult(false);
-                        else CcsPulling.SetException(Error);
+                        if (Error != null) VtsPulling.SetResult(false);
+                        else VtsPulling.SetException(Error);
                         break;
 
                     case EnumeratorState.Pulling:
@@ -197,13 +197,13 @@
                         throw new Exception(State + "???");
                 }
 
-                return CcsPulling.Task;
+                return VtsPulling.Task;
             }
 
-            Task IAsyncEnumeratorObs<T>.DisposeAsync()
+            ValueTask IAsyncDisposable.DisposeAsync()
             {
                 Cancel(ErrorHandler.EnumeratorDisposedException);
-                return Task.CompletedTask;
+                return new ValueTask(Task.CompletedTask);
             }
 
             private void Cancel(Exception error)
@@ -237,8 +237,8 @@
                                 catch { /**/ }
                         }
                         Ctr.Dispose();
-                        if (error == null) CcsPulling.SetResult(false);
-                        else CcsPulling.SetException(error);
+                        if (error == null) VtsPulling.SetResult(false);
+                        else VtsPulling.SetException(error);
                         break;
 
                     case EnumeratorState.Pushing:
@@ -253,7 +253,7 @@
                                 catch { /**/ }
                         }
                         Ctr.Dispose();
-                        CcsPushing.SetResult();
+                        VtsPushing.SetResult();
                         break;
 
                     case EnumeratorState.Final:

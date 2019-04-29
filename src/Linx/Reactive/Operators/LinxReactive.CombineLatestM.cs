@@ -1,35 +1,36 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Coroutines;
+    using System.Threading.Tasks.Sources;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Merges differently typed sequences into one.
         /// </summary>
-        public static IAsyncEnumerableObs<TResult> CombineLatest<T1, T2, TResult>(this IAsyncEnumerableObs<T1> source1, IAsyncEnumerableObs<T2> source2, Func<T1, T2, TResult> resultSelector) => new CombineLatestEnumerable<T1, T2, TResult>(source1, source2, resultSelector);
+        public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, TResult>(this IAsyncEnumerable<T1> source1, IAsyncEnumerable<T2> source2, Func<T1, T2, TResult> resultSelector) => new CombineLatestEnumerable<T1, T2, TResult>(source1, source2, resultSelector);
 
-        private sealed class CombineLatestEnumerable<T1, T2, TResult> : IAsyncEnumerableObs<TResult>
+        private sealed class CombineLatestEnumerable<T1, T2, TResult> : IAsyncEnumerable<TResult>
         {
-            private readonly IAsyncEnumerableObs<T1> _source1;
-            private readonly IAsyncEnumerableObs<T2> _source2;
+            private readonly IAsyncEnumerable<T1> _source1;
+            private readonly IAsyncEnumerable<T2> _source2;
             private readonly Func<T1, T2, TResult> _resultSelector;
 
-            public CombineLatestEnumerable(IAsyncEnumerableObs<T1> source1, IAsyncEnumerableObs<T2> source2, Func<T1, T2, TResult> resultSelector)
+            public CombineLatestEnumerable(IAsyncEnumerable<T1> source1, IAsyncEnumerable<T2> source2, Func<T1, T2, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
                 _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
+            private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
                 private const int _sInitial = 0;
                 private const int _sCurrentMutable = 1;
@@ -43,7 +44,7 @@
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource();
                 private readonly Func<T1, T2, TResult> _resultSelector;
                 private CancellationTokenRegistration _ctr;
-                private CoCompletionSource<bool> _ccsPull = CoCompletionSource<bool>.Init();
+                private readonly ManualResetValueTaskSource<bool> _ccsPull = new ManualResetValueTaskSource<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state;
                 private TResult _current;
@@ -147,7 +148,7 @@
                         }
                     }
 
-                    async void Produce<T>(IAsyncEnumerableObs<T> source, Action<Enumerator, T> setNext)
+                    async void Produce<T>(IAsyncEnumerable<T> source, Action<Enumerator, T> setNext)
                     {
                         Exception error;
                         var any = false;
@@ -155,7 +156,7 @@
                         {
                             _cts.Token.ThrowIfCancellationRequested();
 
-                            var ae = source.GetAsyncEnumerator(_cts.Token);
+                            var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                             try
                             {
                                 while (await ae.MoveNextAsync())
@@ -218,7 +219,7 @@
                                     }
                                 }
                             }
-                            finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                            finally { await ae.DisposeAsync(); }
 
                             error = null;
                         }
@@ -239,9 +240,9 @@
 
                 private TResult GetResult() => _resultSelector(_next.Value1, _next.Value2);
 
-                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext = false)
+                public ValueTask<bool> MoveNextAsync()
                 {
-                    _ccsPull.Reset(continueOnCapturedContext);
+                    _ccsPull.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -309,10 +310,10 @@
                     return _ccsPull.Task;
                 }
 
-                public Task DisposeAsync()
+                public ValueTask DisposeAsync()
                 {
-                    if (_state <= _sLast) Cancel(new ObjectDisposedException(nameof(IAsyncEnumeratorObs<TResult>)));
-                    return _atmbDisposed.Task;
+                    if (_state <= _sLast) Cancel(new ObjectDisposedException(nameof(IAsyncEnumerator<TResult>)));
+                    return new ValueTask(_atmbDisposed.Task);
                 }
 
                 private void Cancel(Exception error)

@@ -6,37 +6,37 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Coroutines;
+    using System.Threading.Tasks.Sources;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Ignores all but the latest element.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Latest<T>(this IAsyncEnumerableObs<T> source) => new LatestOneEnumerable<T>(source);
+        public static IAsyncEnumerable<T> Latest<T>(this IAsyncEnumerable<T> source) => new LatestOneEnumerable<T>(source);
 
         /// <summary>
         /// Ignores all but the latest <paramref name="max"/> elements.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Latest<T>(this IAsyncEnumerableObs<T> source, int max)
+        public static IAsyncEnumerable<T> Latest<T>(this IAsyncEnumerable<T> source, int max)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return max <= 1 ? (IAsyncEnumerableObs<T>)new LatestOneEnumerable<T>(source) : new LatestManyEnumerable<T>(source, max);
+            return max <= 1 ? (IAsyncEnumerable<T>)new LatestOneEnumerable<T>(source) : new LatestManyEnumerable<T>(source, max);
         }
 
-        private sealed class LatestOneEnumerable<T> : IAsyncEnumerableObs<T>
+        private sealed class LatestOneEnumerable<T> : IAsyncEnumerable<T>
         {
-            private readonly IAsyncEnumerableObs<T> _source;
+            private readonly IAsyncEnumerable<T> _source;
 
-            public LatestOneEnumerable(IAsyncEnumerableObs<T> source)
+            public LatestOneEnumerable(IAsyncEnumerable<T> source)
             {
                 Debug.Assert(source != null);
                 _source = source;
             }
 
-            public IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumeratorObs<T>
+            private sealed class Enumerator : IAsyncEnumerator<T>
             {
                 private const int _sInitial = 0; // not enumerating
                 private const int _sPulling = 1; // pending MoveNext
@@ -52,7 +52,7 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private CoCompletionSource<bool> _ccsPull = CoCompletionSource<bool>.Init();
+                private readonly ManualResetValueTaskSource<bool> _vtsPull = new ManualResetValueTaskSource<bool>();
                 private T _current, _next;
 
                 public Enumerator(LatestOneEnumerable<T> enumerable, CancellationToken token)
@@ -70,9 +70,9 @@
                     }
                 }
 
-                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ValueTask<bool> MoveNextAsync()
                 {
-                    _ccsPull.Reset(continueOnCapturedContext);
+                    _vtsPull.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -90,7 +90,7 @@
                         case _sNext:
                             _current = _next;
                             _state = _sCurrentMutable;
-                            _ccsPull.SetResult(true);
+                            _vtsPull.SetResult(true);
                             break;
 
                         case _sLast:
@@ -99,7 +99,7 @@
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
-                            _ccsPull.SetResult(true);
+                            _vtsPull.SetResult(true);
                             break;
 
                         case _sCanceling:
@@ -109,7 +109,7 @@
                         case _sFinal:
                             _state = _sFinal;
                             _current = default;
-                            _eh.SetResultOrError(_ccsPull, false);
+                            _eh.SetResultOrError(_vtsPull, false);
                             break;
 
                         default: // Pulling, CancelingPulling???
@@ -117,13 +117,13 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsPull.Task;
+                    return _vtsPull.Task;
                 }
 
-                public Task DisposeAsync()
+                public ValueTask DisposeAsync()
                 {
                     Cancel(ErrorHandler.EnumeratorDisposedException);
-                    return _atmbDisposed.Task;
+                    return new ValueTask(_atmbDisposed.Task);
                 }
 
                 private void Cancel(Exception error)
@@ -173,7 +173,7 @@
                     Exception error;
                     try
                     {
-                        var ae = _enumerable._source.GetAsyncEnumerator(_eh.InternalToken);
+                        var ae = _enumerable._source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
                         {
                             while (await ae.MoveNextAsync())
@@ -186,7 +186,7 @@
                                     case _sPulling:
                                         _current = current;
                                         _state = _sCurrentMutable;
-                                        _ccsPull.SetResult(true);
+                                        _vtsPull.SetResult(true);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -212,7 +212,7 @@
                                 }
                             }
                         }
-                        finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                        finally { await ae.DisposeAsync(); }
 
                         error = null;
                     }
@@ -228,7 +228,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _eh.SetResultOrError(_ccsPull, false);
+                                _eh.SetResultOrError(_vtsPull, false);
                                 break;
 
                             case _sCurrentMutable:
@@ -260,7 +260,7 @@
                                 _current = default;
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
-                                _eh.SetResultOrError(_ccsPull, false);
+                                _eh.SetResultOrError(_vtsPull, false);
                                 break;
 
                             default: // Initial, Last, Final???
@@ -272,12 +272,12 @@
             }
         }
 
-        private sealed class LatestManyEnumerable<T> : IAsyncEnumerableObs<T>
+        private sealed class LatestManyEnumerable<T> : IAsyncEnumerable<T>
         {
-            private readonly IAsyncEnumerableObs<T> _source;
+            private readonly IAsyncEnumerable<T> _source;
             private readonly int _maxSize;
 
-            public LatestManyEnumerable(IAsyncEnumerableObs<T> source, int maxSize)
+            public LatestManyEnumerable(IAsyncEnumerable<T> source, int maxSize)
             {
                 Debug.Assert(source != null);
                 Debug.Assert(maxSize >= 2);
@@ -285,9 +285,9 @@
                 _maxSize = maxSize;
             }
 
-            public IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumeratorObs<T>
+            private sealed class Enumerator : IAsyncEnumerator<T>
             {
                 private const int _sInitial = 0; // not enumerating
                 private const int _sPulling = 1; // pending MoveNext
@@ -302,7 +302,7 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private CoCompletionSource<bool> _ccsPull = CoCompletionSource<bool>.Init();
+                private readonly ManualResetValueTaskSource<bool> _vtsPull = new ManualResetValueTaskSource<bool>();
                 private T _current;
                 private Queue<T> _next;
 
@@ -321,9 +321,9 @@
                     }
                 }
 
-                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ValueTask<bool> MoveNextAsync()
                 {
-                    _ccsPull.Reset(continueOnCapturedContext);
+                    _vtsPull.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -341,7 +341,7 @@
                             {
                                 _current = _next.Dequeue(); // no exception assumed
                                 _state = _sCurrentMutable;
-                                _ccsPull.SetResult(true);
+                                _vtsPull.SetResult(true);
                             }
                             break;
 
@@ -357,7 +357,7 @@
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
                             }
-                            _ccsPull.SetResult(true);
+                            _vtsPull.SetResult(true);
                             break;
 
                         case _sCanceling:
@@ -367,7 +367,7 @@
                         case _sFinal:
                             _state = _sFinal;
                             _current = default;
-                            _eh.SetResultOrError(_ccsPull, false);
+                            _eh.SetResultOrError(_vtsPull, false);
                             break;
 
                         default: // Pulling, CancelingPulling???
@@ -375,13 +375,13 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsPull.Task;
+                    return _vtsPull.Task;
                 }
 
-                public Task DisposeAsync()
+                public ValueTask DisposeAsync()
                 {
                     Cancel(ErrorHandler.EnumeratorDisposedException);
-                    return _atmbDisposed.Task;
+                    return new ValueTask(_atmbDisposed.Task);
                 }
 
                 private void Cancel(Exception error)
@@ -430,7 +430,7 @@
                     Exception error;
                     try
                     {
-                        var ae = _enumerable._source.GetAsyncEnumerator(_eh.InternalToken);
+                        var ae = _enumerable._source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
                         {
                             while (await ae.MoveNextAsync())
@@ -443,7 +443,7 @@
                                     case _sPulling:
                                         _current = current;
                                         _state = _sCurrentMutable;
-                                        _ccsPull.SetResult(true);
+                                        _vtsPull.SetResult(true);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -482,7 +482,7 @@
                                 }
                             }
                         }
-                        finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                        finally { await ae.DisposeAsync(); }
 
                         error = null;
                     }
@@ -499,7 +499,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _eh.SetResultOrError(_ccsPull, false);
+                                _eh.SetResultOrError(_vtsPull, false);
                                 break;
 
                             case _sCurrentMutable:
@@ -524,7 +524,7 @@
                                 _current = default;
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
-                                _eh.SetResultOrError(_ccsPull, false);
+                                _eh.SetResultOrError(_vtsPull, false);
                                 break;
 
                             default: // Initial, Last, Final???

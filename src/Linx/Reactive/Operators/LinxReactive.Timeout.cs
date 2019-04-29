@@ -1,6 +1,8 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
     using Timing;
 
     partial class LinxReactive
@@ -8,7 +10,7 @@
         /// <summary>
         /// Throws a <see cref="TimeoutException"/> if no element is observed within <paramref name="dueTime"/>.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Timeout<T>(this IAsyncEnumerableObs<T> source, TimeSpan dueTime)
+        public static IAsyncEnumerable<T> Timeout<T>(this IAsyncEnumerable<T> source, TimeSpan dueTime)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (dueTime <= TimeSpan.Zero) return Throw<T>(new TimeoutException());
@@ -35,15 +37,16 @@
                 Exception internalError;
                 try
                 {
-                    var ae = source.GetAsyncEnumerator(eh.InternalToken);
+                    var ae = source.WithCancellation(eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                     try
                     {
                         while (true)
                         {
                             var tMoveNext = ae.MoveNextAsync();
+                            var aMoveNext = tMoveNext.GetAwaiter();
                             bool hasNext;
-                            if (tMoveNext.IsCompleted)
-                                hasNext = tMoveNext.GetAwaiter().GetResult();
+                            if (aMoveNext.IsCompleted)
+                                hasNext = aMoveNext.GetResult();
                             else
                             {
                                 timer.Enable(dueTime);
@@ -54,7 +57,7 @@
                             await yield(ae.Current);
                         }
                     }
-                    finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                    finally { await ae.DisposeAsync(); }
                     internalError = null;
                 }
                 catch (Exception ex) { internalError = ex; }

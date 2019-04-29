@@ -1,6 +1,7 @@
 ﻿namespace Tests.Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
     using System.Threading;
@@ -11,9 +12,9 @@
 
     internal static class MyOperators
     {
-        public static IAsyncEnumerableObs<T> ObserveAfter<T>(this IAsyncEnumerableObs<T> source, TimeSpan delay) => LinxReactive.Produce<T>(async (yield, token) =>
+        public static IAsyncEnumerable<T> ObserveAfter<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxReactive.Produce<T>(async (yield, token) =>
         {
-            var ae = source.GetAsyncEnumerator(token);
+            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
                 var time = Time.Current;
@@ -25,12 +26,12 @@
                     await yield(ae.Current);
                 }
             }
-            finally { await ae.DisposeAsync().ConfigureAwait(false); }
+            finally { await ae.DisposeAsync(); }
         });
 
-        public static IAsyncEnumerableObs<T> ObserveImmediate<T>(this IAsyncEnumerableObs<T> source, TimeSpan delay) => LinxReactive.Produce<T>(async (yield, token) =>
+        public static IAsyncEnumerable<T> ObserveImmediate<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxReactive.Produce<T>(async (yield, token) =>
         {
-            var ae = source.GetAsyncEnumerator(token);
+            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
                 var time = Time.Current;
@@ -42,7 +43,7 @@
                     await yield(current);
                 }
             }
-            finally { await ae.DisposeAsync().ConfigureAwait(false); }
+            finally { await ae.DisposeAsync(); }
         });
     }
 
@@ -207,7 +208,7 @@
             using (new VirtualTime())
             {
                 var testee = source.Timeout(TimeSpan.FromSeconds(3.5));
-                var ae = testee.GetAsyncEnumerator(default);
+                var ae = testee.ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
                     Assert.True(await ae.MoveNextAsync() && ae.Current == 1);
@@ -215,7 +216,7 @@
                     Assert.True(await ae.MoveNextAsync() && ae.Current == 3);
                     await Assert.ThrowsAsync<TimeoutException>(async () => await ae.MoveNextAsync());
                 }
-                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                finally { await ae.DisposeAsync(); }
             }
         }
 

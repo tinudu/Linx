@@ -5,15 +5,15 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Coroutines;
+    using System.Threading.Tasks.Sources;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Group by a key.
         /// </summary>
-        public static IAsyncEnumerableObs<IGroupedAsyncEnumerable<TKey, TSource>> GroupBy<TSource, TKey>(
-            this IAsyncEnumerableObs<TSource> source,
+        public static IAsyncEnumerable<IGroupedAsyncEnumerable<TKey, TSource>> GroupBy<TSource, TKey>(
+            this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             IEqualityComparer<TKey> keyComparer = null)
             => new GroupByEnumerable<TSource, TKey>(source, keySelector, keyComparer, false);
@@ -21,21 +21,21 @@
         /// <summary>
         /// Group by a key; close a group when unsubscribed.
         /// </summary>
-        public static IAsyncEnumerableObs<IGroupedAsyncEnumerable<TKey, TSource>> GroupByWhileObserved<TSource, TKey>(
-            this IAsyncEnumerableObs<TSource> source,
+        public static IAsyncEnumerable<IGroupedAsyncEnumerable<TKey, TSource>> GroupByWhileObserved<TSource, TKey>(
+            this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             IEqualityComparer<TKey> keyComparer = null)
             => new GroupByEnumerable<TSource, TKey>(source, keySelector, keyComparer, true);
 
-        private sealed class GroupByEnumerable<TSource, TKey> : IAsyncEnumerableObs<IGroupedAsyncEnumerable<TKey, TSource>>
+        private sealed class GroupByEnumerable<TSource, TKey> : IAsyncEnumerable<IGroupedAsyncEnumerable<TKey, TSource>>
         {
-            private readonly IAsyncEnumerableObs<TSource> _source;
+            private readonly IAsyncEnumerable<TSource> _source;
             private readonly Func<TSource, TKey> _keySelector;
             private readonly IEqualityComparer<TKey> _keyComparer;
             private readonly bool _whileObserved;
 
             public GroupByEnumerable(
-                IAsyncEnumerableObs<TSource> source,
+                IAsyncEnumerable<TSource> source,
                 Func<TSource, TKey> keySelector,
                 IEqualityComparer<TKey> keyComparer,
                 bool whileObserved)
@@ -46,9 +46,9 @@
                 _whileObserved = whileObserved;
             }
 
-            IAsyncEnumeratorObs<IGroupedAsyncEnumerable<TKey, TSource>> IAsyncEnumerableObs<IGroupedAsyncEnumerable<TKey, TSource>>.GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            IAsyncEnumerator<IGroupedAsyncEnumerable<TKey, TSource>> IAsyncEnumerable<IGroupedAsyncEnumerable<TKey, TSource>>.GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumeratorObs<IGroupedAsyncEnumerable<TKey, TSource>>
+            private sealed class Enumerator : IAsyncEnumerator<IGroupedAsyncEnumerable<TKey, TSource>>
             {
                 private const int _sInitial = 0;
                 private const int _sAccepting = 1;
@@ -61,8 +61,8 @@
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource(); // request cancellation when Canceling[Accepting] and _nGroups == 0
                 private readonly GroupByEnumerable<TSource, TKey> _enumerable;
                 private CancellationTokenRegistration _ctr;
-                private CoCompletionSource<bool> _ccsAccepting = CoCompletionSource<bool>.Init(); // pending MoveNextAsync
-                private CoCompletionSource _ccsEmitting = CoCompletionSource.Init(); // await MoveNextAsync either on the group enumerator or a group
+                private readonly ManualResetValueTaskSource<bool> _vtsAccepting = new ManualResetValueTaskSource<bool>(); // pending MoveNextAsync
+                private readonly ManualResetValueTaskSource _vtsEmitting = new ManualResetValueTaskSource(); // await MoveNextAsync either on the group enumerator or a group
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
                 private Exception _error; // while canceling or when final
@@ -77,9 +77,9 @@
 
                 public IGroupedAsyncEnumerable<TKey, TSource> Current { get; private set; }
 
-                ICoAwaiter<bool> IAsyncEnumeratorObs<IGroupedAsyncEnumerable<TKey, TSource>>.MoveNextAsync(bool continueOnCapturedContext)
+                ValueTask<bool> IAsyncEnumerator<IGroupedAsyncEnumerable<TKey, TSource>>.MoveNextAsync()
                 {
-                    _ccsAccepting.Reset(continueOnCapturedContext);
+                    _vtsAccepting.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -91,7 +91,7 @@
 
                         case _sEmitting:
                             _state = _sAccepting;
-                            _ccsEmitting.SetResult();
+                            _vtsEmitting.SetResult();
                             break;
 
                         case _sCanceling:
@@ -100,8 +100,8 @@
 
                         case _sFinal:
                             _state = _sFinal;
-                            if (_error == null) _ccsAccepting.SetResult(false);
-                            else _ccsAccepting.SetException(_error);
+                            if (_error == null) _vtsAccepting.SetResult(false);
+                            else _vtsAccepting.SetException(_error);
                             break;
 
                         default: // Accepting, CancelingAccepting???
@@ -109,13 +109,13 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsAccepting.Task;
+                    return _vtsAccepting.Task;
                 }
 
-                public Task DisposeAsync()
+                public ValueTask DisposeAsync()
                 {
                     Cancel(ErrorHandler.EnumeratorDisposedException);
-                    return _atmbDisposed.Task;
+                    return new ValueTask(_atmbDisposed.Task);
                 }
 
                 private void Cancel(Exception error)
@@ -139,7 +139,7 @@
                             if (cancel)
                                 try { _cts.Cancel(); }
                                 catch { /**/ }
-                            _ccsEmitting.SetResult();
+                            _vtsEmitting.SetResult();
                             break;
 
                         case _sAccepting:
@@ -163,7 +163,7 @@
                     Exception error;
                     try
                     {
-                        var ae = _enumerable._source.GetAsyncEnumerator(_cts.Token);
+                        var ae = _enumerable._source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                         try
                         {
                             while (await ae.MoveNextAsync())
@@ -182,11 +182,11 @@
                                     _nGroups++;
 
                                     // emit
-                                    _ccsEmitting.Reset(false);
+                                    _vtsEmitting.Reset();
                                     _state = _sEmitting;
                                     Current = group;
-                                    _ccsAccepting.SetResult(true);
-                                    await _ccsEmitting.Task;
+                                    _vtsAccepting.SetResult(true);
+                                    await _vtsEmitting.Task;
 
                                     state = Atomic.Lock(ref _state);
                                     if (group.State == GroupState.Initial) // not enumerating
@@ -207,10 +207,10 @@
                                 {
                                     if (group.State == GroupState.Enumerating) // but not Accepting
                                     {
-                                        _ccsEmitting.Reset(false);
+                                        _vtsEmitting.Reset();
                                         group.State = GroupState.Emitting;
                                         _state = state;
-                                        await _ccsEmitting.Task;
+                                        await _vtsEmitting.Task;
                                         state = Atomic.Lock(ref _state);
                                     }
 
@@ -219,7 +219,7 @@
                                         group.State = GroupState.Enumerating;
                                         _state = state;
                                         group.Current = current;
-                                        group.CcsAccepting.SetResult(true);
+                                        group.VtsAccepting.SetResult(true);
                                     }
                                     else
                                         _state = state;
@@ -228,7 +228,7 @@
                                 _cts.Token.ThrowIfCancellationRequested();
                             }
                         }
-                        finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                        finally { await ae.DisposeAsync(); }
 
                         error = null;
                     }
@@ -243,8 +243,8 @@
                         if (state == _sAccepting || state == _sCancelingAccepting)
                         {
                             Current = null;
-                            if (_error == null) _ccsAccepting.SetResult(false);
-                            else _ccsAccepting.SetException(_error);
+                            if (_error == null) _vtsAccepting.SetResult(false);
+                            else _vtsAccepting.SetException(_error);
                         }
                         _atmbDisposed.SetResult();
 
@@ -257,8 +257,8 @@
                             group.Ctr.Dispose();
                             if (s != GroupState.Accepting) continue;
                             group.Current = default;
-                            if (error == null) group.CcsAccepting.SetResult(false);
-                            else group.CcsAccepting.SetException(error);
+                            if (error == null) group.VtsAccepting.SetResult(false);
+                            else group.VtsAccepting.SetException(error);
                         }
 
                         _groups.Clear();
@@ -275,12 +275,12 @@
                     Final // final state with or without error
                 }
 
-                private sealed class Group : IGroupedAsyncEnumerable<TKey, TSource>, IAsyncEnumeratorObs<TSource>
+                private sealed class Group : IGroupedAsyncEnumerable<TKey, TSource>, IAsyncEnumerator<TSource>
                 {
                     private readonly Enumerator _enumerator;
                     public TKey Key { get; }
 
-                    public CoCompletionSource<bool> CcsAccepting = CoCompletionSource<bool>.Init();
+                    public readonly ManualResetValueTaskSource<bool> VtsAccepting = new ManualResetValueTaskSource<bool>();
                     public CancellationTokenRegistration Ctr;
                     public GroupState State;
                     public Exception Error;
@@ -293,7 +293,7 @@
                         Key = key;
                     }
 
-                    IAsyncEnumeratorObs<TSource> IAsyncEnumerableObs<TSource>.GetAsyncEnumerator(CancellationToken token)
+                    IAsyncEnumerator<TSource> IAsyncEnumerable<TSource>.GetAsyncEnumerator(CancellationToken token)
                     {
                         var state = Atomic.Lock(ref _enumerator._state);
                         switch (State)
@@ -316,9 +316,9 @@
                         }
                     }
 
-                    ICoAwaiter<bool> IAsyncEnumeratorObs<TSource>.MoveNextAsync(bool continueOnCapturedContext)
+                    ValueTask<bool> IAsyncEnumerator<TSource>.MoveNextAsync()
                     {
-                        CcsAccepting.Reset(continueOnCapturedContext);
+                        VtsAccepting.Reset();
 
                         var state = Atomic.Lock(ref _enumerator._state);
                         switch (State)
@@ -327,7 +327,7 @@
                             case GroupState.TooLate:
                                 // Pulling on the group rather than its enumerator? Invalid.
                                 _enumerator._state = state;
-                                CcsAccepting.SetResult(default);
+                                VtsAccepting.SetResult(default);
                                 throw new InvalidOperationException();
 
                             case GroupState.Enumerating:
@@ -338,14 +338,14 @@
                             case GroupState.Emitting:
                                 State = GroupState.Accepting;
                                 _enumerator._state = state;
-                                _enumerator._ccsEmitting.SetResult();
+                                _enumerator._vtsEmitting.SetResult();
                                 break;
 
                             case GroupState.Final:
                                 _enumerator._state = state;
                                 Current = default;
-                                if (Error == null) CcsAccepting.SetResult(false);
-                                else CcsAccepting.SetException(Error);
+                                if (Error == null) VtsAccepting.SetResult(false);
+                                else VtsAccepting.SetException(Error);
                                 break;
 
                             default: // Accepting???
@@ -353,13 +353,13 @@
                                 throw new Exception(State + "???");
                         }
 
-                        return CcsAccepting.Task;
+                        return VtsAccepting.Task;
                     }
 
-                    Task IAsyncEnumeratorObs<TSource>.DisposeAsync()
+                    ValueTask IAsyncDisposable.DisposeAsync()
                     {
                         Cancel(ErrorHandler.EnumeratorDisposedException);
-                        return Task.CompletedTask;
+                        return new ValueTask(Task.CompletedTask);
                     }
 
                     private void Cancel(Exception error)
@@ -397,12 +397,12 @@
                                 switch (s)
                                 {
                                     case GroupState.Emitting:
-                                        _enumerator._ccsEmitting.SetResult();
+                                        _enumerator._vtsEmitting.SetResult();
                                         break;
                                     case GroupState.Accepting:
                                         Current = default;
-                                        if (Error == null) CcsAccepting.SetResult(false);
-                                        else CcsAccepting.SetException(Error);
+                                        if (Error == null) VtsAccepting.SetResult(false);
+                                        else VtsAccepting.SetException(Error);
                                         break;
                                 }
                                 break;

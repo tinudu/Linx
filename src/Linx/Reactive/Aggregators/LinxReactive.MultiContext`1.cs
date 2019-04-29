@@ -1,6 +1,7 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Subjects;
@@ -52,7 +53,7 @@
                 catch (Exception ex) { HandleError(ex); throw; }
             }
 
-            public async Task SubscribeTo(IAsyncEnumerableObs<T> source)
+            public async Task SubscribeTo(IAsyncEnumerable<T> source)
             {
                 _eh.InternalToken.ThrowIfCancellationRequested();
                 try { await _subject.SubscribeTo(source).ConfigureAwait(false); }

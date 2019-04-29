@@ -1,14 +1,16 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
+    using System.Threading.Tasks;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Transforms a sequence of sequences into an sequence producing values only from the most recent sequence.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Switch<T>(this IAsyncEnumerableObs<IAsyncEnumerableObs<T>> sources)
+        public static IAsyncEnumerable<T> Switch<T>(this IAsyncEnumerable<IAsyncEnumerable<T>> sources)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
 
@@ -27,7 +29,9 @@
                 var aeOuter = sources
                     .Do(v => CancelInner(), e => CancelInner())
                     .Latest()
-                    .GetAsyncEnumerator(token);
+                    .WithCancellation(token)
+                    .ConfigureAwait(false)
+                    .GetAsyncEnumerator();
                 try
                 {
                     while (await aeOuter.MoveNextAsync())
@@ -36,19 +40,19 @@
                         ctsInner = cts;
                         try
                         {
-                            var aeInner = aeOuter.Current.GetAsyncEnumerator(cts.Token);
+                            var aeInner = aeOuter.Current.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                             try
                             {
                                 while (await aeInner.MoveNextAsync())
                                     await yield(aeInner.Current);
                             }
-                            finally { await aeInner.DisposeAsync().ConfigureAwait(false); }
+                            finally { await aeInner.DisposeAsync(); }
                         }
                         catch (OperationCanceledException oce) when (oce.CancellationToken == cts.Token) { }
                         finally { CancelInner(); }
                     }
                 }
-                finally { await aeOuter.DisposeAsync().ConfigureAwait(false); }
+                finally { await aeOuter.DisposeAsync(); }
             });
         }
     }

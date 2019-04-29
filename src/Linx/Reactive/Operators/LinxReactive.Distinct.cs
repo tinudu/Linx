@@ -2,20 +2,21 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading.Tasks;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Returns distinct elements from a sequence
         /// </summary>
-        public static IAsyncEnumerableObs<T> Distinct<T>(this IAsyncEnumerableObs<T> source, IEqualityComparer<T> comparer = null)
+        public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T> comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = EqualityComparer<T>.Default;
 
             return Produce<T>(async (yield, token) =>
             {
-                var ae = source.GetAsyncEnumerator(token);
+                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
                     var distinct = new HashSet<T>(comparer);
@@ -26,7 +27,7 @@
                             await yield(current);
                     }
                 }
-                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                finally { await ae.DisposeAsync(); }
             });
         }
     }

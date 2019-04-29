@@ -11,7 +11,7 @@
         /// Aggregate to a dictionary.
         /// </summary>
         public static async Task<IDictionary<TKey, TSource>> ToDictionary<TSource, TKey>(
-            this IAsyncEnumerableObs<TSource> source,
+            this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             CancellationToken token,
             IEqualityComparer<TKey> comparer = null)
@@ -20,7 +20,7 @@
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
             token.ThrowIfCancellationRequested();
-            var ae = source.GetAsyncEnumerator(token);
+            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
                 var dictionary = new Dictionary<TKey, TSource>(comparer ?? EqualityComparer<TKey>.Default);
@@ -32,14 +32,14 @@
 
                 return dictionary;
             }
-            finally { await ae.DisposeAsync().ConfigureAwait(false); }
+            finally { await ae.DisposeAsync(); }
         }
 
         /// <summary>
         /// Aggregate to a dictionary.
         /// </summary>
         public static async Task<IDictionary<TKey, TValue>> ToDictionary<TSource, TKey, TValue>(
-            this IAsyncEnumerableObs<TSource> source,
+            this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             Func<TSource, TValue> valueSelector,
             CancellationToken token,
@@ -50,7 +50,7 @@
             if (valueSelector == null) throw new ArgumentNullException(nameof(valueSelector));
 
             token.ThrowIfCancellationRequested();
-            var ae = source.GetAsyncEnumerator(token);
+            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
                 var dictionary = new Dictionary<TKey, TValue>(comparer ?? EqualityComparer<TKey>.Default);
@@ -62,7 +62,7 @@
 
                 return dictionary;
             }
-            finally { await ae.DisposeAsync().ConfigureAwait(false); }
+            finally { await ae.DisposeAsync(); }
         }
     }
 }

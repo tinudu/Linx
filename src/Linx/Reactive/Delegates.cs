@@ -1,23 +1,23 @@
 ﻿namespace Linx.Reactive
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    using Coroutines;
 
     /// <summary>
     /// Function that accepts sequence elements.
     /// </summary>
-    public delegate ICoAwaiter AcceptorDelegate<in T>(T value, bool continueOnCapturedContext = false);
+    public delegate ValueTask AcceptorDelegate<in T>(T value);
 
     /// <summary>
     /// Delegate to produce an aggregate from a sequence.
     /// </summary>
-    public delegate Task<TAggregate> AggregatorDelegate<in TSource, TAggregate>(IAsyncEnumerableObs<TSource> source, CancellationToken token);
+    public delegate Task<TAggregate> AggregatorDelegate<in TSource, TAggregate>(IAsyncEnumerable<TSource> source, CancellationToken token);
 
     /// <summary>
     /// Delegate to consume a sequence.
     /// </summary>
-    public delegate Task ConsumerDelegate<in TSource>(IAsyncEnumerableObs<TSource> source, CancellationToken token);
+    public delegate Task ConsumerDelegate<in TSource>(IAsyncEnumerable<TSource> source, CancellationToken token);
 
     /// <summary>
     /// Coroutine to asynchronously produce sequence elements.

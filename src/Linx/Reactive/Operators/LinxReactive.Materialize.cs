@@ -1,13 +1,15 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Materializes the implicit notifications of an observable sequence as explicit notification values.
         /// </summary>
-        public static IAsyncEnumerableObs<INotification<T>> Materialize<T>(this IAsyncEnumerableObs<T> source)
+        public static IAsyncEnumerable<INotification<T>> Materialize<T>(this IAsyncEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -16,13 +18,13 @@
                 INotification<T> completion;
                 try
                 {
-                    var ae = source.GetAsyncEnumerator(token);
+                    var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                     try
                     {
                         while (await ae.MoveNextAsync())
                             await yield(Notification.OnNext(ae.Current));
                     }
-                    finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                    finally { await ae.DisposeAsync(); }
 
                     completion = Notification.OnCompleted<T>();
                 }

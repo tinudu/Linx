@@ -1,6 +1,8 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
     using Timing;
 
     partial class LinxReactive
@@ -8,7 +10,7 @@
         /// <summary>
         /// Records the time interval between consecutive values.
         /// </summary>
-        public static IAsyncEnumerableObs<TimeInterval<T>> TimeInterval<T>(this IAsyncEnumerableObs<T> source)
+        public static IAsyncEnumerable<TimeInterval<T>> TimeInterval<T>(this IAsyncEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -16,7 +18,7 @@
             {
                 var time = Time.Current;
                 var t = time.Now;
-                var ae = source.GetAsyncEnumerator(token);
+                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
                     while (await ae.MoveNextAsync())
@@ -27,7 +29,7 @@
                         await yield(new TimeInterval<T>(i, ae.Current));
                     }
                 }
-                finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                finally { await ae.DisposeAsync(); }
             });
         }
     }

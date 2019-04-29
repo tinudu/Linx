@@ -6,25 +6,25 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Coroutines;
+    using System.Threading.Tasks.Sources;
 
     partial class LinxReactive
     {
         /// <summary>
         /// Buffers items in case the consumer is slower than the producer.
         /// </summary>
-        public static IAsyncEnumerableObs<T> Buffer<T>(this IAsyncEnumerableObs<T> source, int maxSize = int.MaxValue)
+        public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source, int maxSize = int.MaxValue)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             return maxSize > 0 ? new BufferEnumerable<T>(source, maxSize) : source;
         }
 
-        private sealed class BufferEnumerable<T> : IAsyncEnumerableObs<T>
+        private sealed class BufferEnumerable<T> : IAsyncEnumerable<T>
         {
-            private readonly IAsyncEnumerableObs<T> _source;
+            private readonly IAsyncEnumerable<T> _source;
             private readonly int _maxSize;
 
-            public BufferEnumerable(IAsyncEnumerableObs<T> source, int maxSize)
+            public BufferEnumerable(IAsyncEnumerable<T> source, int maxSize)
             {
                 Debug.Assert(source != null);
                 Debug.Assert(maxSize > 0);
@@ -32,9 +32,9 @@
                 _maxSize = maxSize;
             }
 
-            public IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumeratorObs<T>
+            private sealed class Enumerator : IAsyncEnumerator<T>
             {
                 private const int _sInitial = 0; // not enumerating
                 private const int _sActive = 1; // enumerating
@@ -49,8 +49,8 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private CoCompletionSource<bool> _ccsPull = CoCompletionSource<bool>.Init();
-                private CoCompletionSource _ccsPush = CoCompletionSource.Init();
+                private readonly ManualResetValueTaskSource<bool> _ccsPull = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource _ccsPush = new ManualResetValueTaskSource();
                 private Queue<T> _queue;
 
                 public Enumerator(BufferEnumerable<T> enumerable, CancellationToken token)
@@ -61,9 +61,9 @@
 
                 public T Current { get; private set; }
 
-                public ICoAwaiter<bool> MoveNextAsync(bool continueOnCapturedContext)
+                public ValueTask<bool> MoveNextAsync()
                 {
-                    _ccsPull.Reset(continueOnCapturedContext);
+                    _ccsPull.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -125,10 +125,10 @@
                     return _ccsPull.Task;
                 }
 
-                public Task DisposeAsync()
+                public ValueTask DisposeAsync()
                 {
                     Cancel(ErrorHandler.EnumeratorDisposedException);
-                    return _atmbDisposed.Task;
+                    return new ValueTask(_atmbDisposed.Task);
                 }
 
                 private void Cancel(Exception error)
@@ -183,7 +183,7 @@
                     Exception error;
                     try
                     {
-                        var ae = _enumerable._source.GetAsyncEnumerator(_eh.InternalToken);
+                        var ae = _enumerable._source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
                         {
                             while (await ae.MoveNextAsync())
@@ -191,7 +191,7 @@
                                 var state = Atomic.Lock(ref _state);
                                 while (state == _sActive && _queue != null && _queue.Count >= _enumerable._maxSize)
                                 {
-                                    _ccsPush.Reset(false);
+                                    _ccsPush.Reset();
                                     _state = _sPushing;
                                     await _ccsPush.Task;
                                     state = Atomic.Lock(ref _state);
@@ -227,7 +227,7 @@
                                 }
                             }
                         }
-                        finally { await ae.DisposeAsync().ConfigureAwait(false); }
+                        finally { await ae.DisposeAsync(); }
 
                         error = null;
                     }

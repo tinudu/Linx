@@ -1,6 +1,7 @@
 ﻿namespace Linx.Reactive
 {
     using System;
+    using System.Collections.Generic;
     using Timing;
 
     partial class LinxReactive
@@ -8,7 +9,7 @@
         /// <summary>
         /// Returns an observable sequence that produces a value after each period.
         /// </summary>
-        public static IAsyncEnumerableObs<long> Interval(TimeSpan period)
+        public static IAsyncEnumerable<long> Interval(TimeSpan period)
         {
             if (period <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(period));
 
