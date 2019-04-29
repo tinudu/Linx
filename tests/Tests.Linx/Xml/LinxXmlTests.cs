@@ -196,9 +196,9 @@
         [Fact]
         public void Success()
         {
-            Assert.Equal(new DateTimeOffset(_dt, TimeSpan.FromHours(1)), LinxXmlExtensions.ToDateTimeOffset(_dtStr + "+01:00"));
-            Assert.Equal(new DateTimeOffset(_dt, TimeSpan.Zero), LinxXmlExtensions.ToDateTimeOffset(_dtStr + "+00:00"));
-            Assert.Equal(new DateTimeOffset(_dt, TimeSpan.Zero), LinxXmlExtensions.ToDateTimeOffset(_dtStr + "Z"));
+            Assert.Equal(new DateTimeOffset(_dt, TimeSpan.FromHours(1)), LinxXml.ToDateTimeOffset(_dtStr + "+01:00"));
+            Assert.Equal(new DateTimeOffset(_dt, TimeSpan.Zero), LinxXml.ToDateTimeOffset(_dtStr + "+00:00"));
+            Assert.Equal(new DateTimeOffset(_dt, TimeSpan.Zero), LinxXml.ToDateTimeOffset(_dtStr + "Z"));
         }
 
         [Fact]
@@ -206,7 +206,7 @@
         {
             try
             {
-                LinxXmlExtensions.ToDateTimeOffset(_dtStr);
+                LinxXml.ToDateTimeOffset(_dtStr);
                 throw new Exception("Should fail.");
             }
             catch (ArgumentException ex)

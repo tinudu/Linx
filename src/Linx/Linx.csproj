@@ -15,19 +15,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Reactive\Aggregators\LinxReactive.Multi.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxReactive.Multi.tt</DependentUpon>
-    </None>
-    <None Include="Reactive\Operators\LinxReactive.Zip.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxReactive.Zip.tt</DependentUpon>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="ElasticBytes.AsyncEnumerable" Version="1.0.0" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.2" />
   </ItemGroup>
@@ -37,22 +24,42 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Reactive\Aggregators\LinxReactive.MinMax.cs">
+    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MinMax.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.MinMax.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Multi.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.Multi.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Sum.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.Sum.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Aggregators\LinxReactive.MinMax.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxReactive.MinMax.tt</DependentUpon>
     </Compile>
-    <Compile Update="Reactive\Aggregators\LinxReactive.Multi.cs">
+    <Compile Update="AsyncEnumerable\Aggregators\LinxReactive.Multi.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxReactive.Multi.tt</DependentUpon>
     </Compile>
-    <Compile Update="Reactive\Aggregators\LinxReactive.Sum.cs">
+    <Compile Update="AsyncEnumerable\Aggregators\LinxReactive.Sum.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxReactive.Sum.tt</DependentUpon>
     </Compile>
-    <Compile Update="Reactive\Operators\LinxReactive.Zip.cs">
+    <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.Zip.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Operators\LinxReactive.Zip.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxReactive.Zip.tt</DependentUpon>
@@ -60,19 +67,35 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Reactive\Aggregators\LinxReactive.MinMax.tt">
+    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MinMax.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.MinMax.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Multi.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.Multi.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Sum.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.Sum.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Aggregators\LinxReactive.MinMax.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxReactive.MinMax.cs</LastGenOutput>
     </None>
-    <None Update="Reactive\Aggregators\LinxReactive.Multi.tt">
+    <None Update="AsyncEnumerable\Aggregators\LinxReactive.Multi.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxReactive.Multi.cs</LastGenOutput>
     </None>
-    <None Update="Reactive\Aggregators\LinxReactive.Sum.tt">
+    <None Update="AsyncEnumerable\Aggregators\LinxReactive.Sum.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxReactive.Sum.cs</LastGenOutput>
     </None>
-    <None Update="Reactive\Operators\LinxReactive.Zip.tt">
+    <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.Zip.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Operators\LinxReactive.Zip.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxReactive.Zip.cs</LastGenOutput>
     </None>
