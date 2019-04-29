@@ -20,7 +20,7 @@
                 while (await ae.MoveNextAsync())
                 {
                     Debug.WriteLine($"Next@{Time.Current.Now.TimeOfDay.TotalSeconds}");
-                    await time.Wait(delay, token).ConfigureAwait(false);
+                    await time.Delay(delay, token).ConfigureAwait(false);
                     Debug.WriteLine($"Observing {ae.Current}@{Time.Current.Now.TimeOfDay.TotalSeconds}");
                     await yield(ae.Current);
                 }
@@ -37,7 +37,7 @@
                 while (await ae.MoveNextAsync())
                 {
                     var current = ae.Current;
-                    await time.Wait(delay, token).ConfigureAwait(false);
+                    await time.Delay(delay, token).ConfigureAwait(false);
                     Assert.Equal(current, ae.Current);
                     await yield(current);
                 }
@@ -51,7 +51,7 @@
         [Fact]
         public async Task TestCombineLatest()
         {
-            using (var vt = new VirtualTime())
+            using (new VirtualTime())
             {
                 var seq1 = LinxReactive.Interval(TimeSpan.FromSeconds(0.5)).Skip(1).Take(8);
                 var seq2 = LinxReactive.Interval(TimeSpan.FromSeconds(0.7)).Skip(1).Take(7);
@@ -59,7 +59,6 @@
                 // seq1: ....1....2....3....4....5....6....7....8
                 // seq2: ......1......2......3......4......5......6......7
                 var tResult = testee.ToList(default);
-                vt.Start();
                 var result = await tResult;
                 Assert.True(new[] { 11L, 21, 22, 32, 42, 43, 53, 54, 64, 65, 75, 85, 86, 87 }.SequenceEqual(result));
             }
@@ -77,11 +76,10 @@
         [Fact]
         public async Task TestDelay()
         {
-            using (var vt = new VirtualTime())
+            using (new VirtualTime())
             {
                 var source = Enumerable.Range(0, 10).Async().Zip(LinxReactive.Interval(TimeSpan.FromSeconds(0.5)), (i, t) => i);
                 var tResult = source.Delay(TimeSpan.FromSeconds(3)).ToList(default);
-                vt.Start();
                 var result = await tResult;
                 Assert.True(Enumerable.Range(0, 10).SequenceEqual(result));
             }
@@ -90,7 +88,7 @@
         [Fact]
         public async Task TestLatest()
         {
-            using (var vt = new VirtualTime())
+            using (new VirtualTime())
             {
                 var tResult = LinxReactive.Interval(TimeSpan.FromSeconds(1))
                     .Take(15)
@@ -98,12 +96,11 @@
                     .Latest()
                     .ObserveAfter(TimeSpan.FromSeconds(3.7))
                     .ToList(default);
-                vt.Start();
                 var result = await tResult;
                 Assert.True(new[] { 3, 7, 11, 14 }.SequenceEqual(result));
             }
 
-            using (var vt = new VirtualTime())
+            using (new VirtualTime())
             {
                 var tResult = LinxReactive.Interval(TimeSpan.FromSeconds(1))
                     .Take(15)
@@ -111,7 +108,6 @@
                     .Latest()
                     .ObserveImmediate(TimeSpan.FromSeconds(3.7))
                     .ToList(default);
-                vt.Start();
                 var result = await tResult;
                 Assert.True(new[] { 0, 3, 7, 11, 14 }.SequenceEqual(result));
             }
@@ -199,18 +195,17 @@
         [Fact]
         public async Task TestTimeout()
         {
-            using (var time = new VirtualTime())
+            using (var vt = new VirtualTime())
             {
-                time.Start();
                 var source = LinxReactive.Produce<int>(async (yield, token) =>
                 {
                     // ReSharper disable AccessToDisposedClosure
-                    var t = time.Now;
+                    var t = vt.Now;
                     for (var i = 0; i < 10; i++)
                     {
                         var due = t + TimeSpan.FromTicks(i * TimeSpan.TicksPerSecond);
                         t = due;
-                        await time.Wait(t, default).ConfigureAwait(false);
+                        await vt.Delay(t, default).ConfigureAwait(false);
                         await yield(i);
                     }
                     // ReSharper restore AccessToDisposedClosure
@@ -232,12 +227,11 @@
         [Fact]
         public async Task TestZip()
         {
-            using (var vt = new VirtualTime())
+            using (new VirtualTime())
             {
                 var src1 = LinxReactive.Interval(TimeSpan.FromSeconds(1));
                 var src2 = LinxReactive.Interval(TimeSpan.FromSeconds(2)).Take(4);
                 var tResult = src1.Zip(src2, (x, y) => x + y).ToList(default);
-                vt.Start();
                 var result = await tResult;
                 Assert.True(new[] { 0L, 2L, 4L, 6L }.SequenceEqual(result));
             }

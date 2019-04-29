@@ -53,7 +53,7 @@
                 foreach (var ti in source)
                 {
                     t += ti.Interval;
-                    await time.Wait(t, token).ConfigureAwait(false);
+                    await time.Delay(t, token).ConfigureAwait(false);
                     switch (ti.Value.Kind)
                     {
                         case NotificationKind.OnNext:

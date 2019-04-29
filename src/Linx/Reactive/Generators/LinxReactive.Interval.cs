@@ -21,7 +21,7 @@
                 {
                     await yield(value++);
                     due += period;
-                    await time.Wait(due, token).ConfigureAwait(false);
+                    await time.Delay(due, token).ConfigureAwait(false);
                 } while (true);
                 // ReSharper disable once FunctionNeverReturns
             });

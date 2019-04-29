@@ -1,8 +1,6 @@
 ﻿namespace Linx.Reactive
 {
     using System;
-    using System.Threading;
-    using Coroutines;
     using Timing;
 
     partial class LinxReactive
@@ -17,7 +15,6 @@
 
             return Produce<T>(async (yield, token) =>
             {
-                var time = Time.Current;
                 var eh = ErrorHandler.Init();
                 var canceled = 0;
                 void Cancel(Exception externalError)
@@ -34,49 +31,18 @@
                 }
                 if (token.CanBeCanceled) eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
 
+                var timer = Time.Current.CreateTimer((t, d) => Cancel(new TimeoutException()));
                 Exception internalError;
                 try
                 {
                     var ae = source.GetAsyncEnumerator(eh.InternalToken);
                     try
                     {
-                        var ccsWait = CoCompletionSource.Init();
                         while (true)
                         {
-                            var aMoveNext = ae.MoveNextAsync();
-                            if (!aMoveNext.IsCompleted)
-                            {
-                                // await aMoveNext or due time, whatever comes first
-                                ccsWait.Reset(false);
-                                var wait = 2;
-                                var ctsWait = new CancellationTokenSource();
-
-                                aMoveNext.OnCompleted(() =>
-                                {
-                                    ctsWait.Cancel();
-                                    if (Interlocked.Decrement(ref wait) == 0) ccsWait.SetCompleted(null);
-                                });
-
-                                var aWait = time.Wait(time.Now + dueTime, ctsWait.Token).ConfigureAwait(false).GetAwaiter();
-                                aWait.OnCompleted(() =>
-                                {
-                                    Exception waitError;
-                                    try
-                                    {
-                                        aWait.GetResult();
-                                        waitError = new TimeoutException();
-                                    }
-                                    catch (OperationCanceledException oce) when (oce.CancellationToken == ctsWait.Token) { waitError = null; }
-                                    catch (Exception ex) { waitError = ex; }
-                                    if (waitError != null) Cancel(waitError);
-                                    if (Interlocked.Decrement(ref wait) == 0) ccsWait.SetCompleted(null);
-                                });
-
-                                await ccsWait.Awaiter;
-                            }
-
-                            if (!aMoveNext.GetResult())
-                                break;
+                            timer.Enable(dueTime);
+                            try { if (!await ae.MoveNextAsync()) break; }
+                            finally { timer.Disable(); }
                             await yield(ae.Current);
                         }
                     }
@@ -84,6 +50,7 @@
                     internalError = null;
                 }
                 catch (Exception ex) { internalError = ex; }
+                finally { timer.Dispose(); }
 
                 var cancel = Atomic.Lock(ref canceled) == 0;
                 eh.SetInternalError(internalError);
