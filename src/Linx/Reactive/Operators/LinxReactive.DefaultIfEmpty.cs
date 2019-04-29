@@ -7,12 +7,12 @@
         /// <summary>
         /// Returns the elements of the specified sequence or the type parameter's default value in a singleton sequence if the sequence is empty.
         /// </summary>
-        public static IAsyncEnumerable<T> DefaultIfEmpty<T>(this IAsyncEnumerable<T> source) => source.DefaultIfEmpty(default);
+        public static IAsyncEnumerableObs<T> DefaultIfEmpty<T>(this IAsyncEnumerableObs<T> source) => source.DefaultIfEmpty(default);
 
         /// <summary>
         /// Returns the elements of the specified sequence or the specified <paramref name="default"/>, if the sequence is empty.
         /// </summary>
-        public static IAsyncEnumerable<T> DefaultIfEmpty<T>(this IAsyncEnumerable<T> source, T @default)
+        public static IAsyncEnumerableObs<T> DefaultIfEmpty<T>(this IAsyncEnumerableObs<T> source, T @default)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

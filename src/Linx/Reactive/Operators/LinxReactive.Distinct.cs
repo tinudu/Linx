@@ -8,7 +8,7 @@
         /// <summary>
         /// Returns distinct elements from a sequence
         /// </summary>
-        public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T> comparer = null)
+        public static IAsyncEnumerableObs<T> Distinct<T>(this IAsyncEnumerableObs<T> source, IEqualityComparer<T> comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = EqualityComparer<T>.Default;

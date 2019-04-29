@@ -11,7 +11,7 @@
 
     internal static class MyOperators
     {
-        public static IAsyncEnumerable<T> ObserveAfter<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxReactive.Produce<T>(async (yield, token) =>
+        public static IAsyncEnumerableObs<T> ObserveAfter<T>(this IAsyncEnumerableObs<T> source, TimeSpan delay) => LinxReactive.Produce<T>(async (yield, token) =>
         {
             var ae = source.GetAsyncEnumerator(token);
             try
@@ -28,7 +28,7 @@
             finally { await ae.DisposeAsync().ConfigureAwait(false); }
         });
 
-        public static IAsyncEnumerable<T> ObserveImmediate<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxReactive.Produce<T>(async (yield, token) =>
+        public static IAsyncEnumerableObs<T> ObserveImmediate<T>(this IAsyncEnumerableObs<T> source, TimeSpan delay) => LinxReactive.Produce<T>(async (yield, token) =>
         {
             var ae = source.GetAsyncEnumerator(token);
             try
@@ -58,8 +58,7 @@
                 var testee = seq1.CombineLatest(seq2, (x, y) => 10 * x + y);
                 // seq1: ....1....2....3....4....5....6....7....8
                 // seq2: ......1......2......3......4......5......6......7
-                var tResult = testee.ToList(default);
-                var result = await tResult;
+                var result = await testee.ToList(default);
                 Assert.True(new[] { 11L, 21, 22, 32, 42, 43, 53, 54, 64, 65, 75, 85, 86, 87 }.SequenceEqual(result));
             }
         }
@@ -195,29 +194,25 @@
         [Fact]
         public async Task TestTimeout()
         {
-            using (var vt = new VirtualTime())
+            var source = LinxReactive.Produce<int>(async (yield, token) =>
             {
-                var source = LinxReactive.Produce<int>(async (yield, token) =>
+                var time = Time.Current;
+                foreach (var i in Enumerable.Range(1, 10))
                 {
-                    // ReSharper disable AccessToDisposedClosure
-                    var t = vt.Now;
-                    for (var i = 0; i < 10; i++)
-                    {
-                        var due = t + TimeSpan.FromTicks(i * TimeSpan.TicksPerSecond);
-                        t = due;
-                        await vt.Delay(t, default).ConfigureAwait(false);
-                        await yield(i);
-                    }
-                    // ReSharper restore AccessToDisposedClosure
-                });
+                    await time.Delay(TimeSpan.FromSeconds(i), token).ConfigureAwait(false);
+                    await yield(i);
+                }
+            });
 
-                var testee = source.Timeout(TimeSpan.FromSeconds(2.5));
+            using (new VirtualTime())
+            {
+                var testee = source.Timeout(TimeSpan.FromSeconds(3.5));
                 var ae = testee.GetAsyncEnumerator(default);
                 try
                 {
-                    Assert.True(await ae.MoveNextAsync() && ae.Current == 0);
                     Assert.True(await ae.MoveNextAsync() && ae.Current == 1);
                     Assert.True(await ae.MoveNextAsync() && ae.Current == 2);
+                    Assert.True(await ae.MoveNextAsync() && ae.Current == 3);
                     await Assert.ThrowsAsync<TimeoutException>(async () => await ae.MoveNextAsync());
                 }
                 finally { await ae.DisposeAsync().ConfigureAwait(false); }

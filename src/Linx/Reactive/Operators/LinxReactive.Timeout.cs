@@ -8,7 +8,7 @@
         /// <summary>
         /// Throws a <see cref="TimeoutException"/> if no element is observed within <paramref name="dueTime"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Timeout<T>(this IAsyncEnumerable<T> source, TimeSpan dueTime)
+        public static IAsyncEnumerableObs<T> Timeout<T>(this IAsyncEnumerableObs<T> source, TimeSpan dueTime)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (dueTime <= TimeSpan.Zero) return Throw<T>(new TimeoutException());
@@ -40,9 +40,17 @@
                     {
                         while (true)
                         {
-                            timer.Enable(dueTime);
-                            try { if (!await ae.MoveNextAsync()) break; }
-                            finally { timer.Disable(); }
+                            var tMoveNext = ae.MoveNextAsync();
+                            bool hasNext;
+                            if (tMoveNext.IsCompleted)
+                                hasNext = tMoveNext.GetAwaiter().GetResult();
+                            else
+                            {
+                                timer.Enable(dueTime);
+                                try { hasNext = await tMoveNext; }
+                                finally { timer.Disable(); }
+                            }
+                            if (!hasNext) break;
                             await yield(ae.Current);
                         }
                     }

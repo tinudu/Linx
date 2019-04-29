@@ -11,7 +11,7 @@
         /// Multiple aggregators sharing a subscription.
         /// </summary>
         public static async Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TResult>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             AggregatorDelegate<TSource, TAggregate1> aggregator1,
             AggregatorDelegate<TSource, TAggregate2> aggregator2,
             Func<TAggregate1, TAggregate2, TResult> resultSelector,
@@ -47,7 +47,7 @@
         /// Multiple consumers sharing a subscription.
         /// </summary>
         public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             ConsumerDelegate<TSource> consumer1,
             ConsumerDelegate<TSource> consumer2,
             CancellationToken token)
@@ -65,7 +65,7 @@
         /// Multiple aggregators sharing a subscription.
         /// </summary>
         public static async Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             AggregatorDelegate<TSource, TAggregate1> aggregator1,
             AggregatorDelegate<TSource, TAggregate2> aggregator2,
             AggregatorDelegate<TSource, TAggregate3> aggregator3,
@@ -105,7 +105,7 @@
         /// Multiple consumers sharing a subscription.
         /// </summary>
         public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             ConsumerDelegate<TSource> consumer1,
             ConsumerDelegate<TSource> consumer2,
             ConsumerDelegate<TSource> consumer3,
@@ -125,7 +125,7 @@
         /// Multiple aggregators sharing a subscription.
         /// </summary>
         public static async Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             AggregatorDelegate<TSource, TAggregate1> aggregator1,
             AggregatorDelegate<TSource, TAggregate2> aggregator2,
             AggregatorDelegate<TSource, TAggregate3> aggregator3,
@@ -169,7 +169,7 @@
         /// Multiple consumers sharing a subscription.
         /// </summary>
         public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             ConsumerDelegate<TSource> consumer1,
             ConsumerDelegate<TSource> consumer2,
             ConsumerDelegate<TSource> consumer3,
@@ -191,7 +191,7 @@
         /// Multiple aggregators sharing a subscription.
         /// </summary>
         public static async Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             AggregatorDelegate<TSource, TAggregate1> aggregator1,
             AggregatorDelegate<TSource, TAggregate2> aggregator2,
             AggregatorDelegate<TSource, TAggregate3> aggregator3,
@@ -239,7 +239,7 @@
         /// Multiple consumers sharing a subscription.
         /// </summary>
         public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             ConsumerDelegate<TSource> consumer1,
             ConsumerDelegate<TSource> consumer2,
             ConsumerDelegate<TSource> consumer3,
@@ -263,7 +263,7 @@
         /// Multiple aggregators sharing a subscription.
         /// </summary>
         public static async Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             AggregatorDelegate<TSource, TAggregate1> aggregator1,
             AggregatorDelegate<TSource, TAggregate2> aggregator2,
             AggregatorDelegate<TSource, TAggregate3> aggregator3,
@@ -315,7 +315,7 @@
         /// Multiple consumers sharing a subscription.
         /// </summary>
         public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             ConsumerDelegate<TSource> consumer1,
             ConsumerDelegate<TSource> consumer2,
             ConsumerDelegate<TSource> consumer3,
@@ -341,7 +341,7 @@
         /// Multiple aggregators sharing a subscription.
         /// </summary>
         public static async Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             AggregatorDelegate<TSource, TAggregate1> aggregator1,
             AggregatorDelegate<TSource, TAggregate2> aggregator2,
             AggregatorDelegate<TSource, TAggregate3> aggregator3,
@@ -397,7 +397,7 @@
         /// Multiple consumers sharing a subscription.
         /// </summary>
         public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             ConsumerDelegate<TSource> consumer1,
             ConsumerDelegate<TSource> consumer2,
             ConsumerDelegate<TSource> consumer3,
@@ -425,7 +425,7 @@
         /// Multiple aggregators sharing a subscription.
         /// </summary>
         public static async Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             AggregatorDelegate<TSource, TAggregate1> aggregator1,
             AggregatorDelegate<TSource, TAggregate2> aggregator2,
             AggregatorDelegate<TSource, TAggregate3> aggregator3,
@@ -485,7 +485,7 @@
         /// Multiple consumers sharing a subscription.
         /// </summary>
         public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             ConsumerDelegate<TSource> consumer1,
             ConsumerDelegate<TSource> consumer2,
             ConsumerDelegate<TSource> consumer3,

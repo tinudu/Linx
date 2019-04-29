@@ -9,7 +9,7 @@
         /// <summary>
         /// Returns the element at a specified index in a sequence.
         /// </summary>
-        public static async Task<T> ElementAtOrDefault<T>(this IAsyncEnumerable<T> source, int index, CancellationToken token)
+        public static async Task<T> ElementAtOrDefault<T>(this IAsyncEnumerableObs<T> source, int index, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (index < 0) return default;

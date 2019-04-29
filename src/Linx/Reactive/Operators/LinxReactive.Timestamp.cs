@@ -8,7 +8,7 @@
         /// <summary>
         /// Records the timestamp for each value.
         /// </summary>
-        public static IAsyncEnumerable<Timestamped<T>> Timestamp<T>(this IAsyncEnumerable<T> source)
+        public static IAsyncEnumerableObs<Timestamped<T>> Timestamp<T>(this IAsyncEnumerableObs<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

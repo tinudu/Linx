@@ -11,7 +11,7 @@
         /// Aggregate to a dictionary.
         /// </summary>
         public static async Task<IDictionary<TKey, TSource>> ToDictionary<TSource, TKey>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             Func<TSource, TKey> keySelector,
             CancellationToken token,
             IEqualityComparer<TKey> comparer = null)
@@ -39,7 +39,7 @@
         /// Aggregate to a dictionary.
         /// </summary>
         public static async Task<IDictionary<TKey, TValue>> ToDictionary<TSource, TKey, TValue>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
             Func<TSource, TKey> keySelector,
             Func<TSource, TValue> valueSelector,
             CancellationToken token,

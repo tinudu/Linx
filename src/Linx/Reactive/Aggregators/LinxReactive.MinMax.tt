@@ -22,7 +22,7 @@ namespace Linx.Reactive
         /// Returns the <#= mm.Op1 #>imum non-null element of a sequence.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
-        public static async Task<T> <#= mm.Op #><T>(this IAsyncEnumerable<T> source, IComparer<T> comparer, CancellationToken token)
+        public static async Task<T> <#= mm.Op #><T>(this IAsyncEnumerableObs<T> source, IComparer<T> comparer, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
@@ -49,20 +49,20 @@ namespace Linx.Reactive
         /// Returns the <#= mm.Op1 #>imum non-null element of a sequence.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
-        public static async Task<T> <#= mm.Op #><T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<T> <#= mm.Op #><T>(this IAsyncEnumerableObs<T> source, CancellationToken token)
             => await source.<#= mm.Op #>(null, token).ConfigureAwait(false);
 
         /// <summary>
         /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum non-null element.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
-        public static async Task<TResult> <#= mm.Op #><TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token)
+        public static async Task<TResult> <#= mm.Op #><TSource, TResult>(this IAsyncEnumerableObs<TSource> source, Func<TSource, TResult> selector, CancellationToken token)
             => await source.Select(selector).<#= mm.Op #>(null, token).ConfigureAwait(false);
 
         /// <summary>
         /// Returns the <#= mm.Op1 #>imum non-null element of a sequence, or a default value if the sequence contains no non-null elements.
         /// </summary>
-        public static async Task<T> <#= mm.Op #>OrDefault<T>(this IAsyncEnumerable<T> source, IComparer<T> comparer, CancellationToken token)
+        public static async Task<T> <#= mm.Op #>OrDefault<T>(this IAsyncEnumerableObs<T> source, IComparer<T> comparer, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
@@ -88,19 +88,19 @@ namespace Linx.Reactive
         /// <summary>
         /// Returns the <#= mm.Op1 #>imum non-null element of a sequence, or a default value if the sequence contains no non-null elements.
         /// </summary>
-        public static async Task<T> <#= mm.Op #>OrDefault<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<T> <#= mm.Op #>OrDefault<T>(this IAsyncEnumerableObs<T> source, CancellationToken token)
             => await source.<#= mm.Op #>OrDefault(null, token).ConfigureAwait(false);
 
         /// <summary>
         /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum element, or a default value if the sequence contains no non-null elements.
         /// </summary>
-        public static async Task<TResult> <#= mm.Op #>OrDefault<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token)
+        public static async Task<TResult> <#= mm.Op #>OrDefault<TSource, TResult>(this IAsyncEnumerableObs<TSource> source, Func<TSource, TResult> selector, CancellationToken token)
             => await source.Select(selector).<#= mm.Op #>OrDefault(null, token).ConfigureAwait(false);
 
         /// <summary>
         /// Returns the <#= mm.Op1 #>imum element of a sequence, or null if the sequence contains no elements.
         /// </summary>
-        public static async Task<T?> <#= mm.Op #>OrNull<T>(this IAsyncEnumerable<T> source, IComparer<T> comparer, CancellationToken token) where T : struct
+        public static async Task<T?> <#= mm.Op #>OrNull<T>(this IAsyncEnumerableObs<T> source, IComparer<T> comparer, CancellationToken token) where T : struct
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
@@ -126,13 +126,13 @@ namespace Linx.Reactive
         /// <summary>
         /// Returns the <#= mm.Op1 #>imum element of a sequence, or null if the sequence contains no elements.
         /// </summary>
-        public static async Task<T?> <#= mm.Op #>OrNull<T>(this IAsyncEnumerable<T> source, CancellationToken token) where T : struct
+        public static async Task<T?> <#= mm.Op #>OrNull<T>(this IAsyncEnumerableObs<T> source, CancellationToken token) where T : struct
             => await source.<#= mm.Op #>OrNull(null, token).ConfigureAwait(false);
 
         /// <summary>
         /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum element, or null if the sequence contains no elements.
         /// </summary>
-        public static async Task<TResult?> <#= mm.Op #>OrNull<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token) where TResult : struct
+        public static async Task<TResult?> <#= mm.Op #>OrNull<TSource, TResult>(this IAsyncEnumerableObs<TSource> source, Func<TSource, TResult> selector, CancellationToken token) where TResult : struct
             => await source.Select(selector).<#= mm.Op #>OrNull(null, token).ConfigureAwait(false);
 
 <# } #>

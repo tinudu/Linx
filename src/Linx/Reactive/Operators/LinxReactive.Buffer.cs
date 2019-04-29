@@ -13,18 +13,18 @@
         /// <summary>
         /// Buffers items in case the consumer is slower than the producer.
         /// </summary>
-        public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source, int maxSize = int.MaxValue)
+        public static IAsyncEnumerableObs<T> Buffer<T>(this IAsyncEnumerableObs<T> source, int maxSize = int.MaxValue)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             return maxSize > 0 ? new BufferEnumerable<T>(source, maxSize) : source;
         }
 
-        private sealed class BufferEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class BufferEnumerable<T> : IAsyncEnumerableObs<T>
         {
-            private readonly IAsyncEnumerable<T> _source;
+            private readonly IAsyncEnumerableObs<T> _source;
             private readonly int _maxSize;
 
-            public BufferEnumerable(IAsyncEnumerable<T> source, int maxSize)
+            public BufferEnumerable(IAsyncEnumerableObs<T> source, int maxSize)
             {
                 Debug.Assert(source != null);
                 Debug.Assert(maxSize > 0);
@@ -32,9 +32,9 @@
                 _maxSize = maxSize;
             }
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<T>
+            private sealed class Enumerator : IAsyncEnumeratorObs<T>
             {
                 private const int _sInitial = 0; // not enumerating
                 private const int _sActive = 1; // enumerating
@@ -80,7 +80,7 @@
                             {
                                 Current = _queue.Dequeue(); // no exception assumed
                                 _state = _sActive;
-                                _ccsPull.SetCompleted(null, true);
+                                _ccsPull.SetResult(true);
                             }
                             break;
 
@@ -88,8 +88,8 @@
                             Debug.Assert(_queue.Count > 0);
                             Current = _queue.Dequeue(); // no exception assumed
                             _state = _sActive;
-                            _ccsPull.SetCompleted(null, true);
-                            _ccsPush.SetCompleted(null);
+                            _ccsPull.SetResult(true);
+                            _ccsPush.SetResult();
                             break;
 
                         case _sCompleted:
@@ -104,7 +104,7 @@
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
                             }
-                            _ccsPull.SetCompleted(null, true);
+                            _ccsPull.SetResult(true);
                             break;
 
                         case _sCanceling:
@@ -114,7 +114,7 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsPull.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsPull, false);
                             break;
 
                         default: // Pulling, CancelingPulling???
@@ -122,7 +122,7 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsPull.Awaiter;
+                    return _ccsPull.Task;
                 }
 
                 public Task DisposeAsync()
@@ -156,7 +156,7 @@
                             _queue = null;
                             _state = _sCanceling;
                             _eh.Cancel();
-                            _ccsPush.SetCompleted(new OperationCanceledException(_eh.InternalToken));
+                            _ccsPush.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
 
                         case _sPulling:
@@ -193,7 +193,7 @@
                                 {
                                     _ccsPush.Reset(false);
                                     _state = _sPushing;
-                                    await _ccsPush.Awaiter;
+                                    await _ccsPush.Task;
                                     state = Atomic.Lock(ref _state);
                                 }
                                 switch (state)
@@ -212,7 +212,7 @@
                                         try { Current = ae.Current; }
                                         catch { _state = _sPulling; throw; }
                                         _state = _sActive;
-                                        _ccsPull.SetCompleted(null, true);
+                                        _ccsPull.SetResult(true);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -256,7 +256,7 @@
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
                                 Current = default;
-                                _ccsPull.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsPull, false);
                                 break;
 
                             case _sCanceling:
@@ -267,7 +267,7 @@
                             case _sCancelingPulling:
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
-                                _ccsPull.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsPull, false);
                                 break;
 
                             default: // Initial, Pushing, Last, Final???

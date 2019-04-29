@@ -9,7 +9,7 @@
         /// <summary>
         /// Determines whether a sequence contains any elements.
         /// </summary>
-        public static async Task<bool> Any<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<bool> Any<T>(this IAsyncEnumerableObs<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -22,7 +22,7 @@
         /// <summary>
         /// Determines whether any element of a sequence satisfies a condition.
         /// </summary>
-        public static async Task<bool> Any<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        public static async Task<bool> Any<T>(this IAsyncEnumerableObs<T> source, Func<T, bool> predicate, CancellationToken token)
             => await source.Where(predicate).Any(token).ConfigureAwait(false);
     }
 }

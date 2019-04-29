@@ -13,21 +13,21 @@
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Zip<T1, T2, TResult>(this
-            IAsyncEnumerable<T1> source1,
-            IAsyncEnumerable<T2> source2,
+        public static IAsyncEnumerableObs<TResult> Zip<T1, T2, TResult>(this
+            IAsyncEnumerableObs<T1> source1,
+            IAsyncEnumerableObs<T2> source2,
             Func<T1, T2, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, TResult>(source1, source2, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, TResult> : IAsyncEnumerableObs<TResult>
         {
-            private readonly IAsyncEnumerable<T1> _source1;
-            private readonly IAsyncEnumerable<T2> _source2;
+            private readonly IAsyncEnumerableObs<T1> _source1;
+            private readonly IAsyncEnumerableObs<T2> _source2;
             private readonly Func<T1, T2, TResult> _resultSelector;
 
             public ZipEnumerable(
-                IAsyncEnumerable<T1> source1,
-                IAsyncEnumerable<T2> source2,
+                IAsyncEnumerableObs<T1> source1,
+                IAsyncEnumerableObs<T2> source2,
                 Func<T1, T2, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -35,9 +35,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _n = 2;
 
@@ -53,8 +53,8 @@
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
                 private int _active;
-                private IAsyncEnumerator<T1> _ae1;
-                private IAsyncEnumerator<T2> _ae2;
+                private IAsyncEnumeratorObs<T1> _ae1;
+                private IAsyncEnumeratorObs<T2> _ae2;
                 private readonly CoCompletionSource[] _ccssPushing = new CoCompletionSource[_n];
                 private uint _ccssPushingMask;
                 private int _state;
@@ -85,7 +85,7 @@
                             _ccssPushingMask = 0;
                             _state = _sPulling;
                             foreach (var ccs in _ccssPushing)
-                                ccs.SetCompleted(null);
+                                ccs.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -93,15 +93,15 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
-                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            _ccsMoveNext.SetException(new Exception(state + "???"));
                             break;
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -133,7 +133,7 @@
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
                                 foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                    ccs.SetCompleted(ex);
+                                    ccs.SetException(ex);
                             }
                             break;
 
@@ -163,7 +163,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -175,7 +175,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -190,7 +190,7 @@
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
-                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                    _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -201,7 +201,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -212,7 +212,7 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerableObs<T> source, int index, Action<Enumerator, IAsyncEnumeratorObs<T>> setEnumerator)
                 {
                     Exception error;
                     try
@@ -244,11 +244,11 @@
                                                 throw;
                                             }
                                             _state = _sPushing;
-                                            _ccsMoveNext.SetCompleted(null, true);
+                                            _ccsMoveNext.SetResult(true);
                                         }
                                         else
                                             _state = _sPulling;
-                                        await ccsPushing.Awaiter;
+                                        await ccsPushing.Task;
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -276,24 +276,24 @@
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Zip<T1, T2, T3, TResult>(this
-            IAsyncEnumerable<T1> source1,
-            IAsyncEnumerable<T2> source2,
-            IAsyncEnumerable<T3> source3,
+        public static IAsyncEnumerableObs<TResult> Zip<T1, T2, T3, TResult>(this
+            IAsyncEnumerableObs<T1> source1,
+            IAsyncEnumerableObs<T2> source2,
+            IAsyncEnumerableObs<T3> source3,
             Func<T1, T2, T3, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, TResult>(source1, source2, source3, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, TResult> : IAsyncEnumerableObs<TResult>
         {
-            private readonly IAsyncEnumerable<T1> _source1;
-            private readonly IAsyncEnumerable<T2> _source2;
-            private readonly IAsyncEnumerable<T3> _source3;
+            private readonly IAsyncEnumerableObs<T1> _source1;
+            private readonly IAsyncEnumerableObs<T2> _source2;
+            private readonly IAsyncEnumerableObs<T3> _source3;
             private readonly Func<T1, T2, T3, TResult> _resultSelector;
 
             public ZipEnumerable(
-                IAsyncEnumerable<T1> source1,
-                IAsyncEnumerable<T2> source2,
-                IAsyncEnumerable<T3> source3,
+                IAsyncEnumerableObs<T1> source1,
+                IAsyncEnumerableObs<T2> source2,
+                IAsyncEnumerableObs<T3> source3,
                 Func<T1, T2, T3, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -302,9 +302,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _n = 3;
 
@@ -320,9 +320,9 @@
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
                 private int _active;
-                private IAsyncEnumerator<T1> _ae1;
-                private IAsyncEnumerator<T2> _ae2;
-                private IAsyncEnumerator<T3> _ae3;
+                private IAsyncEnumeratorObs<T1> _ae1;
+                private IAsyncEnumeratorObs<T2> _ae2;
+                private IAsyncEnumeratorObs<T3> _ae3;
                 private readonly CoCompletionSource[] _ccssPushing = new CoCompletionSource[_n];
                 private uint _ccssPushingMask;
                 private int _state;
@@ -354,7 +354,7 @@
                             _ccssPushingMask = 0;
                             _state = _sPulling;
                             foreach (var ccs in _ccssPushing)
-                                ccs.SetCompleted(null);
+                                ccs.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -362,15 +362,15 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
-                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            _ccsMoveNext.SetException(new Exception(state + "???"));
                             break;
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -402,7 +402,7 @@
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
                                 foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                    ccs.SetCompleted(ex);
+                                    ccs.SetException(ex);
                             }
                             break;
 
@@ -432,7 +432,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -444,7 +444,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -459,7 +459,7 @@
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
-                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                    _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -470,7 +470,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -481,7 +481,7 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerableObs<T> source, int index, Action<Enumerator, IAsyncEnumeratorObs<T>> setEnumerator)
                 {
                     Exception error;
                     try
@@ -513,11 +513,11 @@
                                                 throw;
                                             }
                                             _state = _sPushing;
-                                            _ccsMoveNext.SetCompleted(null, true);
+                                            _ccsMoveNext.SetResult(true);
                                         }
                                         else
                                             _state = _sPulling;
-                                        await ccsPushing.Awaiter;
+                                        await ccsPushing.Task;
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -545,27 +545,27 @@
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Zip<T1, T2, T3, T4, TResult>(this
-            IAsyncEnumerable<T1> source1,
-            IAsyncEnumerable<T2> source2,
-            IAsyncEnumerable<T3> source3,
-            IAsyncEnumerable<T4> source4,
+        public static IAsyncEnumerableObs<TResult> Zip<T1, T2, T3, T4, TResult>(this
+            IAsyncEnumerableObs<T1> source1,
+            IAsyncEnumerableObs<T2> source2,
+            IAsyncEnumerableObs<T3> source3,
+            IAsyncEnumerableObs<T4> source4,
             Func<T1, T2, T3, T4, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, TResult>(source1, source2, source3, source4, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, TResult> : IAsyncEnumerableObs<TResult>
         {
-            private readonly IAsyncEnumerable<T1> _source1;
-            private readonly IAsyncEnumerable<T2> _source2;
-            private readonly IAsyncEnumerable<T3> _source3;
-            private readonly IAsyncEnumerable<T4> _source4;
+            private readonly IAsyncEnumerableObs<T1> _source1;
+            private readonly IAsyncEnumerableObs<T2> _source2;
+            private readonly IAsyncEnumerableObs<T3> _source3;
+            private readonly IAsyncEnumerableObs<T4> _source4;
             private readonly Func<T1, T2, T3, T4, TResult> _resultSelector;
 
             public ZipEnumerable(
-                IAsyncEnumerable<T1> source1,
-                IAsyncEnumerable<T2> source2,
-                IAsyncEnumerable<T3> source3,
-                IAsyncEnumerable<T4> source4,
+                IAsyncEnumerableObs<T1> source1,
+                IAsyncEnumerableObs<T2> source2,
+                IAsyncEnumerableObs<T3> source3,
+                IAsyncEnumerableObs<T4> source4,
                 Func<T1, T2, T3, T4, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -575,9 +575,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _n = 4;
 
@@ -593,10 +593,10 @@
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
                 private int _active;
-                private IAsyncEnumerator<T1> _ae1;
-                private IAsyncEnumerator<T2> _ae2;
-                private IAsyncEnumerator<T3> _ae3;
-                private IAsyncEnumerator<T4> _ae4;
+                private IAsyncEnumeratorObs<T1> _ae1;
+                private IAsyncEnumeratorObs<T2> _ae2;
+                private IAsyncEnumeratorObs<T3> _ae3;
+                private IAsyncEnumeratorObs<T4> _ae4;
                 private readonly CoCompletionSource[] _ccssPushing = new CoCompletionSource[_n];
                 private uint _ccssPushingMask;
                 private int _state;
@@ -629,7 +629,7 @@
                             _ccssPushingMask = 0;
                             _state = _sPulling;
                             foreach (var ccs in _ccssPushing)
-                                ccs.SetCompleted(null);
+                                ccs.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -637,15 +637,15 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
-                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            _ccsMoveNext.SetException(new Exception(state + "???"));
                             break;
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -677,7 +677,7 @@
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
                                 foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                    ccs.SetCompleted(ex);
+                                    ccs.SetException(ex);
                             }
                             break;
 
@@ -707,7 +707,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -719,7 +719,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -734,7 +734,7 @@
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
-                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                    _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -745,7 +745,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -756,7 +756,7 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerableObs<T> source, int index, Action<Enumerator, IAsyncEnumeratorObs<T>> setEnumerator)
                 {
                     Exception error;
                     try
@@ -788,11 +788,11 @@
                                                 throw;
                                             }
                                             _state = _sPushing;
-                                            _ccsMoveNext.SetCompleted(null, true);
+                                            _ccsMoveNext.SetResult(true);
                                         }
                                         else
                                             _state = _sPulling;
-                                        await ccsPushing.Awaiter;
+                                        await ccsPushing.Task;
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -820,30 +820,30 @@
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Zip<T1, T2, T3, T4, T5, TResult>(this
-            IAsyncEnumerable<T1> source1,
-            IAsyncEnumerable<T2> source2,
-            IAsyncEnumerable<T3> source3,
-            IAsyncEnumerable<T4> source4,
-            IAsyncEnumerable<T5> source5,
+        public static IAsyncEnumerableObs<TResult> Zip<T1, T2, T3, T4, T5, TResult>(this
+            IAsyncEnumerableObs<T1> source1,
+            IAsyncEnumerableObs<T2> source2,
+            IAsyncEnumerableObs<T3> source3,
+            IAsyncEnumerableObs<T4> source4,
+            IAsyncEnumerableObs<T5> source5,
             Func<T1, T2, T3, T4, T5, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, T5, TResult>(source1, source2, source3, source4, source5, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, TResult> : IAsyncEnumerableObs<TResult>
         {
-            private readonly IAsyncEnumerable<T1> _source1;
-            private readonly IAsyncEnumerable<T2> _source2;
-            private readonly IAsyncEnumerable<T3> _source3;
-            private readonly IAsyncEnumerable<T4> _source4;
-            private readonly IAsyncEnumerable<T5> _source5;
+            private readonly IAsyncEnumerableObs<T1> _source1;
+            private readonly IAsyncEnumerableObs<T2> _source2;
+            private readonly IAsyncEnumerableObs<T3> _source3;
+            private readonly IAsyncEnumerableObs<T4> _source4;
+            private readonly IAsyncEnumerableObs<T5> _source5;
             private readonly Func<T1, T2, T3, T4, T5, TResult> _resultSelector;
 
             public ZipEnumerable(
-                IAsyncEnumerable<T1> source1,
-                IAsyncEnumerable<T2> source2,
-                IAsyncEnumerable<T3> source3,
-                IAsyncEnumerable<T4> source4,
-                IAsyncEnumerable<T5> source5,
+                IAsyncEnumerableObs<T1> source1,
+                IAsyncEnumerableObs<T2> source2,
+                IAsyncEnumerableObs<T3> source3,
+                IAsyncEnumerableObs<T4> source4,
+                IAsyncEnumerableObs<T5> source5,
                 Func<T1, T2, T3, T4, T5, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -854,9 +854,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _n = 5;
 
@@ -872,11 +872,11 @@
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
                 private int _active;
-                private IAsyncEnumerator<T1> _ae1;
-                private IAsyncEnumerator<T2> _ae2;
-                private IAsyncEnumerator<T3> _ae3;
-                private IAsyncEnumerator<T4> _ae4;
-                private IAsyncEnumerator<T5> _ae5;
+                private IAsyncEnumeratorObs<T1> _ae1;
+                private IAsyncEnumeratorObs<T2> _ae2;
+                private IAsyncEnumeratorObs<T3> _ae3;
+                private IAsyncEnumeratorObs<T4> _ae4;
+                private IAsyncEnumeratorObs<T5> _ae5;
                 private readonly CoCompletionSource[] _ccssPushing = new CoCompletionSource[_n];
                 private uint _ccssPushingMask;
                 private int _state;
@@ -910,7 +910,7 @@
                             _ccssPushingMask = 0;
                             _state = _sPulling;
                             foreach (var ccs in _ccssPushing)
-                                ccs.SetCompleted(null);
+                                ccs.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -918,15 +918,15 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
-                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            _ccsMoveNext.SetException(new Exception(state + "???"));
                             break;
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -958,7 +958,7 @@
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
                                 foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                    ccs.SetCompleted(ex);
+                                    ccs.SetException(ex);
                             }
                             break;
 
@@ -988,7 +988,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -1000,7 +1000,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -1015,7 +1015,7 @@
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
-                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                    _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -1026,7 +1026,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -1037,7 +1037,7 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerableObs<T> source, int index, Action<Enumerator, IAsyncEnumeratorObs<T>> setEnumerator)
                 {
                     Exception error;
                     try
@@ -1069,11 +1069,11 @@
                                                 throw;
                                             }
                                             _state = _sPushing;
-                                            _ccsMoveNext.SetCompleted(null, true);
+                                            _ccsMoveNext.SetResult(true);
                                         }
                                         else
                                             _state = _sPulling;
-                                        await ccsPushing.Awaiter;
+                                        await ccsPushing.Task;
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -1101,33 +1101,33 @@
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Zip<T1, T2, T3, T4, T5, T6, TResult>(this
-            IAsyncEnumerable<T1> source1,
-            IAsyncEnumerable<T2> source2,
-            IAsyncEnumerable<T3> source3,
-            IAsyncEnumerable<T4> source4,
-            IAsyncEnumerable<T5> source5,
-            IAsyncEnumerable<T6> source6,
+        public static IAsyncEnumerableObs<TResult> Zip<T1, T2, T3, T4, T5, T6, TResult>(this
+            IAsyncEnumerableObs<T1> source1,
+            IAsyncEnumerableObs<T2> source2,
+            IAsyncEnumerableObs<T3> source3,
+            IAsyncEnumerableObs<T4> source4,
+            IAsyncEnumerableObs<T5> source5,
+            IAsyncEnumerableObs<T6> source6,
             Func<T1, T2, T3, T4, T5, T6, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult>(source1, source2, source3, source4, source5, source6, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> : IAsyncEnumerableObs<TResult>
         {
-            private readonly IAsyncEnumerable<T1> _source1;
-            private readonly IAsyncEnumerable<T2> _source2;
-            private readonly IAsyncEnumerable<T3> _source3;
-            private readonly IAsyncEnumerable<T4> _source4;
-            private readonly IAsyncEnumerable<T5> _source5;
-            private readonly IAsyncEnumerable<T6> _source6;
+            private readonly IAsyncEnumerableObs<T1> _source1;
+            private readonly IAsyncEnumerableObs<T2> _source2;
+            private readonly IAsyncEnumerableObs<T3> _source3;
+            private readonly IAsyncEnumerableObs<T4> _source4;
+            private readonly IAsyncEnumerableObs<T5> _source5;
+            private readonly IAsyncEnumerableObs<T6> _source6;
             private readonly Func<T1, T2, T3, T4, T5, T6, TResult> _resultSelector;
 
             public ZipEnumerable(
-                IAsyncEnumerable<T1> source1,
-                IAsyncEnumerable<T2> source2,
-                IAsyncEnumerable<T3> source3,
-                IAsyncEnumerable<T4> source4,
-                IAsyncEnumerable<T5> source5,
-                IAsyncEnumerable<T6> source6,
+                IAsyncEnumerableObs<T1> source1,
+                IAsyncEnumerableObs<T2> source2,
+                IAsyncEnumerableObs<T3> source3,
+                IAsyncEnumerableObs<T4> source4,
+                IAsyncEnumerableObs<T5> source5,
+                IAsyncEnumerableObs<T6> source6,
                 Func<T1, T2, T3, T4, T5, T6, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -1139,9 +1139,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _n = 6;
 
@@ -1157,12 +1157,12 @@
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
                 private int _active;
-                private IAsyncEnumerator<T1> _ae1;
-                private IAsyncEnumerator<T2> _ae2;
-                private IAsyncEnumerator<T3> _ae3;
-                private IAsyncEnumerator<T4> _ae4;
-                private IAsyncEnumerator<T5> _ae5;
-                private IAsyncEnumerator<T6> _ae6;
+                private IAsyncEnumeratorObs<T1> _ae1;
+                private IAsyncEnumeratorObs<T2> _ae2;
+                private IAsyncEnumeratorObs<T3> _ae3;
+                private IAsyncEnumeratorObs<T4> _ae4;
+                private IAsyncEnumeratorObs<T5> _ae5;
+                private IAsyncEnumeratorObs<T6> _ae6;
                 private readonly CoCompletionSource[] _ccssPushing = new CoCompletionSource[_n];
                 private uint _ccssPushingMask;
                 private int _state;
@@ -1197,7 +1197,7 @@
                             _ccssPushingMask = 0;
                             _state = _sPulling;
                             foreach (var ccs in _ccssPushing)
-                                ccs.SetCompleted(null);
+                                ccs.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -1205,15 +1205,15 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
-                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            _ccsMoveNext.SetException(new Exception(state + "???"));
                             break;
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -1245,7 +1245,7 @@
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
                                 foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                    ccs.SetCompleted(ex);
+                                    ccs.SetException(ex);
                             }
                             break;
 
@@ -1275,7 +1275,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -1287,7 +1287,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -1302,7 +1302,7 @@
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
-                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                    _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -1313,7 +1313,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -1324,7 +1324,7 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerableObs<T> source, int index, Action<Enumerator, IAsyncEnumeratorObs<T>> setEnumerator)
                 {
                     Exception error;
                     try
@@ -1356,11 +1356,11 @@
                                                 throw;
                                             }
                                             _state = _sPushing;
-                                            _ccsMoveNext.SetCompleted(null, true);
+                                            _ccsMoveNext.SetResult(true);
                                         }
                                         else
                                             _state = _sPulling;
-                                        await ccsPushing.Awaiter;
+                                        await ccsPushing.Task;
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -1388,36 +1388,36 @@
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Zip<T1, T2, T3, T4, T5, T6, T7, TResult>(this
-            IAsyncEnumerable<T1> source1,
-            IAsyncEnumerable<T2> source2,
-            IAsyncEnumerable<T3> source3,
-            IAsyncEnumerable<T4> source4,
-            IAsyncEnumerable<T5> source5,
-            IAsyncEnumerable<T6> source6,
-            IAsyncEnumerable<T7> source7,
+        public static IAsyncEnumerableObs<TResult> Zip<T1, T2, T3, T4, T5, T6, T7, TResult>(this
+            IAsyncEnumerableObs<T1> source1,
+            IAsyncEnumerableObs<T2> source2,
+            IAsyncEnumerableObs<T3> source3,
+            IAsyncEnumerableObs<T4> source4,
+            IAsyncEnumerableObs<T5> source5,
+            IAsyncEnumerableObs<T6> source6,
+            IAsyncEnumerableObs<T7> source7,
             Func<T1, T2, T3, T4, T5, T6, T7, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult>(source1, source2, source3, source4, source5, source6, source7, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> : IAsyncEnumerableObs<TResult>
         {
-            private readonly IAsyncEnumerable<T1> _source1;
-            private readonly IAsyncEnumerable<T2> _source2;
-            private readonly IAsyncEnumerable<T3> _source3;
-            private readonly IAsyncEnumerable<T4> _source4;
-            private readonly IAsyncEnumerable<T5> _source5;
-            private readonly IAsyncEnumerable<T6> _source6;
-            private readonly IAsyncEnumerable<T7> _source7;
+            private readonly IAsyncEnumerableObs<T1> _source1;
+            private readonly IAsyncEnumerableObs<T2> _source2;
+            private readonly IAsyncEnumerableObs<T3> _source3;
+            private readonly IAsyncEnumerableObs<T4> _source4;
+            private readonly IAsyncEnumerableObs<T5> _source5;
+            private readonly IAsyncEnumerableObs<T6> _source6;
+            private readonly IAsyncEnumerableObs<T7> _source7;
             private readonly Func<T1, T2, T3, T4, T5, T6, T7, TResult> _resultSelector;
 
             public ZipEnumerable(
-                IAsyncEnumerable<T1> source1,
-                IAsyncEnumerable<T2> source2,
-                IAsyncEnumerable<T3> source3,
-                IAsyncEnumerable<T4> source4,
-                IAsyncEnumerable<T5> source5,
-                IAsyncEnumerable<T6> source6,
-                IAsyncEnumerable<T7> source7,
+                IAsyncEnumerableObs<T1> source1,
+                IAsyncEnumerableObs<T2> source2,
+                IAsyncEnumerableObs<T3> source3,
+                IAsyncEnumerableObs<T4> source4,
+                IAsyncEnumerableObs<T5> source5,
+                IAsyncEnumerableObs<T6> source6,
+                IAsyncEnumerableObs<T7> source7,
                 Func<T1, T2, T3, T4, T5, T6, T7, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -1430,9 +1430,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _n = 7;
 
@@ -1448,13 +1448,13 @@
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
                 private int _active;
-                private IAsyncEnumerator<T1> _ae1;
-                private IAsyncEnumerator<T2> _ae2;
-                private IAsyncEnumerator<T3> _ae3;
-                private IAsyncEnumerator<T4> _ae4;
-                private IAsyncEnumerator<T5> _ae5;
-                private IAsyncEnumerator<T6> _ae6;
-                private IAsyncEnumerator<T7> _ae7;
+                private IAsyncEnumeratorObs<T1> _ae1;
+                private IAsyncEnumeratorObs<T2> _ae2;
+                private IAsyncEnumeratorObs<T3> _ae3;
+                private IAsyncEnumeratorObs<T4> _ae4;
+                private IAsyncEnumeratorObs<T5> _ae5;
+                private IAsyncEnumeratorObs<T6> _ae6;
+                private IAsyncEnumeratorObs<T7> _ae7;
                 private readonly CoCompletionSource[] _ccssPushing = new CoCompletionSource[_n];
                 private uint _ccssPushingMask;
                 private int _state;
@@ -1490,7 +1490,7 @@
                             _ccssPushingMask = 0;
                             _state = _sPulling;
                             foreach (var ccs in _ccssPushing)
-                                ccs.SetCompleted(null);
+                                ccs.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -1498,15 +1498,15 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
-                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            _ccsMoveNext.SetException(new Exception(state + "???"));
                             break;
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -1538,7 +1538,7 @@
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
                                 foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                    ccs.SetCompleted(ex);
+                                    ccs.SetException(ex);
                             }
                             break;
 
@@ -1568,7 +1568,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -1580,7 +1580,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -1595,7 +1595,7 @@
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
-                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                    _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -1606,7 +1606,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -1617,7 +1617,7 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerableObs<T> source, int index, Action<Enumerator, IAsyncEnumeratorObs<T>> setEnumerator)
                 {
                     Exception error;
                     try
@@ -1649,11 +1649,11 @@
                                                 throw;
                                             }
                                             _state = _sPushing;
-                                            _ccsMoveNext.SetCompleted(null, true);
+                                            _ccsMoveNext.SetResult(true);
                                         }
                                         else
                                             _state = _sPulling;
-                                        await ccsPushing.Awaiter;
+                                        await ccsPushing.Task;
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -1681,39 +1681,39 @@
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Zip<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(this
-            IAsyncEnumerable<T1> source1,
-            IAsyncEnumerable<T2> source2,
-            IAsyncEnumerable<T3> source3,
-            IAsyncEnumerable<T4> source4,
-            IAsyncEnumerable<T5> source5,
-            IAsyncEnumerable<T6> source6,
-            IAsyncEnumerable<T7> source7,
-            IAsyncEnumerable<T8> source8,
+        public static IAsyncEnumerableObs<TResult> Zip<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(this
+            IAsyncEnumerableObs<T1> source1,
+            IAsyncEnumerableObs<T2> source2,
+            IAsyncEnumerableObs<T3> source3,
+            IAsyncEnumerableObs<T4> source4,
+            IAsyncEnumerableObs<T5> source5,
+            IAsyncEnumerableObs<T6> source6,
+            IAsyncEnumerableObs<T7> source7,
+            IAsyncEnumerableObs<T8> source8,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(source1, source2, source3, source4, source5, source6, source7, source8, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : IAsyncEnumerableObs<TResult>
         {
-            private readonly IAsyncEnumerable<T1> _source1;
-            private readonly IAsyncEnumerable<T2> _source2;
-            private readonly IAsyncEnumerable<T3> _source3;
-            private readonly IAsyncEnumerable<T4> _source4;
-            private readonly IAsyncEnumerable<T5> _source5;
-            private readonly IAsyncEnumerable<T6> _source6;
-            private readonly IAsyncEnumerable<T7> _source7;
-            private readonly IAsyncEnumerable<T8> _source8;
+            private readonly IAsyncEnumerableObs<T1> _source1;
+            private readonly IAsyncEnumerableObs<T2> _source2;
+            private readonly IAsyncEnumerableObs<T3> _source3;
+            private readonly IAsyncEnumerableObs<T4> _source4;
+            private readonly IAsyncEnumerableObs<T5> _source5;
+            private readonly IAsyncEnumerableObs<T6> _source6;
+            private readonly IAsyncEnumerableObs<T7> _source7;
+            private readonly IAsyncEnumerableObs<T8> _source8;
             private readonly Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> _resultSelector;
 
             public ZipEnumerable(
-                IAsyncEnumerable<T1> source1,
-                IAsyncEnumerable<T2> source2,
-                IAsyncEnumerable<T3> source3,
-                IAsyncEnumerable<T4> source4,
-                IAsyncEnumerable<T5> source5,
-                IAsyncEnumerable<T6> source6,
-                IAsyncEnumerable<T7> source7,
-                IAsyncEnumerable<T8> source8,
+                IAsyncEnumerableObs<T1> source1,
+                IAsyncEnumerableObs<T2> source2,
+                IAsyncEnumerableObs<T3> source3,
+                IAsyncEnumerableObs<T4> source4,
+                IAsyncEnumerableObs<T5> source5,
+                IAsyncEnumerableObs<T6> source6,
+                IAsyncEnumerableObs<T7> source7,
+                IAsyncEnumerableObs<T8> source8,
                 Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -1727,9 +1727,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _n = 8;
 
@@ -1745,14 +1745,14 @@
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private CoCompletionSource<bool> _ccsMoveNext = CoCompletionSource<bool>.Init();
                 private int _active;
-                private IAsyncEnumerator<T1> _ae1;
-                private IAsyncEnumerator<T2> _ae2;
-                private IAsyncEnumerator<T3> _ae3;
-                private IAsyncEnumerator<T4> _ae4;
-                private IAsyncEnumerator<T5> _ae5;
-                private IAsyncEnumerator<T6> _ae6;
-                private IAsyncEnumerator<T7> _ae7;
-                private IAsyncEnumerator<T8> _ae8;
+                private IAsyncEnumeratorObs<T1> _ae1;
+                private IAsyncEnumeratorObs<T2> _ae2;
+                private IAsyncEnumeratorObs<T3> _ae3;
+                private IAsyncEnumeratorObs<T4> _ae4;
+                private IAsyncEnumeratorObs<T5> _ae5;
+                private IAsyncEnumeratorObs<T6> _ae6;
+                private IAsyncEnumeratorObs<T7> _ae7;
+                private IAsyncEnumeratorObs<T8> _ae8;
                 private readonly CoCompletionSource[] _ccssPushing = new CoCompletionSource[_n];
                 private uint _ccssPushingMask;
                 private int _state;
@@ -1789,7 +1789,7 @@
                             _ccssPushingMask = 0;
                             _state = _sPulling;
                             foreach (var ccs in _ccssPushing)
-                                ccs.SetCompleted(null);
+                                ccs.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -1797,15 +1797,15 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
-                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            _ccsMoveNext.SetException(new Exception(state + "???"));
                             break;
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -1837,7 +1837,7 @@
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
                                 foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                    ccs.SetCompleted(ex);
+                                    ccs.SetException(ex);
                             }
                             break;
 
@@ -1867,7 +1867,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -1879,7 +1879,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -1894,7 +1894,7 @@
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
-                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                    _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -1905,7 +1905,7 @@
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -1916,7 +1916,7 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerableObs<T> source, int index, Action<Enumerator, IAsyncEnumeratorObs<T>> setEnumerator)
                 {
                     Exception error;
                     try
@@ -1948,11 +1948,11 @@
                                                 throw;
                                             }
                                             _state = _sPushing;
-                                            _ccsMoveNext.SetCompleted(null, true);
+                                            _ccsMoveNext.SetResult(true);
                                         }
                                         else
                                             _state = _sPulling;
-                                        await ccsPushing.Awaiter;
+                                        await ccsPushing.Task;
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 

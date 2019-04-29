@@ -7,7 +7,7 @@
         /// <summary>
         /// Returns values from an observable sequence as long as a specified condition is true, and then skips the remaining values.
         /// </summary>
-        public static IAsyncEnumerable<T> TakeWhile<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate)
+        public static IAsyncEnumerableObs<T> TakeWhile<T>(this IAsyncEnumerableObs<T> source, Func<T, bool> predicate)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -32,7 +32,7 @@
         /// <summary>
         /// Returns values from an observable sequence as long as a specified condition is true, and then skips the remaining values.
         /// </summary>
-        public static IAsyncEnumerable<T> TakeWhile<T>(this IAsyncEnumerable<T> source, Func<T, int, bool> predicate)
+        public static IAsyncEnumerableObs<T> TakeWhile<T>(this IAsyncEnumerableObs<T> source, Func<T, int, bool> predicate)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));

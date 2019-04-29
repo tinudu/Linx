@@ -8,23 +8,23 @@
     partial class LinxReactive
     {
         /// <summary>
-        /// Gets a <see cref="IAsyncEnumerable{T}"/> that completes only when the token is canceled or when it's disposed.
+        /// Gets a <see cref="IAsyncEnumerableObs{T}"/> that completes only when the token is canceled or when it's disposed.
         /// </summary>
-        public static IAsyncEnumerable<T> Never<T>() => NeverAsyncEnumerable<T>.Singleton;
+        public static IAsyncEnumerableObs<T> Never<T>() => NeverAsyncEnumerable<T>.Singleton;
 
         /// <summary>
-        /// Gets a <see cref="IAsyncEnumerable{T}"/> that completes only when the token is canceled or when it's disposed.
+        /// Gets a <see cref="IAsyncEnumerableObs{T}"/> that completes only when the token is canceled or when it's disposed.
         /// </summary>
-        public static IAsyncEnumerable<T> Never<T>(T sample) => NeverAsyncEnumerable<T>.Singleton;
+        public static IAsyncEnumerableObs<T> Never<T>(T sample) => NeverAsyncEnumerable<T>.Singleton;
 
-        private sealed class NeverAsyncEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class NeverAsyncEnumerable<T> : IAsyncEnumerableObs<T>
         {
             public static NeverAsyncEnumerable<T> Singleton { get; } = new NeverAsyncEnumerable<T>();
             private NeverAsyncEnumerable() { }
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(token);
+            public IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(token);
 
-            private sealed class Enumerator : IAsyncEnumerator<T>
+            private sealed class Enumerator : IAsyncEnumeratorObs<T>
             {
                 private const int _sInitial = 0;
                 private const int _sPulling = 1;
@@ -54,14 +54,14 @@
                             break;
                         case _sFinal:
                             _state = _sFinal;
-                            _ccs.SetCompleted(_error, false);
+                            _ccs.SetException(_error);
                             break;
                         default: // Pulling???
                             _state = state;
                             throw new Exception(_state + "???");
                     }
 
-                    return _ccs.Awaiter;
+                    return _ccs.Task;
                 }
 
                 public Task DisposeAsync()
@@ -84,7 +84,7 @@
                             _error = error;
                             _state = _sFinal;
                             _ctr.Dispose();
-                            _ccs.SetCompleted(error, false);
+                            _ccs.SetException(error);
                             break;
                         case _sFinal:
                             _state = _sFinal;

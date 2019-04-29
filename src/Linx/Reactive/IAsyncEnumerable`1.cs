@@ -5,11 +5,11 @@
     /// <summary>
     /// Asynchronous enumerable.
     /// </summary>
-    public interface IAsyncEnumerable<out T>
+    public interface IAsyncEnumerableObs<out T>
     {
         /// <summary>
         /// Get an async enumerator.
         /// </summary>
-        IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token);
+        IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token);
     }
 }

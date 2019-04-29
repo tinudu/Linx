@@ -9,7 +9,7 @@
         /// <summary>
         /// Projects each element of a sequence into a new form.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector)
+        public static IAsyncEnumerableObs<TResult> Select<TSource, TResult>(this IAsyncEnumerableObs<TSource> source, Func<TSource, TResult> selector)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
@@ -29,7 +29,7 @@
         /// <summary>
         /// Projects each element of a sequence into a new form.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, CancellationToken, Task<TResult>> selector)
+        public static IAsyncEnumerableObs<TResult> Select<TSource, TResult>(this IAsyncEnumerableObs<TSource> source, Func<TSource, CancellationToken, Task<TResult>> selector)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));

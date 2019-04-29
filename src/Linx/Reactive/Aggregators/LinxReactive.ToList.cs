@@ -10,7 +10,7 @@
         /// <summary>
         /// Aggregate elements into a list.
         /// </summary>
-        public static async Task<List<T>> ToList<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<List<T>> ToList<T>(this IAsyncEnumerableObs<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

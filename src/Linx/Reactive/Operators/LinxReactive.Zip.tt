@@ -46,25 +46,25 @@ namespace Linx.Reactive
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Zip<#= arg.GenArgList #>(this
+        public static IAsyncEnumerableObs<TResult> Zip<#= arg.GenArgList #>(this
 <#
     foreach(var n in arg.Names)
     {
 #>
-            IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
+            IAsyncEnumerableObs<<#= n.GenArg #>> <#= n.Source #>,
 <#
     }
 #>
             Func<#= arg.GenArgList #> resultSelector)
             => new ZipEnumerable<#= arg.GenArgList #>(<#= string.Join(", ", arg.Names.Select(n => n.Source)) #>, resultSelector);
 
-        private sealed class ZipEnumerable<#= arg.GenArgList #> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<#= arg.GenArgList #> : IAsyncEnumerableObs<TResult>
         {
 <#
     foreach(var n in arg.Names)
     {
 #>
-            private readonly IAsyncEnumerable<<#= n.GenArg #>> _<#= n.Source #>;
+            private readonly IAsyncEnumerableObs<<#= n.GenArg #>> _<#= n.Source #>;
 <#
     }
 #>
@@ -75,7 +75,7 @@ namespace Linx.Reactive
     foreach(var n in arg.Names)
     {
 #>
-                IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
+                IAsyncEnumerableObs<<#= n.GenArg #>> <#= n.Source #>,
 <#
     }
 #>
@@ -92,9 +92,9 @@ namespace Linx.Reactive
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _n = <#= arg.N #>;
 
@@ -114,7 +114,7 @@ namespace Linx.Reactive
     foreach(var n in arg.Names)
     {
 #>
-                private IAsyncEnumerator<<#= n.GenArg #>> <#= n.Ae #>;
+                private IAsyncEnumeratorObs<<#= n.GenArg #>> <#= n.Ae #>;
 <#
     }
 #>
@@ -154,7 +154,7 @@ namespace Linx.Reactive
                             _ccssPushingMask = 0;
                             _state = _sPulling;
                             foreach (var ccs in _ccssPushing)
-                                ccs.SetCompleted(null);
+                                ccs.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -162,15 +162,15 @@ namespace Linx.Reactive
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
-                            _ccsMoveNext.SetCompleted(new Exception(state + "???"), false);
+                            _ccsMoveNext.SetException(new Exception(state + "???"));
                             break;
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -202,7 +202,7 @@ namespace Linx.Reactive
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
                                 foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                    ccs.SetCompleted(ex);
+                                    ccs.SetException(ex);
                             }
                             break;
 
@@ -232,7 +232,7 @@ namespace Linx.Reactive
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -244,7 +244,7 @@ namespace Linx.Reactive
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -259,7 +259,7 @@ namespace Linx.Reactive
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
-                                    _ccsMoveNext.SetCompleted(_eh.Error, false);
+                                    _eh.SetResultOrError(_ccsMoveNext, false);
                             }
                             else
                             {
@@ -270,7 +270,7 @@ namespace Linx.Reactive
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
                                     foreach (var ccs in _ccssPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetCompleted(ex);
+                                        ccs.SetException(ex);
                                 }
                             }
                             break;
@@ -281,7 +281,7 @@ namespace Linx.Reactive
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, IAsyncEnumerator<T>> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerableObs<T> source, int index, Action<Enumerator, IAsyncEnumeratorObs<T>> setEnumerator)
                 {
                     Exception error;
                     try
@@ -313,11 +313,11 @@ namespace Linx.Reactive
                                                 throw;
                                             }
                                             _state = _sPushing;
-                                            _ccsMoveNext.SetCompleted(null, true);
+                                            _ccsMoveNext.SetResult(true);
                                         }
                                         else
                                             _state = _sPulling;
-                                        await ccsPushing.Awaiter;
+                                        await ccsPushing.Task;
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 

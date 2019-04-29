@@ -7,7 +7,7 @@
         /// <summary>
         /// Returns all non-null values from <paramref name="source"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Values<T>(this IAsyncEnumerable<T?> source) where T : struct
+        public static IAsyncEnumerableObs<T> Values<T>(this IAsyncEnumerableObs<T?> source) where T : struct
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

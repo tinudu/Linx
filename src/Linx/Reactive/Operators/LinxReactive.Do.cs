@@ -7,7 +7,7 @@
         /// <summary>
         /// Produce side effects while enumerating a sequence.
         /// </summary>
-        public static IAsyncEnumerable<T> Do<T>(this IAsyncEnumerable<T> source, Action<T> onNext = null, Action<Exception> onError = null, Action onCompleted = null)
+        public static IAsyncEnumerableObs<T> Do<T>(this IAsyncEnumerableObs<T> source, Action<T> onNext = null, Action<Exception> onError = null, Action onCompleted = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

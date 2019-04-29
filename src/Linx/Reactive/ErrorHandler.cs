@@ -2,6 +2,7 @@
 {
     using System;
     using System.Threading;
+    using Coroutines;
 
     /// <summary>
     /// Provides common error handling.
@@ -9,7 +10,7 @@
     internal struct ErrorHandler
     {
         /// <summary>
-        /// <see cref="ObjectDisposedException"/> singleton that says a <see cref="IAsyncEnumerator{T}"/> was disposed.
+        /// <see cref="ObjectDisposedException"/> singleton that says a <see cref="IAsyncEnumeratorObs{T}"/> was disposed.
         /// </summary>
         public static ObjectDisposedException EnumeratorDisposedException { get; } = new ObjectDisposedException("IAsyncEnumerator");
 
@@ -76,6 +77,20 @@
         {
             var error = Error;
             if (error != null) throw error;
+        }
+
+        public void SetResultOrError(CoCompletionSource ccs)
+        {
+            var error = Error;
+            if (error == null) ccs.SetResult();
+            else ccs.SetException(error);
+        }
+
+        public void SetResultOrError<T>(CoCompletionSource<T> ccs, T result)
+        {
+            var error = Error;
+            if (error == null) ccs.SetResult(result);
+            else ccs.SetException(error);
         }
     }
 }

@@ -7,7 +7,7 @@
         /// <summary>
         /// Materializes the implicit notifications of an observable sequence as explicit notification values.
         /// </summary>
-        public static IAsyncEnumerable<INotification<T>> Materialize<T>(this IAsyncEnumerable<T> source)
+        public static IAsyncEnumerableObs<INotification<T>> Materialize<T>(this IAsyncEnumerableObs<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

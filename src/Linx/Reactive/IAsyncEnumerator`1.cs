@@ -6,7 +6,7 @@
     /// <summary>
     /// Enumerator where elements are retrieved asynchronously.
     /// </summary>
-    public interface IAsyncEnumerator<out T>
+    public interface IAsyncEnumeratorObs<out T>
     {
         /// <summary>
         /// Get the next element.

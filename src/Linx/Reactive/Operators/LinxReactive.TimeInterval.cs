@@ -8,7 +8,7 @@
         /// <summary>
         /// Records the time interval between consecutive values.
         /// </summary>
-        public static IAsyncEnumerable<TimeInterval<T>> TimeInterval<T>(this IAsyncEnumerable<T> source)
+        public static IAsyncEnumerableObs<TimeInterval<T>> TimeInterval<T>(this IAsyncEnumerableObs<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

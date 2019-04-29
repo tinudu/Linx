@@ -12,12 +12,12 @@
     /// <summary>
     /// Delegate to produce an aggregate from a sequence.
     /// </summary>
-    public delegate Task<TAggregate> AggregatorDelegate<in TSource, TAggregate>(IAsyncEnumerable<TSource> source, CancellationToken token);
+    public delegate Task<TAggregate> AggregatorDelegate<in TSource, TAggregate>(IAsyncEnumerableObs<TSource> source, CancellationToken token);
 
     /// <summary>
     /// Delegate to consume a sequence.
     /// </summary>
-    public delegate Task ConsumerDelegate<in TSource>(IAsyncEnumerable<TSource> source, CancellationToken token);
+    public delegate Task ConsumerDelegate<in TSource>(IAsyncEnumerableObs<TSource> source, CancellationToken token);
 
     /// <summary>
     /// Coroutine to asynchronously produce sequence elements.

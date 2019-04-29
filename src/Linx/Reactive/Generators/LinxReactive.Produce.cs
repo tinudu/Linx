@@ -10,34 +10,34 @@
     partial class LinxReactive
     {
         /// <summary>
-        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
+        /// Create a <see cref="IAsyncEnumerableObs{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Produce<T>(ProducerDelegate<T> producer)
+        public static IAsyncEnumerableObs<T> Produce<T>(ProducerDelegate<T> producer)
         {
             if (producer == null) throw new ArgumentNullException(nameof(producer));
             return new ProduceEnumerable<T>(producer);
         }
 
         /// <summary>
-        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
+        /// Create a <see cref="IAsyncEnumerableObs{T}"/> defined by a <see cref="ProducerDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Produce<T>(T sample, ProducerDelegate<T> producer)
+        public static IAsyncEnumerableObs<T> Produce<T>(T sample, ProducerDelegate<T> producer)
         {
             if (producer == null) throw new ArgumentNullException(nameof(producer));
             return new ProduceEnumerable<T>(producer);
         }
 
         [DebuggerNonUserCode]
-        private sealed class ProduceEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class ProduceEnumerable<T> : IAsyncEnumerableObs<T>
         {
             private readonly ProducerDelegate<T> _producer;
 
             public ProduceEnumerable(ProducerDelegate<T> producer) => _producer = producer;
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
             [DebuggerNonUserCode]
-            private sealed class Enumerator : IAsyncEnumerator<T>
+            private sealed class Enumerator : IAsyncEnumeratorObs<T>
             {
                 private const int _sInitial = 0;
                 private const int _sPulling = 1;
@@ -74,7 +74,7 @@
                             break;
                         case _sPushing:
                             _state = _sPulling;
-                            _ccsOnNext.SetCompleted(null);
+                            _ccsOnNext.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -82,14 +82,14 @@
                         case _sFinal:
                             Current = default;
                             _state = _sFinal;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsMoveNext.Awaiter;
+                    return _ccsMoveNext.Task;
                 }
 
                 public Task DisposeAsync()
@@ -108,20 +108,20 @@
                         case _sPulling:
                             Current = value;
                             _state = _sPushing;
-                            _ccsMoveNext.SetCompleted(null, true);
+                            _ccsMoveNext.SetResult(true);
                             break;
                         case _sCanceling:
                         case _sCancelingPulling:
                             _state = state;
                             Atomic.WaitCanceled(_eh.InternalToken);
-                            _ccsOnNext.SetCompleted(new OperationCanceledException(_eh.InternalToken));
+                            _ccsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
                         default: // Initial, Pushing, Final ???
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsOnNext.Awaiter;
+                    return _ccsOnNext.Task;
                 }
 
                 private void Cancel(Exception error)
@@ -144,7 +144,7 @@
                             _eh.SetExternalError(error);
                             _state = _sCanceling;
                             _eh.Cancel();
-                            _ccsOnNext.SetCompleted(new OperationCanceledException(_eh.InternalToken));
+                            _ccsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
                         case _sCanceling:
                         case _sCancelingPulling:
@@ -176,14 +176,14 @@
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
 
                         case _sPushing:
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
-                            _ccsOnNext.SetCompleted(new OperationCanceledException(_eh.InternalToken));
+                            _ccsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
 
                         case _sCanceling:
@@ -195,7 +195,7 @@
                             _state = _sFinal;
                             _atmbDisposed.SetResult();
                             Current = default;
-                            _ccsMoveNext.SetCompleted(_eh.Error, false);
+                            _eh.SetResultOrError(_ccsMoveNext, false);
                             break;
 
                         default: // Initial, Final??

@@ -8,7 +8,7 @@
         /// <summary>
         /// Indicates the sequence by <paramref name="delay"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Delay<T>(this IAsyncEnumerable<T> source, TimeSpan delay)
+        public static IAsyncEnumerableObs<T> Delay<T>(this IAsyncEnumerableObs<T> source, TimeSpan delay)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (delay <= TimeSpan.Zero) return source;

@@ -7,7 +7,7 @@
         /// <summary>
         /// Invokes the specified action when the sequence terminates.
         /// </summary>
-        public static IAsyncEnumerable<T> Finally<T>(this IAsyncEnumerable<T> source, Action @finally)
+        public static IAsyncEnumerableObs<T> Finally<T>(this IAsyncEnumerableObs<T> source, Action @finally)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (@finally == null) throw new ArgumentNullException(nameof(@finally));

@@ -10,7 +10,7 @@
         /// Returns the first element of a sequence.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no elements.</exception>
-        public static async Task<T> First<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<T> First<T>(this IAsyncEnumerableObs<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -24,7 +24,7 @@
         /// Returns the first element in a sequence that satisfies a specified condition.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no elements.</exception>
-        public static async Task<T> First<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        public static async Task<T> First<T>(this IAsyncEnumerableObs<T> source, Func<T, bool> predicate, CancellationToken token)
             => await source.Where(predicate).First(token).ConfigureAwait(false);
     }
 }

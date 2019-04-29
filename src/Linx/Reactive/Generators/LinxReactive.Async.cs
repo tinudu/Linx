@@ -6,9 +6,9 @@
     partial class LinxReactive
     {
         /// <summary>
-        /// Convert a <see cref="IEnumerable{T}"/> to a <see cref="IAsyncEnumerable{T}"/>.
+        /// Convert a <see cref="IEnumerable{T}"/> to a <see cref="IAsyncEnumerableObs{T}"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Async<T>(this IEnumerable<T> source)
+        public static IAsyncEnumerableObs<T> Async<T>(this IEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

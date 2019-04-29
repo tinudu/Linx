@@ -22,7 +22,7 @@
         /// <summary>
         /// Gets the awaiter controlled by this instance.
         /// </summary>
-        public ICoAwaiter<T> Awaiter => _awaiter;
+        public ICoAwaiter<T> Task => _awaiter;
 
         /// <summary>
         /// Reset the awaiter.
@@ -31,10 +31,14 @@
         public void Reset(bool continueOnCapturedContext) => _awaiter.Reset(continueOnCapturedContext);
 
         /// <summary>
-        /// Complete with the specified <paramref name="exception"/> (if not null), or set the specified <paramref name="result"/>.
+        /// Complete sucessfully.
         /// </summary>
-        /// <exception cref="InvalidOperationException">Call not preceded by <see cref="Reset"/>.</exception>
-        public void SetCompleted(Exception exception, T result) => _awaiter.SetCompleted(exception, result);
+        public void SetResult(T result) => _awaiter.SetCompleted(null, result);
+
+        /// <summary>
+        /// Complete with error.
+        /// </summary>
+        public void SetException(Exception error) => _awaiter.SetCompleted(error, default);
 
         [DebuggerNonUserCode]
         private sealed class CoAwaiter : ICoAwaiter<T>

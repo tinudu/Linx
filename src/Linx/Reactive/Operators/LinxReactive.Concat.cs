@@ -8,7 +8,7 @@
         /// <summary>
         /// Concats the elements of the specified sequences.
         /// </summary>
-        public static IAsyncEnumerable<T> Concat<T>(this IAsyncEnumerable<IAsyncEnumerable<T>> sources)
+        public static IAsyncEnumerableObs<T> Concat<T>(this IAsyncEnumerableObs<IAsyncEnumerableObs<T>> sources)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
 
@@ -27,7 +27,7 @@
         /// <summary>
         /// Concats the elements of the specified sequences.
         /// </summary>
-        public static IAsyncEnumerable<T> Concat<T>(this IEnumerable<IAsyncEnumerable<T>> sources)
+        public static IAsyncEnumerableObs<T> Concat<T>(this IEnumerable<IAsyncEnumerableObs<T>> sources)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
 
@@ -41,7 +41,7 @@
         /// <summary>
         /// Concats the elements of the specified sequences.
         /// </summary>
-        public static IAsyncEnumerable<T> Concat<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second)
+        public static IAsyncEnumerableObs<T> Concat<T>(this IAsyncEnumerableObs<T> first, IAsyncEnumerableObs<T> second)
         {
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));
@@ -51,6 +51,6 @@
         /// <summary>
         /// Concats the elements of the specified sequences.
         /// </summary>
-        public static IAsyncEnumerable<T> Concat<T>(params IAsyncEnumerable<T>[] sources) => sources.Concat();
+        public static IAsyncEnumerableObs<T> Concat<T>(params IAsyncEnumerableObs<T>[] sources) => sources.Concat();
     }
 }

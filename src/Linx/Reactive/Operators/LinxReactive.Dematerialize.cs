@@ -9,7 +9,7 @@
         /// <summary>
         /// Dematerializes the explicit notification values of an observable sequence as implicit notifications.
         /// </summary>
-        public static IAsyncEnumerable<T> Dematerialize<T>(this IAsyncEnumerable<INotification<T>> source)
+        public static IAsyncEnumerableObs<T> Dematerialize<T>(this IAsyncEnumerableObs<INotification<T>> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -42,7 +42,7 @@
         /// <summary>
         /// Dematerializes the explicit notification in <paramref name="source"/> after an interval.
         /// </summary>
-        public static IAsyncEnumerable<T> Dematerialize<T>(this IEnumerable<TimeInterval<INotification<T>>> source)
+        public static IAsyncEnumerableObs<T> Dematerialize<T>(this IEnumerable<TimeInterval<INotification<T>>> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

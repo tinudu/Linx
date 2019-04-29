@@ -12,24 +12,24 @@
         /// <summary>
         /// Merges differently typed sequences into one.
         /// </summary>
-        public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, TResult>(this IAsyncEnumerable<T1> source1, IAsyncEnumerable<T2> source2, Func<T1, T2, TResult> resultSelector) => new CombineLatestEnumerable<T1, T2, TResult>(source1, source2, resultSelector);
+        public static IAsyncEnumerableObs<TResult> CombineLatest<T1, T2, TResult>(this IAsyncEnumerableObs<T1> source1, IAsyncEnumerableObs<T2> source2, Func<T1, T2, TResult> resultSelector) => new CombineLatestEnumerable<T1, T2, TResult>(source1, source2, resultSelector);
 
-        private sealed class CombineLatestEnumerable<T1, T2, TResult> : IAsyncEnumerable<TResult>
+        private sealed class CombineLatestEnumerable<T1, T2, TResult> : IAsyncEnumerableObs<TResult>
         {
-            private readonly IAsyncEnumerable<T1> _source1;
-            private readonly IAsyncEnumerable<T2> _source2;
+            private readonly IAsyncEnumerableObs<T1> _source1;
+            private readonly IAsyncEnumerableObs<T2> _source2;
             private readonly Func<T1, T2, TResult> _resultSelector;
 
-            public CombineLatestEnumerable(IAsyncEnumerable<T1> source1, IAsyncEnumerable<T2> source2, Func<T1, T2, TResult> resultSelector)
+            public CombineLatestEnumerable(IAsyncEnumerableObs<T1> source1, IAsyncEnumerableObs<T2> source2, Func<T1, T2, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
                 _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumeratorObs<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            private sealed class Enumerator : IAsyncEnumeratorObs<TResult>
             {
                 private const int _sInitial = 0;
                 private const int _sCurrentMutable = 1;
@@ -124,7 +124,8 @@
                                 try { _cts.Cancel(); } catch {/**/}
                                 _ctr.Dispose();
                                 _atmbDisposed.SetResult();
-                                _ccsPull.SetCompleted(_error, false);
+                                if (_error == null) _ccsPull.SetResult(false);
+                                else _ccsPull.SetException(_error);
                                 break;
 
                             case _sCanceling:
@@ -136,7 +137,8 @@
                                 if (error != null) _error = error;
                                 _current = default;
                                 _state = _sFinal;
-                                _ccsPull.SetCompleted(_error, false);
+                                if (_error == null) _ccsPull.SetResult(false);
+                                else _ccsPull.SetException(_error);
                                 break;
 
                             default: // Last, Final???
@@ -145,7 +147,7 @@
                         }
                     }
 
-                    async void Produce<T>(IAsyncEnumerable<T> source, Action<Enumerator, T> setNext)
+                    async void Produce<T>(IAsyncEnumerableObs<T> source, Action<Enumerator, T> setNext)
                     {
                         Exception error;
                         var any = false;
@@ -198,7 +200,7 @@
                                             if (valuesCountDown == 0)
                                             {
                                                 _state = _sCurrentMutable;
-                                                _ccsPull.SetCompleted(null, true);
+                                                _ccsPull.SetResult(true);
                                             }
                                             else
                                                 _state = _sPulling;
@@ -254,7 +256,7 @@
                             {
                                 _current = GetResult();
                                 _state = _sCurrentMutable;
-                                _ccsPull.SetCompleted(null, true);
+                                _ccsPull.SetResult(true);
                             }
                             catch (Exception error)
                             {
@@ -274,7 +276,7 @@
                                 _state = _sFinal;
                                 _ctr.Dispose();
                                 _atmbDisposed.SetResult();
-                                _ccsPull.SetCompleted(null, true);
+                                _ccsPull.SetResult(true);
                             }
                             catch (Exception error)
                             {
@@ -283,7 +285,8 @@
                                 _error = error;
                                 _state = _sFinal;
                                 _ctr.Dispose();
-                                _ccsPull.SetCompleted(_error, false);
+                                if (_error == null) _ccsPull.SetResult(false);
+                                else _ccsPull.SetException(_error);
                             }
                             break;
 
@@ -294,7 +297,8 @@
                         case _sFinal:
                             _current = default;
                             _state = _sFinal;
-                            _ccsPull.SetCompleted(_error, false);
+                            if (_error == null) _ccsPull.SetResult(false);
+                            else _ccsPull.SetException(_error);
                             break;
 
                         default: // Pulling, CancelingPulling???
@@ -302,12 +306,12 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsPull.Awaiter;
+                    return _ccsPull.Task;
                 }
 
                 public Task DisposeAsync()
                 {
-                    if (_state <= _sLast) Cancel(new ObjectDisposedException(nameof(IAsyncEnumerator<TResult>)));
+                    if (_state <= _sLast) Cancel(new ObjectDisposedException(nameof(IAsyncEnumeratorObs<TResult>)));
                     return _atmbDisposed.Task;
                 }
 

@@ -23,7 +23,7 @@ namespace Linx.Reactive
         /// <summary>
         /// Computes the sum of a sequence values.
         /// </summary>
-        public static async Task<<#= t.Type #>> Sum(this IAsyncEnumerable<<#= t.Type #>> source, CancellationToken token)
+        public static async Task<<#= t.Type #>> Sum(this IAsyncEnumerableObs<<#= t.Type #>> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -42,17 +42,17 @@ namespace Linx.Reactive
         /// <summary>
         /// Computes the sum of a sequence of non-null values.
         /// </summary>
-        public static async Task<<#= t.Type #>> Sum(this IAsyncEnumerable<<#= t.Type #>?> source, CancellationToken token) => await source.Values().Sum(token);
+        public static async Task<<#= t.Type #>> Sum(this IAsyncEnumerableObs<<#= t.Type #>?> source, CancellationToken token) => await source.Values().Sum(token);
 
         /// <summary>
         /// Computes the sum of the sequence of values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static async Task<<#= t.Type #>> Sum<T>(this IAsyncEnumerable<T> source, Func<T, <#= t.Type #>> selector, CancellationToken token) => await source.Select(selector).Sum(token);
+        public static async Task<<#= t.Type #>> Sum<T>(this IAsyncEnumerableObs<T> source, Func<T, <#= t.Type #>> selector, CancellationToken token) => await source.Select(selector).Sum(token);
 
         /// <summary>
         /// Computes the sum of the sequence of non-null values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static async Task<<#= t.Type #>> Sum<T>(this IAsyncEnumerable<T> source, Func<T, <#= t.Type #>?> selector, CancellationToken token) => await source.Select(selector).Values().Sum(token);
+        public static async Task<<#= t.Type #>> Sum<T>(this IAsyncEnumerableObs<T> source, Func<T, <#= t.Type #>?> selector, CancellationToken token) => await source.Select(selector).Values().Sum(token);
 
 <# } #>
     }

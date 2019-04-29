@@ -10,7 +10,7 @@
         /// Returns the only element of a sequence, and throws an exception if there is not exactly one element in the sequence.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no or multiple elements.</exception>
-        public static async Task<T> Single<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<T> Single<T>(this IAsyncEnumerableObs<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -30,7 +30,7 @@
         /// Returns the only element of a sequence that satisfies a specified condition, and throws an exception if not exactly one such element exists.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no or multiple elements.</exception>
-        public static async Task<T> Single<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        public static async Task<T> Single<T>(this IAsyncEnumerableObs<T> source, Func<T, bool> predicate, CancellationToken token)
             => await source.Where(predicate).Single(token).ConfigureAwait(false);
     }
 }

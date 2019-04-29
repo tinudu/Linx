@@ -102,7 +102,9 @@
             // loop to advance virtual time, running on a low prio thread
             while (true)
             {
-                Thread.Sleep(1); // yeald to other threads so they can schedule
+                // yield to other threads so they can schedule
+                Thread.Sleep(1);
+
                 ITimerCompleter completer;
                 lock (_queue)
                 {
@@ -113,36 +115,29 @@
                         return;
                     }
 
-                    if (_queue.IsEmpty)
-                    {
-                        Monitor.Wait(_queue);
-                        continue;
-                    }
-
-                    var bucket = _queue.Peek();
                     while (true)
                     {
-                        if (Now < bucket.DueUtc) Now = bucket.DueUtc;
-                        if (bucket.Completers.Count > 0)
-                        {
-                            completer = bucket.Completers[0];
-                            bucket.Completers.RemoveAt(0);
-                            break;
-                        }
-
-                        _queue.Dequeue();
-                        _completersByDue.Remove(bucket.DueUtc);
-                        _pool.Push(bucket.Completers);
-                        if (_queue.IsEmpty)
+                        if(_queue.IsEmpty)
                         {
                             completer = null;
                             break;
                         }
-
-                        bucket = _queue.Peek();
+                        var bucket = _queue.Peek();
+                        if (bucket.Completers.Count > 0)
+                        {
+                            if (Now < bucket.DueUtc) Now = bucket.DueUtc;
+                            completer = bucket.Completers[0];
+                            bucket.Completers.RemoveAt(0);
+                            break;
+                        }
+                        _queue.Dequeue();
+                        _completersByDue.Remove(bucket.DueUtc);
+                        _pool.Push(bucket.Completers);
                     }
-                }
 
+                    if (completer == null)
+                        Monitor.Wait(_queue);
+                }
                 completer?.Complete();
             }
         }

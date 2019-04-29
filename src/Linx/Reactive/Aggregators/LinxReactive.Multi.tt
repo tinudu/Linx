@@ -39,7 +39,7 @@ namespace Linx.Reactive
         /// Multiple aggregators sharing a subscription.
         /// </summary>
         public static async Task<TResult> MultiAggregate<TSource, <#= arg.GenArgs #>, TResult>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
 <# foreach(var n in arg.Names) { #>
             AggregatorDelegate<TSource, <#= n.GenArg #>> <#= n.Aggregator #>,
 <# } #>
@@ -79,7 +79,7 @@ namespace Linx.Reactive
         /// Multiple consumers sharing a subscription.
         /// </summary>
         public static async Task MultiConsume<TSource>(
-            this IAsyncEnumerable<TSource> source,
+            this IAsyncEnumerableObs<TSource> source,
 <# foreach(var n in arg.Names) { #>
             ConsumerDelegate<TSource> <#= n.Consumer #>,
 <# } #>

@@ -10,13 +10,13 @@
         /// <summary>
         /// The output sequence.
         /// </summary>
-        IAsyncEnumerable<TResult> Output { get; }
+        IAsyncEnumerableObs<TResult> Output { get; }
 
         /// <summary>
         /// Subscribe to the specified input source.
         /// </summary>
         /// <returns>A task that completes when all subscribers are unsubscribed.</returns>
         /// <exception cref="System.InvalidOperationException">Already subscribed.</exception>
-        Task SubscribeTo(IAsyncEnumerable<TSource> input);
+        Task SubscribeTo(IAsyncEnumerableObs<TSource> input);
     }
 }
