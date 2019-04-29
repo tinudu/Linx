@@ -27,7 +27,7 @@
         /// </summary>
         public VirtualTime(DateTimeOffset now)
         {
-            if (Time.Current != Time.RealTime) throw new InvalidOperationException("Not real time.");
+            if (Time.Current != RealTime.Instance) throw new InvalidOperationException("Not real time.");
 
             Time.Current = this;
             Now = now;
@@ -92,7 +92,7 @@
             {
                 if (_isDisposed) return;
                 _isDisposed = true;
-                Time.Current = Time.RealTime;
+                Time.Current = RealTime.Instance;
                 Monitor.Pulse(_queue);
             }
         }

@@ -18,7 +18,6 @@
                 var result = await t;
                 Assert.True(Enumerable.Range(0, 5).SequenceEqual(result));
             }
-            Time.Current = new VirtualTime();
         }
 
         [Fact]
