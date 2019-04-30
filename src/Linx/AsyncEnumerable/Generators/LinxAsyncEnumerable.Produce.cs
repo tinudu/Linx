@@ -48,10 +48,10 @@
                 private const int _sFinal = 5;
 
                 private readonly ProduceEnumerable<T> _enumerable;
+                private ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
+                private ManualResetTaskProvider _tpOnNext = new ManualResetTaskProvider();
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
-                private ManualResetProvider _tpOnNext = TaskProvider.ManualReset();
                 private int _state;
 
                 public Enumerator(ProduceEnumerable<T> enumerable, CancellationToken token)

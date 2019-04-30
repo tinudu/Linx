@@ -31,7 +31,7 @@
                 private const int _sPulling = 1;
                 private const int _sFinal = 2;
 
-                private ManualResetProvider<bool> _tp = TaskProvider.ManualReset<bool>();
+                private readonly ManualResetTaskProvider<bool> _tp = new ManualResetTaskProvider<bool>();
                 private CancellationTokenRegistration _ctr;
                 private int _state;
                 private Exception _error;

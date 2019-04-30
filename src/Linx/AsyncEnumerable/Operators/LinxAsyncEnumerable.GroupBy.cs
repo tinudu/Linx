@@ -57,12 +57,12 @@
                 private const int _sCancelingAccepting = 4;
                 private const int _sFinal = 5;
 
+                private readonly GroupByEnumerable<TSource, TKey> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpAccepting = new ManualResetTaskProvider<bool>(); // pending MoveNextAsync
+                private readonly ManualResetTaskProvider _tpEmitting = new ManualResetTaskProvider(); // await MoveNextAsync either on the group enumerator or a group
                 private readonly Dictionary<TKey, Group> _groups;
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource(); // request cancellation when Canceling[Accepting] and _nGroups == 0
-                private readonly GroupByEnumerable<TSource, TKey> _enumerable;
                 private CancellationTokenRegistration _ctr;
-                private ManualResetProvider<bool> _tpAccepting = TaskProvider.ManualReset<bool>(); // pending MoveNextAsync
-                private ManualResetConfiguredProvider _vtsEmitting = TaskProvider.ManualReset(false); // await MoveNextAsync either on the group enumerator or a group
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
                 private Exception _error; // while canceling or when final
@@ -91,7 +91,7 @@
 
                         case _sEmitting:
                             _state = _sAccepting;
-                            _vtsEmitting.SetResult();
+                            _tpEmitting.SetResult();
                             break;
 
                         case _sCanceling:
@@ -139,7 +139,7 @@
                             if (cancel)
                                 try { _cts.Cancel(); }
                                 catch { /**/ }
-                            _vtsEmitting.SetResult();
+                            _tpEmitting.SetResult();
                             break;
 
                         case _sAccepting:
@@ -182,11 +182,11 @@
                                     _nGroups++;
 
                                     // emit
-                                    _vtsEmitting.Reset();
+                                    _tpEmitting.Reset();
                                     _state = _sEmitting;
                                     Current = group;
                                     _tpAccepting.SetResult(true);
-                                    await _vtsEmitting.Awaitable;
+                                    await _tpEmitting.Task.ConfigureAwait(false);
 
                                     state = Atomic.Lock(ref _state);
                                     if (group.State == GroupState.Initial) // not enumerating
@@ -207,10 +207,10 @@
                                 {
                                     if (group.State == GroupState.Enumerating) // but not Accepting
                                     {
-                                        _vtsEmitting.Reset();
+                                        _tpEmitting.Reset();
                                         group.State = GroupState.Emitting;
                                         _state = state;
-                                        await _vtsEmitting.Awaitable;
+                                        await _tpEmitting.Task.ConfigureAwait(false);
                                         state = Atomic.Lock(ref _state);
                                     }
 
@@ -280,7 +280,7 @@
                     private readonly Enumerator _enumerator;
                     public TKey Key { get; }
 
-                    public ManualResetProvider<bool> TpAccepting = TaskProvider.ManualReset<bool>();
+                    public readonly ManualResetTaskProvider<bool> TpAccepting = new ManualResetTaskProvider<bool>();
                     public CancellationTokenRegistration Ctr;
                     public GroupState State;
                     public Exception Error;
@@ -339,7 +339,7 @@
                             case GroupState.Emitting:
                                 State = GroupState.Accepting;
                                 _enumerator._state = state;
-                                _enumerator._vtsEmitting.SetResult();
+                                _enumerator._tpEmitting.SetResult();
                                 break;
 
                             case GroupState.Final:
@@ -405,7 +405,7 @@
                                 switch (s)
                                 {
                                     case GroupState.Emitting:
-                                        _enumerator._vtsEmitting.SetResult();
+                                        _enumerator._tpEmitting.SetResult();
                                         break;
                                     case GroupState.Accepting:
                                         Current = default;

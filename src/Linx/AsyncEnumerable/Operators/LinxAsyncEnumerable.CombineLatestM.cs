@@ -43,8 +43,8 @@
 
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource();
                 private readonly Func<T1, T2, TResult> _resultSelector;
+                private readonly ManualResetTaskProvider<bool> _tpPull = new ManualResetTaskProvider<bool>();
                 private CancellationTokenRegistration _ctr;
-                private ManualResetProvider<bool> _tpPull = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state;
                 private TResult _current;

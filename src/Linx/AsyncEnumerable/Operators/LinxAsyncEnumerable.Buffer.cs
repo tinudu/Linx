@@ -46,11 +46,11 @@
                 private const int _sFinal = 7;
 
                 private readonly BufferEnumerable<T> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpPull = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider _tpPush = new ManualResetTaskProvider();
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private ManualResetProvider<bool> _tpPull = TaskProvider.ManualReset<bool>();
-                private ManualResetConfiguredProvider _cpPush = TaskProvider.ManualReset(false);
                 private Queue<T> _queue;
 
                 public Enumerator(BufferEnumerable<T> enumerable, CancellationToken token)
@@ -89,7 +89,7 @@
                             Current = _queue.Dequeue(); // no exception assumed
                             _state = _sActive;
                             _tpPull.SetResult(true);
-                            _cpPush.SetResult();
+                            _tpPush.SetResult();
                             break;
 
                         case _sCompleted:
@@ -156,7 +156,7 @@
                             _queue = null;
                             _state = _sCanceling;
                             _eh.Cancel();
-                            _cpPush.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _tpPush.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
 
                         case _sPulling:
@@ -191,9 +191,9 @@
                                 var state = Atomic.Lock(ref _state);
                                 while (state == _sActive && _queue != null && _queue.Count >= _enumerable._maxSize)
                                 {
-                                    _cpPush.Reset();
+                                    _tpPush.Reset();
                                     _state = _sPushing;
-                                    await _cpPush.Awaitable;
+                                    await _tpPush.Task.ConfigureAwait(false);
                                     state = Atomic.Lock(ref _state);
                                 }
                                 switch (state)

@@ -59,10 +59,10 @@
                 private const int _fIncrementing = 8;
 
                 private readonly ParallelEnumerable<TSource, TResult> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpPulling = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider _tpIncrementing = new ManualResetTaskProvider();
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private ManualResetProvider<bool> _tpPulling = TaskProvider.ManualReset<bool>();
-                private ManualResetConfiguredProvider _cpIncrementing = TaskProvider.ManualReset(false);
                 private int _state;
                 private int _active; // #started tasks + _queue.Count + (Producing ? 1 : 0)
                 private Queue<TResult> _queue;
@@ -102,7 +102,7 @@
                                 if ((state & _fIncrementing) != 0)
                                 {
                                     _state = _sActive;
-                                    _cpIncrementing.SetResult();
+                                    _tpIncrementing.SetResult();
                                 }
                                 else if (--_active == 0) // this was the last item
                                 {
@@ -151,7 +151,7 @@
                                 if ((state & _fIncrementing) != 0)
                                 {
                                     _state = _sActive;
-                                    _cpIncrementing.SetResult();
+                                    _tpIncrementing.SetResult();
                                 }
                                 else if (--_active == 0) // this was the last item
                                 {
@@ -235,7 +235,7 @@
                             {
                                 _state = _sCanceling | (state & _fPulling);
                                 _eh.Cancel();
-                                if ((state & _fIncrementing) != 0) _cpIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
+                                if ((state & _fIncrementing) != 0) _tpIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
                             }
                             break;
                         case _sCanceling:
@@ -291,7 +291,7 @@
                             {
                                 _state = _sCanceling | (state & _fPulling);
                                 _eh.Cancel();
-                                if ((state & _fIncrementing) != 0) _cpIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
+                                if ((state & _fIncrementing) != 0) _tpIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
                             }
                             break;
                         default: // Canceled, Final
@@ -354,9 +354,9 @@
                                     case _sActive:
                                         if (_active > _enumerable._maxConcurrent)
                                         {
-                                            _cpIncrementing.Reset();
+                                            _tpIncrementing.Reset();
                                             _state = state | _fIncrementing;
-                                            await _cpIncrementing.Awaitable;
+                                            await _tpIncrementing.Task.ConfigureAwait(false);
                                         }
                                         else
                                         {

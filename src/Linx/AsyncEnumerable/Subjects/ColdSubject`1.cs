@@ -72,7 +72,7 @@
                             Atomic.Lock(ref _state);
                             if (e.State == EnumeratorState.Pulling)
                             {
-                                e.CpPushing.Reset();
+                                e.TpPushing.Reset();
                                 e.Current = current;
                                 e.State = EnumeratorState.Pushing;
                                 _state = 1;
@@ -90,7 +90,7 @@
                         for (var ix = _enumerators.Count - 1; ix >= 0; ix--)
                         {
                             var e = _enumerators[ix];
-                            await e.CpPushing.Awaitable;
+                            await e.TpPushing.Task.ConfigureAwait(false);
                             if (e.State != EnumeratorState.Pulling)
                                 _enumerators.RemoveAt(ix); // no exception assumed
                         }
@@ -137,10 +137,10 @@
         {
             private readonly ColdSubject<T> _subject;
 
+            public readonly ManualResetTaskProvider<bool> TpPulling = new ManualResetTaskProvider<bool>();
+            public readonly ManualResetTaskProvider TpPushing = new ManualResetTaskProvider();
             public CancellationTokenRegistration Ctr;
             public EnumeratorState State;
-            public ManualResetProvider<bool> TpPulling = TaskProvider.ManualReset<bool>();
-            public ManualResetConfiguredProvider CpPushing = TaskProvider.ManualReset(false);
             public T Current { get; set; }
             public Exception Error;
 
@@ -179,7 +179,7 @@
                         Debug.Assert(subjState == 1);
                         State = EnumeratorState.Pulling;
                         _subject._state = 1;
-                        CpPushing.SetResult();
+                        TpPushing.SetResult();
                         break;
 
                     case EnumeratorState.Final:
@@ -253,7 +253,7 @@
                                 catch { /**/ }
                         }
                         Ctr.Dispose();
-                        CpPushing.SetResult();
+                        TpPushing.SetResult();
                         break;
 
                     case EnumeratorState.Final:

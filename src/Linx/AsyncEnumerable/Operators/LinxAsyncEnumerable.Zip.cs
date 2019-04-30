@@ -50,14 +50,14 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, TResult> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
-                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _active;
                 private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
                 private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
-                private readonly ManualResetConfiguredProvider[] _cpsPushing = new ManualResetConfiguredProvider[_n];
-                private uint _cpsPushingMask;
                 private int _state;
 
                 public Enumerator(ZipEnumerable<T1, T2, TResult> enumerable, CancellationToken token)
@@ -82,10 +82,10 @@
                             Produce(_enumerable._source2, 1, (e, ae) => e._ae2 = ae);
                             break;
                         case _sPushing:
-                            Debug.Assert(_cpsPushingMask == (1U << _n) - 1);
-                            _cpsPushingMask = 0;
+                            Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
+                            _tpsPushingMask = 0;
                             _state = _sPulling;
-                            foreach (var cp in _cpsPushing)
+                            foreach (var cp in _tpsPushing)
                                 cp.SetResult();
                             break;
                         case _sCanceling:
@@ -126,14 +126,14 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
-                            var m = _cpsPushingMask;
-                            _cpsPushingMask = 0;
+                            var m = _tpsPushingMask;
+                            _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
                             _eh.Cancel();
                             if (m != 0)
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
-                                foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                     ccs.SetException(ex);
                             }
                             break;
@@ -160,7 +160,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
@@ -168,14 +168,14 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = _sCancelingPulling;
                                 _eh.Cancel();
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -187,7 +187,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
@@ -195,13 +195,13 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = state;
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -220,7 +220,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _cpsPushing[index] = TaskProvider.ManualReset(false);
+                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -234,13 +234,13 @@
                                 {
                                     case _sPulling:
                                         cpPushing.Reset();
-                                        _cpsPushingMask |= flag;
-                                        if (_cpsPushingMask == (1U << _n) - 1)
+                                        _tpsPushingMask |= flag;
+                                        if (_tpsPushingMask == (1U << _n) - 1)
                                         {
                                             try { Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current); }
                                             catch
                                             {
-                                                _cpsPushingMask &= ~flag;
+                                                _tpsPushingMask &= ~flag;
                                                 _state = _sPulling;
                                                 throw;
                                             }
@@ -249,7 +249,7 @@
                                         }
                                         else
                                             _state = _sPulling;
-                                        await cpPushing.Awaitable;
+                                        await cpPushing.Task.ConfigureAwait(false);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -317,15 +317,15 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, TResult> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
-                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _active;
                 private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
                 private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
                 private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
-                private readonly ManualResetConfiguredProvider[] _cpsPushing = new ManualResetConfiguredProvider[_n];
-                private uint _cpsPushingMask;
                 private int _state;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, TResult> enumerable, CancellationToken token)
@@ -351,10 +351,10 @@
                             Produce(_enumerable._source3, 2, (e, ae) => e._ae3 = ae);
                             break;
                         case _sPushing:
-                            Debug.Assert(_cpsPushingMask == (1U << _n) - 1);
-                            _cpsPushingMask = 0;
+                            Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
+                            _tpsPushingMask = 0;
                             _state = _sPulling;
-                            foreach (var cp in _cpsPushing)
+                            foreach (var cp in _tpsPushing)
                                 cp.SetResult();
                             break;
                         case _sCanceling:
@@ -395,14 +395,14 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
-                            var m = _cpsPushingMask;
-                            _cpsPushingMask = 0;
+                            var m = _tpsPushingMask;
+                            _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
                             _eh.Cancel();
                             if (m != 0)
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
-                                foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                     ccs.SetException(ex);
                             }
                             break;
@@ -429,7 +429,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
@@ -437,14 +437,14 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = _sCancelingPulling;
                                 _eh.Cancel();
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -456,7 +456,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
@@ -464,13 +464,13 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = state;
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -489,7 +489,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _cpsPushing[index] = TaskProvider.ManualReset(false);
+                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -503,13 +503,13 @@
                                 {
                                     case _sPulling:
                                         cpPushing.Reset();
-                                        _cpsPushingMask |= flag;
-                                        if (_cpsPushingMask == (1U << _n) - 1)
+                                        _tpsPushingMask |= flag;
+                                        if (_tpsPushingMask == (1U << _n) - 1)
                                         {
                                             try { Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current); }
                                             catch
                                             {
-                                                _cpsPushingMask &= ~flag;
+                                                _tpsPushingMask &= ~flag;
                                                 _state = _sPulling;
                                                 throw;
                                             }
@@ -518,7 +518,7 @@
                                         }
                                         else
                                             _state = _sPulling;
-                                        await cpPushing.Awaitable;
+                                        await cpPushing.Task.ConfigureAwait(false);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -590,16 +590,16 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, TResult> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
-                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _active;
                 private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
                 private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
                 private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
                 private ConfiguredCancelableAsyncEnumerable<T4>.Enumerator _ae4;
-                private readonly ManualResetConfiguredProvider[] _cpsPushing = new ManualResetConfiguredProvider[_n];
-                private uint _cpsPushingMask;
                 private int _state;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, TResult> enumerable, CancellationToken token)
@@ -626,10 +626,10 @@
                             Produce(_enumerable._source4, 3, (e, ae) => e._ae4 = ae);
                             break;
                         case _sPushing:
-                            Debug.Assert(_cpsPushingMask == (1U << _n) - 1);
-                            _cpsPushingMask = 0;
+                            Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
+                            _tpsPushingMask = 0;
                             _state = _sPulling;
-                            foreach (var cp in _cpsPushing)
+                            foreach (var cp in _tpsPushing)
                                 cp.SetResult();
                             break;
                         case _sCanceling:
@@ -670,14 +670,14 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
-                            var m = _cpsPushingMask;
-                            _cpsPushingMask = 0;
+                            var m = _tpsPushingMask;
+                            _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
                             _eh.Cancel();
                             if (m != 0)
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
-                                foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                     ccs.SetException(ex);
                             }
                             break;
@@ -704,7 +704,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
@@ -712,14 +712,14 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = _sCancelingPulling;
                                 _eh.Cancel();
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -731,7 +731,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
@@ -739,13 +739,13 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = state;
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -764,7 +764,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _cpsPushing[index] = TaskProvider.ManualReset(false);
+                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -778,13 +778,13 @@
                                 {
                                     case _sPulling:
                                         cpPushing.Reset();
-                                        _cpsPushingMask |= flag;
-                                        if (_cpsPushingMask == (1U << _n) - 1)
+                                        _tpsPushingMask |= flag;
+                                        if (_tpsPushingMask == (1U << _n) - 1)
                                         {
                                             try { Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current); }
                                             catch
                                             {
-                                                _cpsPushingMask &= ~flag;
+                                                _tpsPushingMask &= ~flag;
                                                 _state = _sPulling;
                                                 throw;
                                             }
@@ -793,7 +793,7 @@
                                         }
                                         else
                                             _state = _sPulling;
-                                        await cpPushing.Awaitable;
+                                        await cpPushing.Task.ConfigureAwait(false);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -869,8 +869,10 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, TResult> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
-                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _active;
                 private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
@@ -878,8 +880,6 @@
                 private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
                 private ConfiguredCancelableAsyncEnumerable<T4>.Enumerator _ae4;
                 private ConfiguredCancelableAsyncEnumerable<T5>.Enumerator _ae5;
-                private readonly ManualResetConfiguredProvider[] _cpsPushing = new ManualResetConfiguredProvider[_n];
-                private uint _cpsPushingMask;
                 private int _state;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, T5, TResult> enumerable, CancellationToken token)
@@ -907,10 +907,10 @@
                             Produce(_enumerable._source5, 4, (e, ae) => e._ae5 = ae);
                             break;
                         case _sPushing:
-                            Debug.Assert(_cpsPushingMask == (1U << _n) - 1);
-                            _cpsPushingMask = 0;
+                            Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
+                            _tpsPushingMask = 0;
                             _state = _sPulling;
-                            foreach (var cp in _cpsPushing)
+                            foreach (var cp in _tpsPushing)
                                 cp.SetResult();
                             break;
                         case _sCanceling:
@@ -951,14 +951,14 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
-                            var m = _cpsPushingMask;
-                            _cpsPushingMask = 0;
+                            var m = _tpsPushingMask;
+                            _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
                             _eh.Cancel();
                             if (m != 0)
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
-                                foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                     ccs.SetException(ex);
                             }
                             break;
@@ -985,7 +985,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
@@ -993,14 +993,14 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = _sCancelingPulling;
                                 _eh.Cancel();
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -1012,7 +1012,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
@@ -1020,13 +1020,13 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = state;
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -1045,7 +1045,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _cpsPushing[index] = TaskProvider.ManualReset(false);
+                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -1059,13 +1059,13 @@
                                 {
                                     case _sPulling:
                                         cpPushing.Reset();
-                                        _cpsPushingMask |= flag;
-                                        if (_cpsPushingMask == (1U << _n) - 1)
+                                        _tpsPushingMask |= flag;
+                                        if (_tpsPushingMask == (1U << _n) - 1)
                                         {
                                             try { Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current, _ae5.Current); }
                                             catch
                                             {
-                                                _cpsPushingMask &= ~flag;
+                                                _tpsPushingMask &= ~flag;
                                                 _state = _sPulling;
                                                 throw;
                                             }
@@ -1074,7 +1074,7 @@
                                         }
                                         else
                                             _state = _sPulling;
-                                        await cpPushing.Awaitable;
+                                        await cpPushing.Task.ConfigureAwait(false);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -1154,8 +1154,10 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
-                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _active;
                 private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
@@ -1164,8 +1166,6 @@
                 private ConfiguredCancelableAsyncEnumerable<T4>.Enumerator _ae4;
                 private ConfiguredCancelableAsyncEnumerable<T5>.Enumerator _ae5;
                 private ConfiguredCancelableAsyncEnumerable<T6>.Enumerator _ae6;
-                private readonly ManualResetConfiguredProvider[] _cpsPushing = new ManualResetConfiguredProvider[_n];
-                private uint _cpsPushingMask;
                 private int _state;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> enumerable, CancellationToken token)
@@ -1194,10 +1194,10 @@
                             Produce(_enumerable._source6, 5, (e, ae) => e._ae6 = ae);
                             break;
                         case _sPushing:
-                            Debug.Assert(_cpsPushingMask == (1U << _n) - 1);
-                            _cpsPushingMask = 0;
+                            Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
+                            _tpsPushingMask = 0;
                             _state = _sPulling;
-                            foreach (var cp in _cpsPushing)
+                            foreach (var cp in _tpsPushing)
                                 cp.SetResult();
                             break;
                         case _sCanceling:
@@ -1238,14 +1238,14 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
-                            var m = _cpsPushingMask;
-                            _cpsPushingMask = 0;
+                            var m = _tpsPushingMask;
+                            _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
                             _eh.Cancel();
                             if (m != 0)
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
-                                foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                     ccs.SetException(ex);
                             }
                             break;
@@ -1272,7 +1272,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
@@ -1280,14 +1280,14 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = _sCancelingPulling;
                                 _eh.Cancel();
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -1299,7 +1299,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
@@ -1307,13 +1307,13 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = state;
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -1332,7 +1332,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _cpsPushing[index] = TaskProvider.ManualReset(false);
+                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -1346,13 +1346,13 @@
                                 {
                                     case _sPulling:
                                         cpPushing.Reset();
-                                        _cpsPushingMask |= flag;
-                                        if (_cpsPushingMask == (1U << _n) - 1)
+                                        _tpsPushingMask |= flag;
+                                        if (_tpsPushingMask == (1U << _n) - 1)
                                         {
                                             try { Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current, _ae5.Current, _ae6.Current); }
                                             catch
                                             {
-                                                _cpsPushingMask &= ~flag;
+                                                _tpsPushingMask &= ~flag;
                                                 _state = _sPulling;
                                                 throw;
                                             }
@@ -1361,7 +1361,7 @@
                                         }
                                         else
                                             _state = _sPulling;
-                                        await cpPushing.Awaitable;
+                                        await cpPushing.Task.ConfigureAwait(false);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -1445,8 +1445,10 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
-                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _active;
                 private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
@@ -1456,8 +1458,6 @@
                 private ConfiguredCancelableAsyncEnumerable<T5>.Enumerator _ae5;
                 private ConfiguredCancelableAsyncEnumerable<T6>.Enumerator _ae6;
                 private ConfiguredCancelableAsyncEnumerable<T7>.Enumerator _ae7;
-                private readonly ManualResetConfiguredProvider[] _cpsPushing = new ManualResetConfiguredProvider[_n];
-                private uint _cpsPushingMask;
                 private int _state;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> enumerable, CancellationToken token)
@@ -1487,10 +1487,10 @@
                             Produce(_enumerable._source7, 6, (e, ae) => e._ae7 = ae);
                             break;
                         case _sPushing:
-                            Debug.Assert(_cpsPushingMask == (1U << _n) - 1);
-                            _cpsPushingMask = 0;
+                            Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
+                            _tpsPushingMask = 0;
                             _state = _sPulling;
-                            foreach (var cp in _cpsPushing)
+                            foreach (var cp in _tpsPushing)
                                 cp.SetResult();
                             break;
                         case _sCanceling:
@@ -1531,14 +1531,14 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
-                            var m = _cpsPushingMask;
-                            _cpsPushingMask = 0;
+                            var m = _tpsPushingMask;
+                            _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
                             _eh.Cancel();
                             if (m != 0)
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
-                                foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                     ccs.SetException(ex);
                             }
                             break;
@@ -1565,7 +1565,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
@@ -1573,14 +1573,14 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = _sCancelingPulling;
                                 _eh.Cancel();
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -1592,7 +1592,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
@@ -1600,13 +1600,13 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = state;
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -1625,7 +1625,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _cpsPushing[index] = TaskProvider.ManualReset(false);
+                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -1639,13 +1639,13 @@
                                 {
                                     case _sPulling:
                                         cpPushing.Reset();
-                                        _cpsPushingMask |= flag;
-                                        if (_cpsPushingMask == (1U << _n) - 1)
+                                        _tpsPushingMask |= flag;
+                                        if (_tpsPushingMask == (1U << _n) - 1)
                                         {
                                             try { Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current, _ae5.Current, _ae6.Current, _ae7.Current); }
                                             catch
                                             {
-                                                _cpsPushingMask &= ~flag;
+                                                _tpsPushingMask &= ~flag;
                                                 _state = _sPulling;
                                                 throw;
                                             }
@@ -1654,7 +1654,7 @@
                                         }
                                         else
                                             _state = _sPulling;
-                                        await cpPushing.Awaitable;
+                                        await cpPushing.Task.ConfigureAwait(false);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -1742,8 +1742,10 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> _enumerable;
+                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
-                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _active;
                 private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
@@ -1754,8 +1756,6 @@
                 private ConfiguredCancelableAsyncEnumerable<T6>.Enumerator _ae6;
                 private ConfiguredCancelableAsyncEnumerable<T7>.Enumerator _ae7;
                 private ConfiguredCancelableAsyncEnumerable<T8>.Enumerator _ae8;
-                private readonly ManualResetConfiguredProvider[] _cpsPushing = new ManualResetConfiguredProvider[_n];
-                private uint _cpsPushingMask;
                 private int _state;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> enumerable, CancellationToken token)
@@ -1786,10 +1786,10 @@
                             Produce(_enumerable._source8, 7, (e, ae) => e._ae8 = ae);
                             break;
                         case _sPushing:
-                            Debug.Assert(_cpsPushingMask == (1U << _n) - 1);
-                            _cpsPushingMask = 0;
+                            Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
+                            _tpsPushingMask = 0;
                             _state = _sPulling;
-                            foreach (var cp in _cpsPushing)
+                            foreach (var cp in _tpsPushing)
                                 cp.SetResult();
                             break;
                         case _sCanceling:
@@ -1830,14 +1830,14 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
-                            var m = _cpsPushingMask;
-                            _cpsPushingMask = 0;
+                            var m = _tpsPushingMask;
+                            _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
                             _eh.Cancel();
                             if (m != 0)
                             {
                                 var ex = new OperationCanceledException(_eh.InternalToken);
-                                foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                     ccs.SetException(ex);
                             }
                             break;
@@ -1864,7 +1864,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
@@ -1872,14 +1872,14 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = _sCancelingPulling;
                                 _eh.Cancel();
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -1891,7 +1891,7 @@
                             _eh.SetInternalError(error);
                             if (--_active == 0)
                             {
-                                Debug.Assert(_cpsPushingMask == 0);
+                                Debug.Assert(_tpsPushingMask == 0);
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
                                 if (state == _sCancelingPulling)
@@ -1899,13 +1899,13 @@
                             }
                             else
                             {
-                                var m = _cpsPushingMask;
-                                _cpsPushingMask = 0;
+                                var m = _tpsPushingMask;
+                                _tpsPushingMask = 0;
                                 _state = state;
                                 if (m != 0)
                                 {
                                     var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _cpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                         ccs.SetException(ex);
                                 }
                             }
@@ -1924,7 +1924,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _cpsPushing[index] = TaskProvider.ManualReset(false);
+                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -1938,13 +1938,13 @@
                                 {
                                     case _sPulling:
                                         cpPushing.Reset();
-                                        _cpsPushingMask |= flag;
-                                        if (_cpsPushingMask == (1U << _n) - 1)
+                                        _tpsPushingMask |= flag;
+                                        if (_tpsPushingMask == (1U << _n) - 1)
                                         {
                                             try { Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current, _ae5.Current, _ae6.Current, _ae7.Current, _ae8.Current); }
                                             catch
                                             {
-                                                _cpsPushingMask &= ~flag;
+                                                _tpsPushingMask &= ~flag;
                                                 _state = _sPulling;
                                                 throw;
                                             }
@@ -1953,7 +1953,7 @@
                                         }
                                         else
                                             _state = _sPulling;
-                                        await cpPushing.Awaitable;
+                                        await cpPushing.Task.ConfigureAwait(false);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
