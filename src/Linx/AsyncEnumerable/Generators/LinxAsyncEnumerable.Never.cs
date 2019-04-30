@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading.Tasks.Sources;
+    using TaskProviders;
 
     partial class LinxAsyncEnumerable
     {
@@ -31,7 +31,7 @@
                 private const int _sPulling = 1;
                 private const int _sFinal = 2;
 
-                private readonly ManualResetValueTaskSource<bool> _vts = new ManualResetValueTaskSource<bool>();
+                private ManualResetProvider<bool> _tp = TaskProvider.ManualReset<bool>();
                 private CancellationTokenRegistration _ctr;
                 private int _state;
                 private Exception _error;
@@ -45,7 +45,7 @@
 
                 public ValueTask<bool> MoveNextAsync()
                 {
-                    _vts.Reset();
+                    _tp.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -55,14 +55,14 @@
                             break;
                         case _sFinal:
                             _state = _sFinal;
-                            _vts.SetException(_error);
+                            _tp.SetException(_error);
                             break;
                         default: // Pulling???
                             _state = state;
                             throw new Exception(_state + "???");
                     }
 
-                    return _vts.GenericTask();
+                    return _tp.Task;
                 }
 
                 public ValueTask DisposeAsync()
@@ -85,7 +85,7 @@
                             _error = error;
                             _state = _sFinal;
                             _ctr.Dispose();
-                            _vts.SetException(error);
+                            _tp.SetException(error);
                             break;
                         case _sFinal:
                             _state = _sFinal;

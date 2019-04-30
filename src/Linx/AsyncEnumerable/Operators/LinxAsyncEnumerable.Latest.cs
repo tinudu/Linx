@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading.Tasks.Sources;
+    using TaskProviders;
 
     partial class LinxAsyncEnumerable
     {
@@ -52,7 +52,7 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private readonly ManualResetValueTaskSource<bool> _vtsPull = new ManualResetValueTaskSource<bool>();
+                private ManualResetProvider<bool> _vtsPull = TaskProvider.ManualReset<bool>();
                 private T _current, _next;
 
                 public Enumerator(LatestOneEnumerable<T> enumerable, CancellationToken token)
@@ -117,7 +117,7 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _vtsPull.GenericTask();
+                    return _vtsPull.Task;
                 }
 
                 public ValueTask DisposeAsync()
@@ -302,7 +302,7 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private readonly ManualResetValueTaskSource<bool> _vtsPull = new ManualResetValueTaskSource<bool>();
+                private ManualResetProvider<bool> _tpPull = TaskProvider.ManualReset<bool>();
                 private T _current;
                 private Queue<T> _next;
 
@@ -323,7 +323,7 @@
 
                 public ValueTask<bool> MoveNextAsync()
                 {
-                    _vtsPull.Reset();
+                    _tpPull.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -341,7 +341,7 @@
                             {
                                 _current = _next.Dequeue(); // no exception assumed
                                 _state = _sCurrentMutable;
-                                _vtsPull.SetResult(true);
+                                _tpPull.SetResult(true);
                             }
                             break;
 
@@ -357,7 +357,7 @@
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
                             }
-                            _vtsPull.SetResult(true);
+                            _tpPull.SetResult(true);
                             break;
 
                         case _sCanceling:
@@ -367,7 +367,7 @@
                         case _sFinal:
                             _state = _sFinal;
                             _current = default;
-                            _vtsPull.SetExceptionOrResult(_eh.Error, false);
+                            _tpPull.SetExceptionOrResult(_eh.Error, false);
                             break;
 
                         default: // Pulling, CancelingPulling???
@@ -375,7 +375,7 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _vtsPull.GenericTask();
+                    return _tpPull.Task;
                 }
 
                 public ValueTask DisposeAsync()
@@ -443,7 +443,7 @@
                                     case _sPulling:
                                         _current = current;
                                         _state = _sCurrentMutable;
-                                        _vtsPull.SetResult(true);
+                                        _tpPull.SetResult(true);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -499,7 +499,7 @@
                                 _state = _sFinal;
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
-                                _vtsPull.SetExceptionOrResult(_eh.Error, false);
+                                _tpPull.SetExceptionOrResult(_eh.Error, false);
                                 break;
 
                             case _sCurrentMutable:
@@ -524,7 +524,7 @@
                                 _current = default;
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
-                                _vtsPull.SetExceptionOrResult(_eh.Error, false);
+                                _tpPull.SetExceptionOrResult(_eh.Error, false);
                                 break;
 
                             default: // Initial, Last, Final???

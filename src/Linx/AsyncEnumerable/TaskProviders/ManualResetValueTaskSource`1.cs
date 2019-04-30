@@ -1,6 +1,8 @@
 ﻿#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ReSharper disable All
-// https://github.com/dotnet/corefx/blob/master/src/Common/tests/System/Threading/Tasks/Sources/ManualResetValueTaskSource.cs
+
+// ------------------------------------------------------------------------------
+// Copied from https://github.com/dotnet/corefx/blob/master/src/Common/tests/System/Threading/Tasks/Sources/ManualResetValueTaskSource.cs
 // ------------------------------------------------------------------------------
 
 // Licensed to the .NET Foundation under one or more agreements.

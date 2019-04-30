@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading.Tasks.Sources;
+    using TaskProviders;
 
     partial class LinxAsyncEnumerable
     {
@@ -44,7 +44,7 @@
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource();
                 private readonly Func<T1, T2, TResult> _resultSelector;
                 private CancellationTokenRegistration _ctr;
-                private readonly ManualResetValueTaskSource<bool> _ccsPull = new ManualResetValueTaskSource<bool>();
+                private ManualResetProvider<bool> _tpPull = TaskProvider.ManualReset<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state;
                 private TResult _current;
@@ -125,8 +125,8 @@
                                 try { _cts.Cancel(); } catch {/**/}
                                 _ctr.Dispose();
                                 _atmbDisposed.SetResult();
-                                if (_error == null) _ccsPull.SetResult(false);
-                                else _ccsPull.SetException(_error);
+                                if (_error == null) _tpPull.SetResult(false);
+                                else _tpPull.SetException(_error);
                                 break;
 
                             case _sCanceling:
@@ -138,8 +138,8 @@
                                 if (error != null) _error = error;
                                 _current = default;
                                 _state = _sFinal;
-                                if (_error == null) _ccsPull.SetResult(false);
-                                else _ccsPull.SetException(_error);
+                                if (_error == null) _tpPull.SetResult(false);
+                                else _tpPull.SetException(_error);
                                 break;
 
                             default: // Last, Final???
@@ -201,7 +201,7 @@
                                             if (valuesCountDown == 0)
                                             {
                                                 _state = _sCurrentMutable;
-                                                _ccsPull.SetResult(true);
+                                                _tpPull.SetResult(true);
                                             }
                                             else
                                                 _state = _sPulling;
@@ -242,7 +242,7 @@
 
                 public ValueTask<bool> MoveNextAsync()
                 {
-                    _ccsPull.Reset();
+                    _tpPull.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -257,7 +257,7 @@
                             {
                                 _current = GetResult();
                                 _state = _sCurrentMutable;
-                                _ccsPull.SetResult(true);
+                                _tpPull.SetResult(true);
                             }
                             catch (Exception error)
                             {
@@ -277,7 +277,7 @@
                                 _state = _sFinal;
                                 _ctr.Dispose();
                                 _atmbDisposed.SetResult();
-                                _ccsPull.SetResult(true);
+                                _tpPull.SetResult(true);
                             }
                             catch (Exception error)
                             {
@@ -286,8 +286,8 @@
                                 _error = error;
                                 _state = _sFinal;
                                 _ctr.Dispose();
-                                if (_error == null) _ccsPull.SetResult(false);
-                                else _ccsPull.SetException(_error);
+                                if (_error == null) _tpPull.SetResult(false);
+                                else _tpPull.SetException(_error);
                             }
                             break;
 
@@ -298,8 +298,8 @@
                         case _sFinal:
                             _current = default;
                             _state = _sFinal;
-                            if (_error == null) _ccsPull.SetResult(false);
-                            else _ccsPull.SetException(_error);
+                            if (_error == null) _tpPull.SetResult(false);
+                            else _tpPull.SetException(_error);
                             break;
 
                         default: // Pulling, CancelingPulling???
@@ -307,7 +307,7 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _ccsPull.GenericTask();
+                    return _tpPull.Task;
                 }
 
                 public ValueTask DisposeAsync()

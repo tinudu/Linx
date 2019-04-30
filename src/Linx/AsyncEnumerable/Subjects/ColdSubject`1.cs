@@ -5,7 +5,7 @@
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading.Tasks.Sources;
+    using TaskProviders;
 
     /// <summary>
     /// A <see cref="ISubject{T}"/> that disallowes late subscribers.
@@ -72,11 +72,11 @@
                             Atomic.Lock(ref _state);
                             if (e.State == EnumeratorState.Pulling)
                             {
-                                e.VtsPushing.Reset();
+                                e.CpPushing.Reset();
                                 e.Current = current;
                                 e.State = EnumeratorState.Pushing;
                                 _state = 1;
-                                e.VtsPulling.SetResult(true);
+                                e.TpPulling.SetResult(true);
                             }
                             else // final
                             {
@@ -90,7 +90,7 @@
                         for (var ix = _enumerators.Count - 1; ix >= 0; ix--)
                         {
                             var e = _enumerators[ix];
-                            await e.VtsPushing.Task();
+                            await e.CpPushing.Awaitable;
                             if (e.State != EnumeratorState.Pulling)
                                 _enumerators.RemoveAt(ix); // no exception assumed
                         }
@@ -124,8 +124,8 @@
             foreach (var e in _enumerators)
             {
                 e.Ctr.Dispose();
-                if (error == null) e.VtsPulling.SetResult(false);
-                else e.VtsPulling.SetException(error);
+                if (error == null) e.TpPulling.SetResult(false);
+                else e.TpPulling.SetException(error);
             }
             _enumerators.Clear();
             try { _cts.Cancel(); } catch {  /**/ }
@@ -139,8 +139,8 @@
 
             public CancellationTokenRegistration Ctr;
             public EnumeratorState State;
-            public readonly ManualResetValueTaskSource<bool> VtsPulling = new ManualResetValueTaskSource<bool>();
-            public readonly ManualResetValueTaskSource<Unit> VtsPushing = new ManualResetValueTaskSource<Unit>();
+            public ManualResetProvider<bool> TpPulling = TaskProvider.ManualReset<bool>();
+            public ManualResetConfiguredProvider CpPushing = TaskProvider.ManualReset(false);
             public T Current { get; set; }
             public Exception Error;
 
@@ -152,7 +152,7 @@
 
             ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync()
             {
-                VtsPulling.Reset();
+                TpPulling.Reset();
 
                 var subjState = Atomic.Lock(ref _subject._state);
                 switch (State)
@@ -171,7 +171,7 @@
                             State = EnumeratorState.Final;
                             _subject._state = subjState;
                             Ctr.Dispose();
-                            VtsPulling.SetException(ex);
+                            TpPulling.SetException(ex);
                         }
                         break;
 
@@ -179,13 +179,13 @@
                         Debug.Assert(subjState == 1);
                         State = EnumeratorState.Pulling;
                         _subject._state = 1;
-                        VtsPushing.SetResult(default);
+                        CpPushing.SetResult();
                         break;
 
                     case EnumeratorState.Final:
                         _subject._state = subjState;
-                        if (Error != null) VtsPulling.SetResult(false);
-                        else VtsPulling.SetException(Error);
+                        if (Error != null) TpPulling.SetResult(false);
+                        else TpPulling.SetException(Error);
                         break;
 
                     case EnumeratorState.Pulling:
@@ -197,7 +197,7 @@
                         throw new Exception(State + "???");
                 }
 
-                return VtsPulling.GenericTask();
+                return TpPulling.Task;
             }
 
             ValueTask IAsyncDisposable.DisposeAsync()
@@ -237,8 +237,8 @@
                                 catch { /**/ }
                         }
                         Ctr.Dispose();
-                        if (error == null) VtsPulling.SetResult(false);
-                        else VtsPulling.SetException(error);
+                        if (error == null) TpPulling.SetResult(false);
+                        else TpPulling.SetException(error);
                         break;
 
                     case EnumeratorState.Pushing:
@@ -253,7 +253,7 @@
                                 catch { /**/ }
                         }
                         Ctr.Dispose();
-                        VtsPushing.SetResult(default);
+                        CpPushing.SetResult();
                         break;
 
                     case EnumeratorState.Final:

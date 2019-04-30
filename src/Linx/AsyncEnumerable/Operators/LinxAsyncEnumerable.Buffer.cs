@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading.Tasks.Sources;
+    using TaskProviders;
 
     partial class LinxAsyncEnumerable
     {
@@ -49,8 +49,8 @@
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
-                private readonly ManualResetValueTaskSource<bool> _vtsPull = new ManualResetValueTaskSource<bool>();
-                private readonly ManualResetValueTaskSource<Unit> _vtsPush = new ManualResetValueTaskSource<Unit>();
+                private ManualResetProvider<bool> _tpPull = TaskProvider.ManualReset<bool>();
+                private ManualResetConfiguredProvider _cpPush = TaskProvider.ManualReset(false);
                 private Queue<T> _queue;
 
                 public Enumerator(BufferEnumerable<T> enumerable, CancellationToken token)
@@ -63,7 +63,7 @@
 
                 public ValueTask<bool> MoveNextAsync()
                 {
-                    _vtsPull.Reset();
+                    _tpPull.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -80,7 +80,7 @@
                             {
                                 Current = _queue.Dequeue(); // no exception assumed
                                 _state = _sActive;
-                                _vtsPull.SetResult(true);
+                                _tpPull.SetResult(true);
                             }
                             break;
 
@@ -88,8 +88,8 @@
                             Debug.Assert(_queue.Count > 0);
                             Current = _queue.Dequeue(); // no exception assumed
                             _state = _sActive;
-                            _vtsPull.SetResult(true);
-                            _vtsPush.SetResult(default);
+                            _tpPull.SetResult(true);
+                            _cpPush.SetResult();
                             break;
 
                         case _sCompleted:
@@ -104,7 +104,7 @@
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
                             }
-                            _vtsPull.SetResult(true);
+                            _tpPull.SetResult(true);
                             break;
 
                         case _sCanceling:
@@ -114,7 +114,7 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _vtsPull.SetExceptionOrResult(_eh.Error, false);
+                            _tpPull.SetExceptionOrResult(_eh.Error, false);
                             break;
 
                         default: // Pulling, CancelingPulling???
@@ -122,7 +122,7 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _vtsPull.GenericTask();
+                    return _tpPull.Task;
                 }
 
                 public ValueTask DisposeAsync()
@@ -156,7 +156,7 @@
                             _queue = null;
                             _state = _sCanceling;
                             _eh.Cancel();
-                            _vtsPush.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _cpPush.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
 
                         case _sPulling:
@@ -191,9 +191,9 @@
                                 var state = Atomic.Lock(ref _state);
                                 while (state == _sActive && _queue != null && _queue.Count >= _enumerable._maxSize)
                                 {
-                                    _vtsPush.Reset();
+                                    _cpPush.Reset();
                                     _state = _sPushing;
-                                    await _vtsPush.Task();
+                                    await _cpPush.Awaitable;
                                     state = Atomic.Lock(ref _state);
                                 }
                                 switch (state)
@@ -212,7 +212,7 @@
                                         try { Current = ae.Current; }
                                         catch { _state = _sPulling; throw; }
                                         _state = _sActive;
-                                        _vtsPull.SetResult(true);
+                                        _tpPull.SetResult(true);
                                         _eh.InternalToken.ThrowIfCancellationRequested();
                                         break;
 
@@ -256,7 +256,7 @@
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
                                 Current = default;
-                                _vtsPull.SetExceptionOrResult(_eh.Error, false);
+                                _tpPull.SetExceptionOrResult(_eh.Error, false);
                                 break;
 
                             case _sCanceling:
@@ -267,7 +267,7 @@
                             case _sCancelingPulling:
                                 _state = _sFinal;
                                 _atmbDisposed.SetResult();
-                                _vtsPull.SetExceptionOrResult(_eh.Error, false);
+                                _tpPull.SetExceptionOrResult(_eh.Error, false);
                                 break;
 
                             default: // Initial, Pushing, Last, Final???

@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading.Tasks.Sources;
+    using TaskProviders;
 
     partial class LinxAsyncEnumerable
     {
@@ -50,8 +50,8 @@
                 private readonly ProduceEnumerable<T> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private readonly ManualResetValueTaskSource<bool> _vtsMoveNext = new ManualResetValueTaskSource<bool>();
-                private readonly ManualResetValueTaskSource<Unit> _vtsOnNext = new ManualResetValueTaskSource<Unit>();
+                private ManualResetProvider<bool> _tpMoveNext = TaskProvider.ManualReset<bool>();
+                private ManualResetProvider _tpOnNext = TaskProvider.ManualReset();
                 private int _state;
 
                 public Enumerator(ProduceEnumerable<T> enumerable, CancellationToken token)
@@ -64,7 +64,7 @@
 
                 public ValueTask<bool> MoveNextAsync()
                 {
-                    _vtsMoveNext.Reset();
+                    _tpMoveNext.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -75,7 +75,7 @@
                             break;
                         case _sPushing:
                             _state = _sPulling;
-                            _vtsOnNext.SetResult(default);
+                            _tpOnNext.SetResult();
                             break;
                         case _sCanceling:
                             _state = _sCancelingPulling;
@@ -83,14 +83,14 @@
                         case _sFinal:
                             Current = default;
                             _state = _sFinal;
-                            _vtsMoveNext.SetExceptionOrResult(_eh.Error, false);
+                            _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
                             break;
                         default: // Pulling, CancelingPulling
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _vtsMoveNext.GenericTask();
+                    return _tpMoveNext.Task;
                 }
 
                 public ValueTask DisposeAsync()
@@ -101,7 +101,7 @@
 
                 private ValueTask OnNext(T value)
                 {
-                    _vtsOnNext.Reset();
+                    _tpOnNext.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -109,20 +109,20 @@
                         case _sPulling:
                             Current = value;
                             _state = _sPushing;
-                            _vtsMoveNext.SetResult(true);
+                            _tpMoveNext.SetResult(true);
                             break;
                         case _sCanceling:
                         case _sCancelingPulling:
                             _state = state;
                             Atomic.WaitCanceled(_eh.InternalToken);
-                            _vtsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _tpOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
                         default: // Initial, Pushing, Final ???
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _vtsOnNext.Task();
+                    return _tpOnNext.Task;
                 }
 
                 private void Cancel(Exception error)
@@ -145,7 +145,7 @@
                             _eh.SetExternalError(error);
                             _state = _sCanceling;
                             _eh.Cancel();
-                            _vtsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _tpOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
                         case _sCanceling:
                         case _sCancelingPulling:
@@ -177,14 +177,14 @@
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
                             Current = default;
-                            _vtsMoveNext.SetExceptionOrResult(_eh.Error, false);
+                            _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
                             break;
 
                         case _sPushing:
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
-                            _vtsOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _tpOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
 
                         case _sCanceling:
@@ -196,7 +196,7 @@
                             _state = _sFinal;
                             _atmbDisposed.SetResult();
                             Current = default;
-                            _vtsMoveNext.SetExceptionOrResult(_eh.Error, false);
+                            _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
                             break;
 
                         default: // Initial, Final??

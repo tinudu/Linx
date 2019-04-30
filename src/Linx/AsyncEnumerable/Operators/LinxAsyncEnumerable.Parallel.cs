@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading.Tasks.Sources;
+    using TaskProviders;
 
     partial class LinxAsyncEnumerable
     {
@@ -61,8 +61,8 @@
                 private readonly ParallelEnumerable<TSource, TResult> _enumerable;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private readonly ManualResetValueTaskSource<bool> _vtsPulling = new ManualResetValueTaskSource<bool>();
-                private readonly ManualResetValueTaskSource<Unit> _vtsIncrementing = new ManualResetValueTaskSource<Unit>();
+                private ManualResetProvider<bool> _tpPulling = TaskProvider.ManualReset<bool>();
+                private ManualResetConfiguredProvider _cpIncrementing = TaskProvider.ManualReset(false);
                 private int _state;
                 private int _active; // #started tasks + _queue.Count + (Producing ? 1 : 0)
                 private Queue<TResult> _queue;
@@ -77,7 +77,7 @@
 
                 public ValueTask<bool> MoveNextAsync()
                 {
-                    _vtsPulling.Reset();
+                    _tpPulling.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     Debug.Assert((state & _fPulling) == 0);
@@ -102,7 +102,7 @@
                                 if ((state & _fIncrementing) != 0)
                                 {
                                     _state = _sActive;
-                                    _vtsIncrementing.SetResult(default);
+                                    _cpIncrementing.SetResult();
                                 }
                                 else if (--_active == 0) // this was the last item
                                 {
@@ -113,7 +113,7 @@
                                 }
                                 else
                                     _state = _sActive;
-                                _vtsPulling.SetResult(true);
+                                _tpPulling.SetResult(true);
                             }
                             break;
                         case _sCanceling:
@@ -122,14 +122,14 @@
                         case _sFinal:
                             _state = _sFinal;
                             Current = default;
-                            _vtsPulling.SetExceptionOrResult(_eh.Error, false);
+                            _tpPulling.SetExceptionOrResult(_eh.Error, false);
                             break;
                         default:
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _vtsPulling.GenericTask();
+                    return _tpPulling.Task;
                 }
 
                 public ValueTask DisposeAsync()
@@ -151,7 +151,7 @@
                                 if ((state & _fIncrementing) != 0)
                                 {
                                     _state = _sActive;
-                                    _vtsIncrementing.SetResult(default);
+                                    _cpIncrementing.SetResult();
                                 }
                                 else if (--_active == 0) // this was the last item
                                 {
@@ -164,7 +164,7 @@
                                     _state = _sActive;
 
                                 Current = result;
-                                _vtsPulling.SetResult(true);
+                                _tpPulling.SetResult(true);
                             }
                             else // enqueue
                                 try
@@ -187,7 +187,7 @@
                                 if ((state & _fPulling) != 0)
                                 {
                                     Current = default;
-                                    _vtsPulling.SetExceptionOrResult(_eh.Error, false);
+                                    _tpPulling.SetExceptionOrResult(_eh.Error, false);
                                 }
                             }
                             break;
@@ -228,14 +228,14 @@
                                 if ((state & _fPulling) != 0)
                                 {
                                     Current = default;
-                                    _vtsPulling.SetExceptionOrResult(_eh.Error, false);
+                                    _tpPulling.SetExceptionOrResult(_eh.Error, false);
                                 }
                             }
                             else // go canceled
                             {
                                 _state = _sCanceling | (state & _fPulling);
                                 _eh.Cancel();
-                                if ((state & _fIncrementing) != 0) _vtsIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
+                                if ((state & _fIncrementing) != 0) _cpIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
                             }
                             break;
                         case _sCanceling:
@@ -249,7 +249,7 @@
                                 if ((state & _fPulling) != 0)
                                 {
                                     Current = default;
-                                    _vtsPulling.SetExceptionOrResult(_eh.Error, false);
+                                    _tpPulling.SetExceptionOrResult(_eh.Error, false);
                                 }
                             }
                             break;
@@ -284,14 +284,14 @@
                                 if ((state & _fPulling) != 0)
                                 {
                                     Current = default;
-                                    _vtsPulling.SetExceptionOrResult(_eh.Error, false);
+                                    _tpPulling.SetExceptionOrResult(_eh.Error, false);
                                 }
                             }
                             else // go canceling
                             {
                                 _state = _sCanceling | (state & _fPulling);
                                 _eh.Cancel();
-                                if ((state & _fIncrementing) != 0) _vtsIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
+                                if ((state & _fIncrementing) != 0) _cpIncrementing.SetException(new OperationCanceledException(_eh.InternalToken));
                             }
                             break;
                         default: // Canceled, Final
@@ -354,9 +354,9 @@
                                     case _sActive:
                                         if (_active > _enumerable._maxConcurrent)
                                         {
-                                            _vtsIncrementing.Reset();
+                                            _cpIncrementing.Reset();
                                             _state = state | _fIncrementing;
-                                            await _vtsIncrementing.Task();
+                                            await _cpIncrementing.Awaitable;
                                         }
                                         else
                                         {
@@ -397,7 +397,7 @@
                                     if ((state & _fPulling) != 0)
                                     {
                                         Current = default;
-                                        _vtsPulling.SetExceptionOrResult(_eh.Error, false);
+                                        _tpPulling.SetExceptionOrResult(_eh.Error, false);
                                     }
                                 }
                                 else
@@ -413,7 +413,7 @@
                                     if ((state & _fPulling) != 0)
                                     {
                                         Current = default;
-                                        _vtsPulling.SetExceptionOrResult(_eh.Error, false);
+                                        _tpPulling.SetExceptionOrResult(_eh.Error, false);
                                     }
                                 }
                                 else

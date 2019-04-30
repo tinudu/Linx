@@ -5,7 +5,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading.Tasks.Sources;
+    using TaskProviders;
 
     partial class LinxAsyncEnumerable
     {
@@ -61,8 +61,8 @@
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource(); // request cancellation when Canceling[Accepting] and _nGroups == 0
                 private readonly GroupByEnumerable<TSource, TKey> _enumerable;
                 private CancellationTokenRegistration _ctr;
-                private readonly ManualResetValueTaskSource<bool> _vtsAccepting = new ManualResetValueTaskSource<bool>(); // pending MoveNextAsync
-                private readonly ManualResetValueTaskSource<Unit> _vtsEmitting = new ManualResetValueTaskSource<Unit>(); // await MoveNextAsync either on the group enumerator or a group
+                private ManualResetProvider<bool> _tpAccepting = TaskProvider.ManualReset<bool>(); // pending MoveNextAsync
+                private ManualResetConfiguredProvider _vtsEmitting = TaskProvider.ManualReset(false); // await MoveNextAsync either on the group enumerator or a group
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
                 private Exception _error; // while canceling or when final
@@ -79,7 +79,7 @@
 
                 ValueTask<bool> IAsyncEnumerator<IAsyncGrouping<TKey, TSource>>.MoveNextAsync()
                 {
-                    _vtsAccepting.Reset();
+                    _tpAccepting.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
@@ -91,7 +91,7 @@
 
                         case _sEmitting:
                             _state = _sAccepting;
-                            _vtsEmitting.SetResult(default);
+                            _vtsEmitting.SetResult();
                             break;
 
                         case _sCanceling:
@@ -100,8 +100,8 @@
 
                         case _sFinal:
                             _state = _sFinal;
-                            if (_error == null) _vtsAccepting.SetResult(false);
-                            else _vtsAccepting.SetException(_error);
+                            if (_error == null) _tpAccepting.SetResult(false);
+                            else _tpAccepting.SetException(_error);
                             break;
 
                         default: // Accepting, CancelingAccepting???
@@ -109,7 +109,7 @@
                             throw new Exception(state + "???");
                     }
 
-                    return _vtsAccepting.GenericTask();
+                    return _tpAccepting.Task;
                 }
 
                 public ValueTask DisposeAsync()
@@ -139,7 +139,7 @@
                             if (cancel)
                                 try { _cts.Cancel(); }
                                 catch { /**/ }
-                            _vtsEmitting.SetResult(default);
+                            _vtsEmitting.SetResult();
                             break;
 
                         case _sAccepting:
@@ -185,8 +185,8 @@
                                     _vtsEmitting.Reset();
                                     _state = _sEmitting;
                                     Current = group;
-                                    _vtsAccepting.SetResult(true);
-                                    await _vtsEmitting.Task();
+                                    _tpAccepting.SetResult(true);
+                                    await _vtsEmitting.Awaitable;
 
                                     state = Atomic.Lock(ref _state);
                                     if (group.State == GroupState.Initial) // not enumerating
@@ -210,7 +210,7 @@
                                         _vtsEmitting.Reset();
                                         group.State = GroupState.Emitting;
                                         _state = state;
-                                        await _vtsEmitting.Task();
+                                        await _vtsEmitting.Awaitable;
                                         state = Atomic.Lock(ref _state);
                                     }
 
@@ -219,7 +219,7 @@
                                         group.State = GroupState.Enumerating;
                                         _state = state;
                                         group.Current = current;
-                                        group.VtsAccepting.SetResult(true);
+                                        group.TpAccepting.SetResult(true);
                                     }
                                     else
                                         _state = state;
@@ -243,8 +243,8 @@
                         if (state == _sAccepting || state == _sCancelingAccepting)
                         {
                             Current = null;
-                            if (_error == null) _vtsAccepting.SetResult(false);
-                            else _vtsAccepting.SetException(_error);
+                            if (_error == null) _tpAccepting.SetResult(false);
+                            else _tpAccepting.SetException(_error);
                         }
                         _atmbDisposed.SetResult();
 
@@ -257,8 +257,8 @@
                             group.Ctr.Dispose();
                             if (s != GroupState.Accepting) continue;
                             group.Current = default;
-                            if (error == null) group.VtsAccepting.SetResult(false);
-                            else group.VtsAccepting.SetException(error);
+                            if (error == null) group.TpAccepting.SetResult(false);
+                            else group.TpAccepting.SetException(error);
                         }
 
                         _groups.Clear();
@@ -280,7 +280,7 @@
                     private readonly Enumerator _enumerator;
                     public TKey Key { get; }
 
-                    public readonly ManualResetValueTaskSource<bool> VtsAccepting = new ManualResetValueTaskSource<bool>();
+                    public ManualResetProvider<bool> TpAccepting = TaskProvider.ManualReset<bool>();
                     public CancellationTokenRegistration Ctr;
                     public GroupState State;
                     public Exception Error;
@@ -319,7 +319,7 @@
 
                     ValueTask<bool> IAsyncEnumerator<TSource>.MoveNextAsync()
                     {
-                        VtsAccepting.Reset();
+                        TpAccepting.Reset();
 
                         var state = Atomic.Lock(ref _enumerator._state);
                         switch (State)
@@ -328,7 +328,7 @@
                             case GroupState.TooLate:
                                 // Pulling on the group rather than its enumerator? Invalid.
                                 _enumerator._state = state;
-                                VtsAccepting.SetResult(default);
+                                TpAccepting.SetResult(default);
                                 throw new InvalidOperationException();
 
                             case GroupState.Enumerating:
@@ -339,28 +339,28 @@
                             case GroupState.Emitting:
                                 State = GroupState.Accepting;
                                 _enumerator._state = state;
-                                _enumerator._vtsEmitting.SetResult(default);
+                                _enumerator._vtsEmitting.SetResult();
                                 break;
 
                             case GroupState.Final:
                                 _enumerator._state = state;
                                 Current = default;
-                                if (Error == null) VtsAccepting.SetResult(false);
-                                else VtsAccepting.SetException(Error);
+                                if (Error == null) TpAccepting.SetResult(false);
+                                else TpAccepting.SetException(Error);
                                 break;
 
                             case GroupState.Accepting:
                                 _enumerator._state = state;
-                                VtsAccepting.SetException(new InvalidOperationException());
+                                TpAccepting.SetException(new InvalidOperationException());
                                 break;
 
                             default: // Accepting???
                                 _enumerator._state = state;
-                                VtsAccepting.SetException(new Exception(State + "???"));
+                                TpAccepting.SetException(new Exception(State + "???"));
                                 break;
                         }
 
-                        return VtsAccepting.GenericTask();
+                        return TpAccepting.Task;
                     }
 
                     ValueTask IAsyncDisposable.DisposeAsync()
@@ -405,12 +405,12 @@
                                 switch (s)
                                 {
                                     case GroupState.Emitting:
-                                        _enumerator._vtsEmitting.SetResult(default);
+                                        _enumerator._vtsEmitting.SetResult();
                                         break;
                                     case GroupState.Accepting:
                                         Current = default;
-                                        if (Error == null) VtsAccepting.SetResult(false);
-                                        else VtsAccepting.SetException(Error);
+                                        if (Error == null) TpAccepting.SetResult(false);
+                                        else TpAccepting.SetException(Error);
                                         break;
                                 }
                                 break;
