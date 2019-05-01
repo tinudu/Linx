@@ -9,22 +9,22 @@
 
     public static class Query
     {
-        private static readonly MethodInfo _miAll = Express.Method((IEnumerable<int> xs) => xs.All(x => false)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miAny = Express.Method((IEnumerable<int> xs) => xs.Any()).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miAny1 = Express.Method((IEnumerable<int> xs) => xs.Any(x => false)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miConcat = Express.Method((IEnumerable<int> xs) => xs.Concat(new int[0])).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miGroupByK = Express.Method((IEnumerable<int> xs) => xs.GroupBy(x => 0)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miGroupByKe = Express.Method((IEnumerable<int> xs) => xs.GroupBy(x => 0, x => 0)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miGroupByKr = Express.Method((IEnumerable<int> xs) => xs.GroupBy(x => 0, (k, vs) => 0)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miGroupByKer = Express.Method((IEnumerable<int> xs) => xs.GroupBy(x => 0, x => 0, (k, vs) => 0)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miOrderBy = Express.Method((IEnumerable<int> xs) => xs.OrderBy(x => x)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miOrderByDescending = Express.Method((IEnumerable<int> xs) => xs.OrderByDescending(x => x)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miSelect = Express.Method((IEnumerable<int> xs) => xs.Select(x => 0)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miSelect1 = Express.Method((IEnumerable<int> xs) => xs.Select((x, i) => 0)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miThenBy = Express.Method((IOrderedEnumerable<int> xs) => xs.ThenBy(x => x)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miThenByDescending = Express.Method((IOrderedEnumerable<int> xs) => xs.ThenByDescending(x => x)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miWhere = Express.Method((IEnumerable<int> xs) => xs.Where(x => false)).GetGenericMethodDefinition();
-        private static readonly MethodInfo _miWhere1 = Express.Method((IEnumerable<int> xs) => xs.Where((x, i) => false)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miAll = Reflect.Method((IEnumerable<int> xs) => xs.All(x => false)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miAny = Reflect.Method((IEnumerable<int> xs) => xs.Any()).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miAny1 = Reflect.Method((IEnumerable<int> xs) => xs.Any(x => false)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miConcat = Reflect.Method((IEnumerable<int> xs) => xs.Concat(new int[0])).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miGroupByK = Reflect.Method((IEnumerable<int> xs) => xs.GroupBy(x => 0)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miGroupByKe = Reflect.Method((IEnumerable<int> xs) => xs.GroupBy(x => 0, x => 0)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miGroupByKr = Reflect.Method((IEnumerable<int> xs) => xs.GroupBy(x => 0, (k, vs) => 0)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miGroupByKer = Reflect.Method((IEnumerable<int> xs) => xs.GroupBy(x => 0, x => 0, (k, vs) => 0)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miOrderBy = Reflect.Method((IEnumerable<int> xs) => xs.OrderBy(x => x)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miOrderByDescending = Reflect.Method((IEnumerable<int> xs) => xs.OrderByDescending(x => x)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miSelect = Reflect.Method((IEnumerable<int> xs) => xs.Select(x => 0)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miSelect1 = Reflect.Method((IEnumerable<int> xs) => xs.Select((x, i) => 0)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miThenBy = Reflect.Method((IOrderedEnumerable<int> xs) => xs.ThenBy(x => x)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miThenByDescending = Reflect.Method((IOrderedEnumerable<int> xs) => xs.ThenByDescending(x => x)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miWhere = Reflect.Method((IEnumerable<int> xs) => xs.Where(x => false)).GetGenericMethodDefinition();
+        private static readonly MethodInfo _miWhere1 = Reflect.Method((IEnumerable<int> xs) => xs.Where((x, i) => false)).GetGenericMethodDefinition();
 
         public static Expression<Func<TContext, bool>> All<TContext, TSource>(this IQuery<TContext, TSource> source, Expression<Func<TSource, bool>> predicate)
         {

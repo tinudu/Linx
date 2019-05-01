@@ -16,7 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Linx.Expressions\Linx.Expressions.csproj" />
     <ProjectReference Include="..\..\src\Linx.Querying\Linx.Querying.csproj" />
   </ItemGroup>
 

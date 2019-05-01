@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Linx.Expressions\Linx.Expressions.csproj" />
+    <ProjectReference Include="..\Linx\Linx.csproj" />
   </ItemGroup>
 
 </Project>

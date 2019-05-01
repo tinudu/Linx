@@ -7,8 +7,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{5F0BA86C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Linx.Querying", "Linx.Querying\Linx.Querying.csproj", "{05DF0F41-211A-49E3-AC3A-75A8A2246CD8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Linx.Expressions", "Linx.Expressions\Linx.Expressions.csproj", "{8B18492F-8E0C-4810-B8EB-F8E925582CA3}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Linx.Expressions.Serialization", "Linx.Expressions.Serialization\Linx.Expressions.Serialization.csproj", "{FCDE1E29-6293-4C6A-B784-9C83E566F2BF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Linx.Jsxn", "Linx.Jsxn\Linx.Jsxn.csproj", "{D5F52F89-4CEA-4113-8CBA-D55487DEA712}"
@@ -31,10 +29,6 @@ Global
 		{05DF0F41-211A-49E3-AC3A-75A8A2246CD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{05DF0F41-211A-49E3-AC3A-75A8A2246CD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{05DF0F41-211A-49E3-AC3A-75A8A2246CD8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8B18492F-8E0C-4810-B8EB-F8E925582CA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8B18492F-8E0C-4810-B8EB-F8E925582CA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8B18492F-8E0C-4810-B8EB-F8E925582CA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8B18492F-8E0C-4810-B8EB-F8E925582CA3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FCDE1E29-6293-4C6A-B784-9C83E566F2BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FCDE1E29-6293-4C6A-B784-9C83E566F2BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FCDE1E29-6293-4C6A-B784-9C83E566F2BF}.Release|Any CPU.ActiveCfg = Release|Any CPU

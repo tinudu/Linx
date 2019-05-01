@@ -15,6 +15,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Expressions\Express.Inject.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Express.Inject.tt</DependentUpon>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ElasticBytes.AsyncEnumerable" Version="1.0.0" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.2" />
   </ItemGroup>
@@ -64,6 +72,21 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxReactive.Zip.tt</DependentUpon>
     </Compile>
+    <Compile Update="Expressions\Express.Func.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Express.Func.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Expressions\Express.Inject.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Express.Inject.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Expressions\Reflect.Generated.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Reflect.Generated.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
@@ -98,6 +121,18 @@
     <None Update="AsyncEnumerable\Operators\LinxReactive.Zip.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxReactive.Zip.cs</LastGenOutput>
+    </None>
+    <None Update="Expressions\Express.Func.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Express.Func.cs</LastGenOutput>
+    </None>
+    <None Update="Expressions\Express.Inject.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Express.Inject.cs</LastGenOutput>
+    </None>
+    <None Update="Expressions\Reflect.Generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Reflect.Generated.cs</LastGenOutput>
     </None>
   </ItemGroup>
 

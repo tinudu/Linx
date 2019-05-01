@@ -1,0 +1,55 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ output extension=".cs" #>
+<#
+    var args = Enumerable.Range(0, 8)
+        .Select(i => string.Join(", ", Enumerable.Range(1, i).Select(j => "T" + j)))
+        .Select(s => new 
+        {
+            ActionArgs = s == string.Empty ? string.Empty : $"<{s}>",
+            FuncArgs = s == string.Empty ? "<TResult>" : $"<{s}, TResult>"
+        });
+#>
+namespace Linx.Expressions
+{
+    using System;
+    using System.Linq.Expressions;
+    using System.Reflection;
+
+    partial class Reflect
+    {
+<# foreach(var arg in args) { #>
+        /// <summary>
+        /// Convenience function to reflect a <see cref="ConstructorInfo"/>.
+        /// </summary>
+        public static ConstructorInfo Constructor<#= arg.ActionArgs #>(Expression<Action<#= arg.ActionArgs #>> lambda) => Constructor((LambdaExpression)lambda);
+
+        /// <summary>
+        /// Convenience function to reflect a <see cref="ConstructorInfo"/>.
+        /// </summary>
+        public static ConstructorInfo Constructor<#= arg.FuncArgs #>(Expression<Func<#= arg.FuncArgs #>> lambda) => Constructor((LambdaExpression)lambda);
+
+        /// <summary>
+        /// Convenience function to reflect a <see cref="MemberInfo"/>.
+        /// </summary>
+        public static MemberInfo Member<#= arg.ActionArgs #>(Expression<Action<#= arg.ActionArgs #>> lambda) => Member((LambdaExpression)lambda);
+
+        /// <summary>
+        /// Convenience function to reflect a <see cref="MemberInfo"/>.
+        /// </summary>
+        public static MemberInfo Member<#= arg.FuncArgs #>(Expression<Func<#= arg.FuncArgs #>> lambda) => Member((LambdaExpression)lambda);
+
+        /// <summary>
+        /// Convenience function to reflect a <see cref="MethodInfo"/>.
+        /// </summary>
+        public static MethodInfo Method<#= arg.ActionArgs #>(Expression<Action<#= arg.ActionArgs #>> lambda) => Method((LambdaExpression)lambda);
+
+        /// <summary>
+        /// Convenience function to reflect a <see cref="MethodInfo"/>.
+        /// </summary>
+        public static MethodInfo Method<#= arg.FuncArgs #>(Expression<Func<#= arg.FuncArgs #>> lambda) => Method((LambdaExpression)lambda);
+
+<# } #>
+    }
+}

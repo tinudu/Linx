@@ -1,0 +1,38 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ output extension=".cs" #>
+<#
+    var args = Enumerable.Range(1, 8)
+        .Select(i => new { N = i, Range = Enumerable.Range(1, i) })
+        .Select(r => new 
+        {
+            r.N,
+            r.Range,
+            GenArgs = $"<{string.Concat(r.Range.Select(i => $"T{i}, "))}TResult>",
+            Plural = r.N > 1 ? "s" : string.Empty
+        });
+#>
+namespace Linx.Expressions
+{
+    using System;
+    using System.Linq.Expressions;
+
+    partial class Express
+    {
+<# foreach (var arg in args) { #>
+        /// <summary>
+        /// Inject the specified expression<#= arg.Plural #> into the body of <paramref name="lambda"/> in place of its parameter<#= arg.Plural #>.
+        /// </summary>
+        /// <returns>The body of <paramref name="lambda"/> with parameter<#= arg.Plural #> replaced.</returns>
+        public static Expression Inject<#= arg.GenArgs #>(this Expression<Func<#= arg.GenArgs #>> lambda<#= string.Concat(arg.Range.Select(i => $", Expression x{i}")) #>)
+            => new ParameterReplaceVisitor(new[]
+            {
+<# foreach(var i in arg.Range) { #>
+                (lambda.Parameters[<#= i - 1 #>], x<#= i #>),
+<# } #>
+            }).Visit(lambda.Body);
+
+<# } #>
+    }
+}

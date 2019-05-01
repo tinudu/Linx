@@ -1,0 +1,31 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ output extension=".cs" #>
+<#
+    var args = Enumerable.Range(0, 8)
+        .Select(i => $"<{string.Concat(Enumerable.Range(1, i).Select(j => $"T{j}, "))}TResult>");
+#>
+namespace Linx.Expressions
+{
+    using System;
+    using System.Linq.Expressions;
+
+    partial class Express
+    {
+<# foreach(var arg in args) { #>
+        /// <summary>
+        /// Convenience function to infer the result type.
+        /// </summary>
+        /// <returns><paramref name="func"/></returns>
+        public static Func<#= arg #> Func<#= arg #>(Func<#= arg #> func) => func;
+
+        /// <summary>
+        /// Convenience function to infer the result type.
+        /// </summary>
+        /// <returns><paramref name="func"/></returns>
+        public static Expression<Func<#= arg #>> FuncX<#= arg #>(Expression<Func<#= arg #>> func) => func;
+
+<# } #>
+    }
+}
