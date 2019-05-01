@@ -19,6 +19,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests.Linx.Jsxn", "..\tests
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests.Linx.Querying", "..\tests\Tests.Linx.Querying\Tests.Linx.Querying.csproj", "{75919018-ACAC-47FA-915D-5BC01F7B1ED6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linx.AsyncEnumerable.Testing", "Linx.AsyncEnumerable.Testing\Linx.AsyncEnumerable.Testing.csproj", "{2CB79346-09B9-4210-8BCA-432F9E320F0E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +55,10 @@ Global
 		{75919018-ACAC-47FA-915D-5BC01F7B1ED6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{75919018-ACAC-47FA-915D-5BC01F7B1ED6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{75919018-ACAC-47FA-915D-5BC01F7B1ED6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2CB79346-09B9-4210-8BCA-432F9E320F0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CB79346-09B9-4210-8BCA-432F9E320F0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CB79346-09B9-4210-8BCA-432F9E320F0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CB79346-09B9-4210-8BCA-432F9E320F0E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

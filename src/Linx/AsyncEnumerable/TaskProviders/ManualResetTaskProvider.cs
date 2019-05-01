@@ -1,12 +1,14 @@
 ﻿namespace Linx.AsyncEnumerable.TaskProviders
 {
     using System;
+    using System.Diagnostics;
     using System.Threading.Tasks;
     using System.Threading.Tasks.Sources;
 
     /// <summary>
     /// Provides manually resettable <see cref="ValueTask"/>.
     /// </summary>
+    [DebuggerNonUserCode]
     public sealed class ManualResetTaskProvider : IValueTaskSource
     {
         private ManualResetValueTaskSourceCore<Unit> _core = new ManualResetValueTaskSourceCore<Unit>();

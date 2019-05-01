@@ -1,11 +1,13 @@
 ﻿namespace Linx.AsyncEnumerable
 {
     using System;
+    using System.Diagnostics;
     using System.Threading;
 
     /// <summary>
     /// Provides common error handling.
     /// </summary>
+    [DebuggerNonUserCode]
     internal struct ErrorHandler
     {
         /// <summary>

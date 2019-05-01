@@ -1,16 +1,17 @@
 ﻿namespace Linx.AsyncEnumerable
 {
     using System;
+    using System.Collections.Generic;
 
     /// <summary>
-    /// Kind of a <see cref="INotification{T}"/>.
+    /// Kind of a <see cref="Notification{T}"/>.
     /// </summary>
     public enum NotificationKind : byte
     {
         /// <summary>
-        /// Notifiaction representing a sequence element.
+        /// Notification representing the end of the sequence.
         /// </summary>
-        OnNext,
+        OnCompleted,
 
         /// <summary>
         /// Notification representing an error.
@@ -18,84 +19,108 @@
         OnError,
 
         /// <summary>
-        /// Notification representing the end of the sequence.
+        /// Notifiaction representing a sequence element.
         /// </summary>
-        OnCompleted
+        OnNext,
     }
 
     /// <summary>
     /// A materialized notification.
     /// </summary>
-    public interface INotification<out T>
+    public struct Notification<T> : IEquatable<Notification<T>>
     {
         /// <summary>
         /// Gets the <see cref="NotificationKind"/>.
         /// </summary>
-        NotificationKind Kind { get; }
+        public NotificationKind Kind { get; }
 
         /// <summary>
         /// Gets the value of a <see cref="NotificationKind.OnNext"/> notification.
         /// </summary>
-        T Value { get; }
+        public T Value { get; }
 
         /// <summary>
-        /// Gets the error of a <see cref="NotificationKind.OnError"/> notifiacation.
+        /// Gets the error of a <see cref="NotificationKind.OnError"/> notification.
         /// </summary>
-        Exception Error { get; }
-    }
-
-    /// <summary>
-    /// Static factory methods for <see cref="INotification{T}"/>.
-    /// </summary>
-    public static class Notification
-    {
-        /// <summary>
-        /// Creates a <see cref="NotificationKind.OnNext"/> notification.
-        /// </summary>
-        public static INotification<T> OnNext<T>(T value) => new OnNextNotification<T>(value);
+        public Exception Error { get; }
 
         /// <summary>
-        /// Creates a <see cref="NotificationKind.OnError"/> notification.
+        /// Create a <see cref="NotificationKind.OnNext"/> notification.
         /// </summary>
-        public static INotification<T> OnError<T>(Exception error) => new OnErrorNotification<T>(error);
-
-        /// <summary>
-        /// Creates a <see cref="NotificationKind.OnCompleted"/> notification.
-        /// </summary>
-        public static INotification<T> OnCompleted<T>() => OnCompletedNotification<T>.Default;
-
-        private sealed class OnNextNotification<T> : INotification<T>
+        public Notification(T value)
         {
-            public NotificationKind Kind => NotificationKind.OnNext;
-            public T Value { get; }
-            public Exception Error => null;
-
-            public OnNextNotification(T value) => Value = value;
-
-            public override string ToString() => $"OnNext({Value})";
+            Kind = NotificationKind.OnNext;
+            Value = value;
+            Error = null;
         }
 
-        private sealed class OnErrorNotification<T> : INotification<T>
+        /// <summary>
+        /// Create a <see cref="NotificationKind.OnError"/> notification.
+        /// </summary>
+        public Notification(Exception error)
         {
-            public NotificationKind Kind => NotificationKind.OnError;
-            public T Value => default;
-            public Exception Error { get; }
-
-            public OnErrorNotification(Exception error) => Error = error ?? throw new ArgumentNullException(nameof(error));
-
-            public override string ToString() => $"OnError({Error})";
+            Kind = NotificationKind.OnError;
+            Value = default;
+            Error = error ?? throw new ArgumentNullException(nameof(error));
         }
 
-        private sealed class OnCompletedNotification<T> : INotification<T>
+        /// <summary>
+        /// Equality.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="NotificationKind.OnNext"/> notifications are compared using the <see cref="EqualityComparer{T}.Default"/>.
+        /// <see cref="NotificationKind.OnError"/> notifications are compared by exception type and message.
+        /// </remarks>
+        public bool Equals(Notification<T> other)
         {
-            public static OnCompletedNotification<T> Default { get; } = new OnCompletedNotification<T>();
-            private OnCompletedNotification() { }
+            if (other.Kind != Kind) return false;
 
-            public NotificationKind Kind => NotificationKind.OnCompleted;
-            public T Value => default;
-            public Exception Error => null;
+            switch (Kind)
+            {
+                case NotificationKind.OnNext:
+                    return other.Kind == NotificationKind.OnNext && EqualityComparer<T>.Default.Equals(Value, other.Value);
+                case NotificationKind.OnCompleted:
+                    return other.Kind == NotificationKind.OnCompleted;
+                case NotificationKind.OnError:
+                    return other.Kind == NotificationKind.OnError && Error.GetType() == other.Error.GetType() && Error.Message == other.Error.Message;
+                default:
+                    throw new Exception(Kind + "???");
+            }
+        }
 
-            public override string ToString() => "OnCompleted()";
+        /// <inheritdoc />
+        public override bool Equals(object obj) => obj is Notification<T> n && Equals(n);
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            switch (Kind)
+            {
+                case NotificationKind.OnNext:
+                    return new HashCode() + (int)NotificationKind.OnNext + EqualityComparer<T>.Default.GetHashCode(Value);
+                case NotificationKind.OnCompleted:
+                    return 0;
+                case NotificationKind.OnError:
+                    return new HashCode() + (int)NotificationKind.OnError + Error.GetType().GetHashCode() + Error.Message.GetHashCode();
+                default:
+                    throw new Exception(Kind + "???");
+            }
+        }
+
+        /// <inheritdoc />
+        public override string ToString()
+        {
+            switch (Kind)
+            {
+                case NotificationKind.OnNext:
+                    return $"OnNext({Value})";
+                case NotificationKind.OnCompleted:
+                    return "OnCompleted()";
+                case NotificationKind.OnError:
+                    return $"OnError({Error.Message})";
+                default:
+                    throw new Exception(Kind + "???");
+            }
         }
     }
 }

@@ -3,12 +3,17 @@
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Runtime.CompilerServices;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// Static Linx methods.
     /// </summary>
     public static class Linx
     {
+        private static readonly Task _never = new AsyncTaskMethodBuilder().Task;
+
         /// <summary>
         /// Clears the specified storage location.
         /// </summary>
@@ -42,6 +47,18 @@
         /// Create an equality comparer by specifying individual comparers for <typeparamref name="TKey"/> and <typeparamref name="TValue"/>.
         /// </summary>
         public static IEqualityComparer<KeyValuePair<TKey, TValue>> KeyValueEqualityComparer<TKey, TValue>(IEqualityComparer<TKey> keyComparer, IEqualityComparer<TValue> valueComparer) => new KeyValueEqualityComparerImpl<TKey, TValue>(keyComparer, valueComparer);
+
+        /// <summary>
+        /// Gets a task that completes as <see cref="TaskStatus.Canceled"/> when the specified <paramref name="token"/> requests cancellation.
+        /// </summary>
+        public static Task WhenCanceled(this CancellationToken token)
+        {
+            if (token.IsCancellationRequested) return Task.FromCanceled(token);
+            if (!token.CanBeCanceled) return _never;
+            var atmb = new AsyncTaskMethodBuilder();
+            if (token.CanBeCanceled) token.Register(() => atmb.SetException(new OperationCanceledException(token)));
+            return atmb.Task;
+        }
 
         /// <summary>
         /// Wrap the specified value.

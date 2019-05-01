@@ -9,26 +9,26 @@
         /// <summary>
         /// Materializes the implicit notifications of an observable sequence as explicit notification values.
         /// </summary>
-        public static IAsyncEnumerable<INotification<T>> Materialize<T>(this IAsyncEnumerable<T> source)
+        public static IAsyncEnumerable<Notification<T>> Materialize<T>(this IAsyncEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<INotification<T>>(async (yield, token) =>
+            return Produce<Notification<T>>(async (yield, token) =>
             {
-                INotification<T> completion;
+                Notification<T> completion;
                 try
                 {
                     var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                     try
                     {
                         while (await ae.MoveNextAsync())
-                            await yield(Notification.OnNext(ae.Current));
+                            await yield(new Notification<T>(ae.Current));
                     }
                     finally { await ae.DisposeAsync(); }
 
-                    completion = Notification.OnCompleted<T>();
+                    completion = new Notification<T>();
                 }
-                catch (Exception ex) { completion = Notification.OnError<T>(ex); }
+                catch (Exception ex) { completion = new Notification<T>(ex); }
 
                 await yield(completion);
             });

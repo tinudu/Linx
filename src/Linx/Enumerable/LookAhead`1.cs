@@ -2,10 +2,12 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     /// <summary>
     /// A wrapper around a <see cref="IEnumerator{T}"/> that looks ahead one item.
     /// </summary>
+    [DebuggerNonUserCode]
     public sealed class LookAhead<T> : IDisposable
     {
         private IEnumerator<T> _enumerator;

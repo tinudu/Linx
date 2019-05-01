@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Linx.AsyncEnumerable.Testing</name>
+    </assembly>
+    <members>
+        <member name="T:Linx.AsyncEnumerable.Testing.MarbleException">
+            <summary>
+            Exception thrown from a marble error completion.
+            </summary>
+        </member>
+        <member name="P:Linx.AsyncEnumerable.Testing.MarbleException.Singleton">
+            <summary>
+            Gets the singleton instance.
+            </summary>
+        </member>
+        <member name="T:Linx.AsyncEnumerable.Testing.MarbleParser">
+            <summary>
+            Marble diagram parser.
+            </summary>
+            <remarks>
+            A parsed marble diagram represents a sequence of <see cref="T:Linx.AsyncEnumerable.TimeInterval`1"/> of <see cref="T:Linx.AsyncEnumerable.Notification`1"/> of <see cref="T:System.Char"/>.
+            
+            Syntax (spaces are ignored):
+            <code>
+            marble-diagram :== time-interval* [ completion ]
+            time-interval :== empty-frame* element-frame
+            emtpy-frame :== '-'
+            element-frame :== element | simultanous-elements
+            element :== [0-9A-Za-z]
+            simultanous-elements :== '[' element+ ']
+            completion :== successful-completion | error-completion | forever
+            successful-completion :== empty-frame* '|'
+            error-completion :== empty-frame* '#'
+            forever-completion :== '*' time-interval+
+            </code>
+            </remarks>
+        </member>
+        <member name="M:Linx.AsyncEnumerable.Testing.MarbleParser.Parse(System.Collections.Generic.IEnumerable{System.Char},Linx.AsyncEnumerable.Testing.MarbleParserSettings)">
+            <summary>
+            Parse a marble diagram.
+            </summary>
+            <param name="diagram">Marble diagram syntax.</param>
+            <param name="settings">Optional. Marble parser settings.</param>
+        </member>
+        <member name="M:Linx.AsyncEnumerable.Testing.MarbleParser.Parse``1(System.Collections.Generic.IEnumerable{System.Char},System.Collections.Generic.IEnumerable{``0},Linx.AsyncEnumerable.Testing.MarbleParserSettings)">
+            <summary>
+            Parse a marble diagram.
+            </summary>
+            <param name="diagram">Marble diagram syntax.</param>
+            <param name="elements">Positional element replacements.</param>
+            <param name="settings">Optional. Marble parser settings.</param>
+        </member>
+        <member name="M:Linx.AsyncEnumerable.Testing.MarbleParser.Parse``1(System.Collections.Generic.IEnumerable{System.Char},Linx.AsyncEnumerable.Testing.MarbleParserSettings,``0[])">
+            <summary>
+            Parse a marble diagram.
+            </summary>
+            <param name="diagram">Marble diagram syntax.</param>
+            <param name="settings">Optional. Marble parser settings.</param>
+            <param name="elements">Positional element replacements.</param>
+        </member>
+        <member name="M:Linx.AsyncEnumerable.Testing.MarbleParser.Parse``1(System.Collections.Generic.IEnumerable{System.Char},System.Func{System.Char,System.Int32,``0},Linx.AsyncEnumerable.Testing.MarbleParserSettings)">
+            <summary>
+            Parse a marble diagram.
+            </summary>
+            <param name="diagram">Marble diagram syntax.</param>
+            <param name="selector">Function to convert elements to <typeparamref name="T"/>.</param>
+            <param name="settings">Optional. Marble parser settings.</param>
+        </member>
+        <member name="T:Linx.AsyncEnumerable.Testing.MarbleParserSettings">
+            <summary>
+            Settings for the <see cref="T:Linx.AsyncEnumerable.Testing.MarbleParser"/>.
+            </summary>
+        </member>
+        <member name="P:Linx.AsyncEnumerable.Testing.MarbleParserSettings.FrameSize">
+            <summary>
+            Gets the duration of a time frame (default: one second).
+            </summary>
+        </member>
+        <member name="P:Linx.AsyncEnumerable.Testing.MarbleParserSettings.Exception">
+            <summary>
+            The <see cref="P:Linx.AsyncEnumerable.Testing.MarbleParserSettings.Exception"/> used as the replacement of the '#' completion (default: <see cref="T:Linx.AsyncEnumerable.Testing.MarbleException"/>).
+            </summary>
+        </member>
+    </members>
+</doc>

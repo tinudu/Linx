@@ -10,7 +10,7 @@
         /// <summary>
         /// Dematerializes the explicit notification values of an observable sequence as implicit notifications.
         /// </summary>
-        public static IAsyncEnumerable<T> Dematerialize<T>(this IAsyncEnumerable<INotification<T>> source)
+        public static IAsyncEnumerable<T> Dematerialize<T>(this IAsyncEnumerable<Notification<T>> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -35,6 +35,7 @@
                                 throw new Exception(current.Kind + "???");
                         }
                     }
+                    await token.WhenCanceled().ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });
@@ -43,7 +44,7 @@
         /// <summary>
         /// Dematerializes the explicit notification in <paramref name="source"/> after an interval.
         /// </summary>
-        public static IAsyncEnumerable<T> Dematerialize<T>(this IEnumerable<TimeInterval<INotification<T>>> source)
+        public static IAsyncEnumerable<T> Dematerialize<T>(this IEnumerable<TimeInterval<Notification<T>>> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -68,6 +69,7 @@
                             throw new Exception(ti.Value.Kind + "???");
                     }
                 }
+                await token.WhenCanceled().ConfigureAwait(false);
             });
         }
     }
