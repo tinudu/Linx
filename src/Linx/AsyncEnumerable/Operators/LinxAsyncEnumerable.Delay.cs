@@ -33,12 +33,12 @@
                         await time.Delay(current.Timestamp + delay, token).ConfigureAwait(false);
                         switch (current.Value.Kind)
                         {
-                            case NotificationKind.OnNext:
+                            case NotificationKind.Next:
                                 await yield(current.Value.Value);
                                 break;
-                            case NotificationKind.OnError:
+                            case NotificationKind.Error:
                                 throw current.Value.Error;
-                            case NotificationKind.OnCompleted:
+                            case NotificationKind.Completed:
                                 return;
                             default:
                                 throw new Exception(current.Value.Kind + "???");

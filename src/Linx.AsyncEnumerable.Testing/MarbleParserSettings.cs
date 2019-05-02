@@ -7,7 +7,12 @@
     /// </summary>
     public sealed class MarbleParserSettings
     {
-        private TimeSpan _frameSize = TimeSpan.FromTicks(TimeSpan.TicksPerSecond);
+        /// <summary>
+        /// One second.
+        /// </summary>
+        public static TimeSpan DefaultFrameSize { get; }= TimeSpan.FromTicks(TimeSpan.TicksPerSecond);
+
+        private TimeSpan _frameSize = DefaultFrameSize;
 
         /// <summary>
         /// Gets the duration of a time frame (default: one second).
@@ -19,8 +24,8 @@
         }
 
         /// <summary>
-        /// The <see cref="Exception"/> used as the replacement of the '#' completion (default: <see cref="MarbleException"/>).
+        /// The <see cref="Error"/> used as the replacement of the '#' completion (default: <see cref="MarbleException"/>).
         /// </summary>
-        public Exception Exception { get; set; }
+        public Exception Error { get; set; }
     }
 }

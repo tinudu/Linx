@@ -11,17 +11,17 @@
         /// <summary>
         /// Notification representing the end of the sequence.
         /// </summary>
-        OnCompleted,
-
-        /// <summary>
-        /// Notification representing an error.
-        /// </summary>
-        OnError,
+        Completed,
 
         /// <summary>
         /// Notifiaction representing a sequence element.
         /// </summary>
-        OnNext,
+        Next,
+
+        /// <summary>
+        /// Notification representing an error.
+        /// </summary>
+        Error
     }
 
     /// <summary>
@@ -35,31 +35,28 @@
         public NotificationKind Kind { get; }
 
         /// <summary>
-        /// Gets the value of a <see cref="NotificationKind.OnNext"/> notification.
+        /// Gets the value of a <see cref="NotificationKind.Next"/> notification.
         /// </summary>
         public T Value { get; }
 
         /// <summary>
-        /// Gets the error of a <see cref="NotificationKind.OnError"/> notification.
+        /// Gets the error of a <see cref="NotificationKind.Error"/> notification.
         /// </summary>
         public Exception Error { get; }
 
-        /// <summary>
-        /// Create a <see cref="NotificationKind.OnNext"/> notification.
-        /// </summary>
-        public Notification(T value)
+        internal Notification(T value)
         {
-            Kind = NotificationKind.OnNext;
+            Kind = NotificationKind.Next;
             Value = value;
             Error = null;
         }
 
         /// <summary>
-        /// Create a <see cref="NotificationKind.OnError"/> notification.
+        /// Create a <see cref="NotificationKind.Error"/> notification.
         /// </summary>
-        public Notification(Exception error)
+        internal Notification(Exception error)
         {
-            Kind = NotificationKind.OnError;
+            Kind = NotificationKind.Error;
             Value = default;
             Error = error ?? throw new ArgumentNullException(nameof(error));
         }
@@ -68,8 +65,8 @@
         /// Equality.
         /// </summary>
         /// <remarks>
-        /// <see cref="NotificationKind.OnNext"/> notifications are compared using the <see cref="EqualityComparer{T}.Default"/>.
-        /// <see cref="NotificationKind.OnError"/> notifications are compared by exception type and message.
+        /// <see cref="NotificationKind.Next"/> notifications are compared using the <see cref="EqualityComparer{T}.Default"/>.
+        /// <see cref="NotificationKind.Error"/> notifications are compared by exception type and message.
         /// </remarks>
         public bool Equals(Notification<T> other)
         {
@@ -77,12 +74,12 @@
 
             switch (Kind)
             {
-                case NotificationKind.OnNext:
-                    return other.Kind == NotificationKind.OnNext && EqualityComparer<T>.Default.Equals(Value, other.Value);
-                case NotificationKind.OnCompleted:
-                    return other.Kind == NotificationKind.OnCompleted;
-                case NotificationKind.OnError:
-                    return other.Kind == NotificationKind.OnError && Error.GetType() == other.Error.GetType() && Error.Message == other.Error.Message;
+                case NotificationKind.Next:
+                    return other.Kind == NotificationKind.Next && EqualityComparer<T>.Default.Equals(Value, other.Value);
+                case NotificationKind.Completed:
+                    return other.Kind == NotificationKind.Completed;
+                case NotificationKind.Error:
+                    return other.Kind == NotificationKind.Error && Error.GetType() == other.Error.GetType() && Error.Message == other.Error.Message;
                 default:
                     throw new Exception(Kind + "???");
             }
@@ -96,12 +93,12 @@
         {
             switch (Kind)
             {
-                case NotificationKind.OnNext:
-                    return new HashCode() + (int)NotificationKind.OnNext + EqualityComparer<T>.Default.GetHashCode(Value);
-                case NotificationKind.OnCompleted:
+                case NotificationKind.Next:
+                    return new HashCode() + (int)NotificationKind.Next + EqualityComparer<T>.Default.GetHashCode(Value);
+                case NotificationKind.Completed:
                     return 0;
-                case NotificationKind.OnError:
-                    return new HashCode() + (int)NotificationKind.OnError + Error.GetType().GetHashCode() + Error.Message.GetHashCode();
+                case NotificationKind.Error:
+                    return new HashCode() + (int)NotificationKind.Error + Error.GetType().GetHashCode() + Error.Message.GetHashCode();
                 default:
                     throw new Exception(Kind + "???");
             }
@@ -112,15 +109,36 @@
         {
             switch (Kind)
             {
-                case NotificationKind.OnNext:
-                    return $"OnNext({Value})";
-                case NotificationKind.OnCompleted:
-                    return "OnCompleted()";
-                case NotificationKind.OnError:
-                    return $"OnError({Error.Message})";
+                case NotificationKind.Next:
+                    return Value?.ToString() ?? string.Empty;
+                case NotificationKind.Completed:
+                    return "Completed";
+                case NotificationKind.Error:
+                    return $"{Error.GetType().Name}({Error.Message})";
                 default:
                     throw new Exception(Kind + "???");
             }
         }
+    }
+
+    /// <summary>
+    /// <see cref="Notification{T}"/> factory methods.
+    /// </summary>
+    public static class Notification
+    {
+        /// <summary>
+        /// Create a <see cref="NotificationKind.Next"/> notification.
+        /// </summary>
+        public static Notification<T> Next<T>(T value) => new Notification<T>(value);
+
+        /// <summary>
+        /// Create a <see cref="NotificationKind.Completed"/> notification.
+        /// </summary>
+        public static Notification<T> Completed<T>() => new Notification<T>();
+        
+        /// <summary>
+        /// Create a <see cref="NotificationKind.Error"/> notification.
+        /// </summary>
+        public static Notification<T> Error<T>(Exception error) => new Notification<T>(error);
     }
 }

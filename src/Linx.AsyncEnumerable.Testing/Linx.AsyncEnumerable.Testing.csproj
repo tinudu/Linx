@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>C:\Users\durtm\source\repos\Linx\src\Linx.AsyncEnumerable.Testing\Linx.AsyncEnumerable.Testing.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\netstandard2.0\Linx.AsyncEnumerable.Testing.xml</DocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>C:\Users\durtm\source\repos\Linx\src\Linx.AsyncEnumerable.Testing\Linx.AsyncEnumerable.Testing.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\netstandard2.0\Linx.AsyncEnumerable.Testing.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

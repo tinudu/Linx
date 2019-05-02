@@ -24,12 +24,12 @@
                         var current = ae.Current;
                         switch (current.Kind)
                         {
-                            case NotificationKind.OnNext:
+                            case NotificationKind.Next:
                                 await yield(current.Value);
                                 break;
-                            case NotificationKind.OnCompleted:
+                            case NotificationKind.Completed:
                                 return;
-                            case NotificationKind.OnError:
+                            case NotificationKind.Error:
                                 throw current.Error;
                             default:
                                 throw new Exception(current.Kind + "???");
@@ -58,12 +58,12 @@
                     await time.Delay(t, token).ConfigureAwait(false);
                     switch (ti.Value.Kind)
                     {
-                        case NotificationKind.OnNext:
+                        case NotificationKind.Next:
                             await yield(ti.Value.Value);
                             break;
-                        case NotificationKind.OnError:
+                        case NotificationKind.Error:
                             throw ti.Value.Error;
-                        case NotificationKind.OnCompleted:
+                        case NotificationKind.Completed:
                             return;
                         default:
                             throw new Exception(ti.Value.Kind + "???");

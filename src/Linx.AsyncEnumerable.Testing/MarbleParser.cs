@@ -13,16 +13,12 @@
     /// 
     /// Syntax (spaces are ignored):
     /// <code>
-    /// marble-diagram :== time-interval* [ completion ]
-    /// time-interval :== empty-frame* element-frame
-    /// emtpy-frame :== '-'
-    /// element-frame :== element | simultanous-elements
-    /// element :== [0-9A-Za-z]
-    /// simultanous-elements :== '[' element+ ']
-    /// completion :== successful-completion | error-completion | forever
-    /// successful-completion :== empty-frame* '|'
-    /// error-completion :== empty-frame* '#'
-    /// forever-completion :== '*' time-interval+
+    /// marble-diagram :== next* [ completed | error | forever ]
+    /// next :== time-frame* [0-9A-Za-z]
+    /// completed :== time-frame* '|'
+    /// error :== time-frame* '#'
+    /// time-frame :== '-'
+    /// forever :== '*' interval-next+
     /// </code>
     /// </remarks>
     public static class MarbleParser
@@ -84,108 +80,93 @@
             if (selector == null) throw new ArgumentNullException(nameof(selector));
             if (settings == null) settings = new MarbleParserSettings();
 
-            using (var input = diagram.Where(ch => ch != ' ').GetLookAhead())
-            {
-                var context = new ParseContext { Input = input, FrameSize = settings.FrameSize };
-                var prefix = ParseTimeIntervals(context, selector)
-                    .Select(ti => new TimeInterval<Notification<T>>(ti.Interval, new Notification<T>(ti.Value)))
-                    .ToList();
-                IEnumerable<TimeInterval<Notification<T>>> notifications;
-                if (!input.HasNext)
-                    notifications = prefix;
-                else
+            using (var context = new ParseContext<T>(diagram, selector, settings))
+                try
                 {
-                    switch (input.Next)
+                    var prefix = ParseTimeIntervals(context).ToList();
+                    IEnumerable<TimeInterval<Notification<T>>> notifications;
+                    if (!context.IsCompleted && context.HasNext && context.Next == '*') // forever
                     {
-                        case '|':
-                            prefix.Add(new TimeInterval<Notification<T>>(context.Interval + settings.FrameSize, new Notification<T>()));
-                            notifications = prefix;
-                            break;
-
-                        case '#':
-                            prefix.Add(new TimeInterval<Notification<T>>(context.Interval + settings.FrameSize, new Notification<T>(settings.Exception ?? MarbleException.Singleton)));
-                            notifications = prefix;
-                            break;
-
-                        case '*':
-                            if (context.Interval != TimeSpan.Zero)
-                                throw new Exception("Empty frames before forever-completion.");
-                            input.MoveNext();
-                            var suffix = ParseTimeIntervals(context, selector)
-                                .Select(ti => new TimeInterval<Notification<T>>(ti.Interval, new Notification<T>(ti.Value)))
-                                .ToList();
-                            if (suffix.Count == 0)
-                                throw new Exception("Empty forever-completion.");
-                            notifications = prefix.Concat(Forever(suffix));
-                            break;
-
-                        default:
-                            throw new Exception("Invalid character.");
+                        context.MoveNext();
+                        var suffix = ParseTimeIntervals(context).ToList();
+                        if (suffix.Count == 0)
+                            throw new MarbleParseException("Empty forever.", context.Position);
+                        if (context.IsCompleted)
+                            throw new MarbleParseException("Forever may not be completed.", context.Position);
+                        notifications = prefix.Concat(Forever(suffix));
                     }
-                }
+                    else
+                        notifications = prefix;
 
-                return notifications;
-            }
+                    if (context.HasNext)
+                        throw new MarbleParseException("Unexpected character.", context.Position);
+                    return notifications;
+                }
+                catch (MarbleParseException) { throw; }
+                catch (Exception ex) { throw new MarbleParseException(ex.Message, context.Position); }
         }
 
-        private static IEnumerable<TimeInterval<T>> ParseTimeIntervals<T>(ParseContext ctx, Func<char, int, T> selector)
+        private static IEnumerable<TimeInterval<Notification<T>>> ParseTimeIntervals<T>(ParseContext<T> ctx)
         {
-            while (ctx.Input.HasNext)
-            {
-                switch (ctx.Input.Next)
+            var interval = TimeSpan.Zero;
+            while (ctx.HasNext)
+                switch (ctx.Next)
                 {
                     case '-':
-                        ctx.Interval += ctx.FrameSize;
-                        ctx.Input.MoveNext();
+                        interval += ctx.FrameSize;
+                        ctx.MoveNext();
                         continue;
-                    case '[':
-                        ctx.Input.MoveNext();
-                        if (!ctx.Input.HasNext || _elementChars.Contains(ctx.Input.Next))
-                            throw new Exception("Empty [].");
-                        yield return new TimeInterval<T>(ctx.Interval + ctx.FrameSize, selector(ctx.Input.Next, ctx.Index++));
-                        ctx.Input.MoveNext();
-                        while (true)
-                        {
-                            if (!ctx.Input.HasNext)
-                                throw new Exception("Unclosed [].");
-
-                            if (ctx.Input.Next == ']')
-                            {
-                                ctx.Input.MoveNext();
-                                break;
-                            }
-
-                            if (_elementChars.Contains(ctx.Input.Next))
-                            {
-                                yield return new TimeInterval<T>(TimeSpan.Zero, selector(ctx.Input.Next, ctx.Index++));
-                                ctx.Input.MoveNext();
-                            }
-                            else
-                                throw new Exception("Invalid character.");
-                        }
-                        ctx.Interval = TimeSpan.Zero;
-                        continue;
-
+                    case '|':
+                        yield return new TimeInterval<Notification<T>>(interval, Notification.Completed<T>());
+                        ctx.MoveNext();
+                        ctx.IsCompleted = true;
+                        yield break;
+                    case '#':
+                        yield return new TimeInterval<Notification<T>>(interval, Notification.Error<T>(ctx.Error));
+                        ctx.MoveNext();
+                        ctx.IsCompleted = true;
+                        yield break;
                     default:
-                        if (_elementChars.Contains(ctx.Input.Next))
-                        {
-                            yield return new TimeInterval<T>(ctx.Interval + ctx.FrameSize, selector(ctx.Input.Next, ctx.Index++));
-                            ctx.Input.MoveNext();
-                            ctx.Interval = TimeSpan.Zero;
-                            continue;
-                        }
+                        if (!_elementChars.Contains(ctx.Next))
+                            yield break;
+                        var value = ctx.Selector(ctx.Next, ctx.Index++);
+                        yield return new TimeInterval<Notification<T>>(interval, Notification.Next(value));
+                        ctx.MoveNext();
+                        interval = TimeSpan.Zero;
                         break;
                 }
-                break;
-            }
+            if (interval != TimeSpan.Zero)
+                throw new MarbleParseException("No notification for interval.", ctx.Position);
         }
 
-        private sealed class ParseContext
+        private sealed class ParseContext<T> : IDisposable
         {
-            public TimeSpan FrameSize;
-            public LookAhead<char> Input;
-            public TimeSpan Interval;
+            private readonly LookAhead<char> _input;
+
+            public readonly Func<char, int, T> Selector;
+            public readonly TimeSpan FrameSize;
+            public readonly Exception Error;
+            public int Position { get; private set; }
             public int Index;
+            public bool IsCompleted;
+
+            public ParseContext(IEnumerable<char> diagram, Func<char, int, T> selector, MarbleParserSettings settingsOpt)
+            {
+                _input = diagram.Where(ch => ch != ' ').GetLookAhead();
+                Selector = selector;
+                FrameSize = settingsOpt?.FrameSize ?? MarbleParserSettings.DefaultFrameSize;
+                Error = settingsOpt?.Error ?? MarbleException.Singleton;
+            }
+
+            public bool HasNext => _input.HasNext;
+            public char Next => _input.Next;
+            public void MoveNext()
+            {
+                _input.MoveNext();
+                Position++;
+            }
+
+            public void Dispose() => _input.Dispose();
         }
 
         private static IEnumerable<T> Forever<T>(IReadOnlyCollection<T> items)
