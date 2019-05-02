@@ -11,20 +11,19 @@
         /// <summary>
         /// Uses <see cref="EqualityComparer{T}.Default"/> as the <see cref="ElementComparer"/>.
         /// </summary>
-        public static SequenceComparer<T> Default { get; } = new SequenceComparer<T>();
+        public static SequenceComparer<T> Default { get; } = new SequenceComparer<T>(EqualityComparer<T>.Default);
+
+        /// <summary>
+        /// Gets an instance.
+        /// </summary>
+        public static SequenceComparer<T> GetComparer(IEqualityComparer<T> elementComparer) => elementComparer == null || elementComparer == EqualityComparer<T>.Default ? Default : new SequenceComparer<T>(elementComparer);
 
         /// <summary>
         /// Gets the element comparer.
         /// </summary>
         public IEqualityComparer<T> ElementComparer { get; }
 
-        private SequenceComparer() => ElementComparer = EqualityComparer<T>.Default;
-
-        /// <summary>
-        /// Initialize with the specified <see cref="IEqualityComparer{T}"/> to compare elements.
-        /// </summary>
-        /// <param name="elementComparer">Optional. Element comparer.</param>
-        public SequenceComparer(IEqualityComparer<T> elementComparer) => ElementComparer = elementComparer ?? EqualityComparer<T>.Default;
+        private SequenceComparer(IEqualityComparer<T> elementComparer) => ElementComparer = elementComparer;
 
         /// <inheritdoc />
         public bool Equals(IEnumerable<T> x, IEnumerable<T> y) => x == null ? y == null : y != null && x.SequenceEqual(y, ElementComparer);
