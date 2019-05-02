@@ -2,28 +2,21 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Invokes the specified action when the sequence terminates with an exception of type <typeparamref name="TException"/>.
+        /// Catches exceptions of type <typeparamref name="TException"/> and replaces it with the sequence returned by the specified <paramref name="handler"/>.
         /// </summary>
-        public static IAsyncEnumerable<TSource> Catch<TSource, TException>(this IAsyncEnumerable<TSource> source, Action<TException> handler) where TException : Exception
+        public static IAsyncEnumerable<TSource> Catch<TSource, TException>(this IAsyncEnumerable<TSource> source, Func<TException, IAsyncEnumerable<TSource>> handler) where TException : Exception
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (handler == null) throw new ArgumentNullException(nameof(handler));
 
             return Produce<TSource>(async (yield, token) =>
             {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
-                        await yield(ae.Current);
-                }
-                catch (TException ex) { handler(ex); }
-                finally { await ae.DisposeAsync(); }
+                try { await source.CopyTo(yield, token); }
+                catch (TException ex) { await handler(ex).CopyTo(yield, token); }
             });
         }
     }
