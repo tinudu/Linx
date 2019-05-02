@@ -93,6 +93,12 @@
         }
 
         [Fact]
+        public async Task TestAverage()
+        {
+            Assert.Equal(5.5, await LinxAsyncEnumerable.Range(1, 10).Average(default));
+        }
+
+        [Fact]
         public async Task TestSingle()
         {
             var result = await new[] { 42 }.Async().Single(CancellationToken.None);

@@ -7,7 +7,7 @@
     using Xunit;
 
     /// <summary>
-    /// Tests of the <see cref="MarbleParser"/>.
+    /// Tests of the <see cref="Marble"/>.
     /// </summary>
     public sealed class MarbleTests
     {
@@ -18,7 +18,7 @@
         [Fact]
         public void TestNever()
         {
-            var m = MarbleParser.Parse("a-b--c").ToList();
+            var m = Marble.Parse("a-b--c").ToList();
             var x = new[]
             {
                 Next(0, 'a'),
@@ -31,7 +31,7 @@
         [Fact]
         public void TestComplete()
         {
-            var m = MarbleParser.Parse("a-b--|").ToList();
+            var m = Marble.Parse("a-b--|").ToList();
             var x = new[]
             {
                 Next(0, 'a'),
@@ -44,7 +44,7 @@
         [Fact]
         public void TestError()
         {
-            var m = MarbleParser.Parse("a-b--#").ToList();
+            var m = Marble.Parse("a-b--#").ToList();
             var x = new[]
             {
                 Next(0, 'a'),
@@ -57,7 +57,7 @@
         [Fact]
         public void TestForever()
         {
-            var m = MarbleParser.Parse("a-b*--c---d").Take(7).ToList();
+            var m = Marble.Parse("a-b*--c---d").Take(7).ToList();
             var x = new[]
             {
                 Next(0, 'a'),
@@ -74,7 +74,7 @@
         [Fact]
         public void TestReplaceFunc()
         {
-            var m = MarbleParser.Parse("X-X--X---|", (ch, i) => i).ToList();
+            var m = Marble.Parse("X-X--X---|", (ch, i) => i).ToList();
             var x = new[]
             {
                 Next(0, 0),
@@ -88,7 +88,7 @@
         [Fact]
         public void TestReplaceElements()
         {
-            var m = MarbleParser.Parse("X-X--X---|", null, 1, 2, 3).ToList();
+            var m = Marble.Parse("X-X--X---|", null, 1, 2, 3).ToList();
             var x = new[]
             {
                 Next(0, 1),
@@ -103,7 +103,7 @@
         public void TestSettings()
         {
             var ms = new MarbleParserSettings { Error = new TimeoutException(), FrameSize = TimeSpan.FromSeconds(2) };
-            var m = MarbleParser.Parse("a-b--#", ms).ToList();
+            var m = Marble.Parse("a-b--#", ms).ToList();
             var x = new[]
             {
                 Next(0, 'a'),

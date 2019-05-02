@@ -126,6 +126,7 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
+                            _eh.SetExternalError(error);
                             var m = _tpsPushingMask;
                             _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
@@ -395,6 +396,7 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
+                            _eh.SetExternalError(error);
                             var m = _tpsPushingMask;
                             _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
@@ -670,6 +672,7 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
+                            _eh.SetExternalError(error);
                             var m = _tpsPushingMask;
                             _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
@@ -951,6 +954,7 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
+                            _eh.SetExternalError(error);
                             var m = _tpsPushingMask;
                             _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
@@ -1238,6 +1242,7 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
+                            _eh.SetExternalError(error);
                             var m = _tpsPushingMask;
                             _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
@@ -1531,6 +1536,7 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
+                            _eh.SetExternalError(error);
                             var m = _tpsPushingMask;
                             _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
@@ -1830,6 +1836,7 @@
                         case _sPulling:
                         case _sPushing:
                             Debug.Assert(_active > 0);
+                            _eh.SetExternalError(error);
                             var m = _tpsPushingMask;
                             _tpsPushingMask = 0;
                             _state = state == _sPulling ? _sCancelingPulling : _sCanceling;

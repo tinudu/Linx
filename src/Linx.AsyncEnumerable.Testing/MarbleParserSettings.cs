@@ -3,7 +3,7 @@
     using System;
 
     /// <summary>
-    /// Settings for the <see cref="MarbleParser"/>.
+    /// Settings for the <see cref="Marble"/>.
     /// </summary>
     public sealed class MarbleParserSettings
     {

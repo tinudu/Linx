@@ -21,7 +21,7 @@
     /// forever :== '*' interval-next+
     /// </code>
     /// </remarks>
-    public static class MarbleParser
+    public static class Marble
     {
         private static readonly ISet<char> _elementChars = new HashSet<char>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
 

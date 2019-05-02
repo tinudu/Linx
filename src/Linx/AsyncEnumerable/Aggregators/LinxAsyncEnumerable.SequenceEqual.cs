@@ -16,24 +16,23 @@
             if (second == null) throw new ArgumentNullException(nameof(second));
 
             token.ThrowIfCancellationRequested();
-            var notificationComparer = NotificationComparer<T>.GetComparer(comparer);
-            var seq1 = first.Select(Notification.Next).Concat(Return(Notification.Completed<T>()));
-            var seq2 = second.Select(Notification.Next).Concat(Return(Notification.Completed<T>()));
-            var ae = seq1.Zip(seq2, notificationComparer.Equals).WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                while (await ae.MoveNextAsync())
-                    if (!ae.Current)
-                        return false;
-            }
-            finally { await ae.DisposeAsync(); }
-            return true;
+            var nCompleted = Return(Notification.Completed<T>());
+            var nNext1 = first.Select(Notification.Next).Concat(nCompleted);
+            var nNext2 = second.Select(Notification.Next).Concat(nCompleted);
+            return await nNext1
+                .Zip(nNext2, NotificationComparer<T>.GetComparer(comparer).Equals)
+                .All(eq => eq, token)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
         /// Compare two sequences for equality.
         /// </summary>
         public static async Task<bool> SequenceEqual<T>(this IAsyncEnumerable<T> first, IEnumerable<T> second, CancellationToken token, IEqualityComparer<T> comparer = null)
-            => await first.SequenceEqual(second.Async(), token, comparer);
+        {
+            if (first == null) throw new ArgumentNullException(nameof(first));
+            if (second == null) throw new ArgumentNullException(nameof(second));
+            return await first.SequenceEqual(second.Async(), token, comparer);
+        }
     }
 }

@@ -3,7 +3,7 @@
     using System;
 
     /// <summary>
-    /// Exception thrown from the <see cref="MarbleParser"/>.
+    /// Exception thrown from the <see cref="Marble"/>.
     /// </summary>
     public sealed class MarbleParseException : Exception
     {
