@@ -22,13 +22,13 @@
                     try
                     {
                         while (await ae.MoveNextAsync())
-                            await yield(new Notification<T>(ae.Current));
+                            await yield(Notification.Next(ae.Current));
                     }
                     finally { await ae.DisposeAsync(); }
 
-                    completion = new Notification<T>();
+                    completion = Notification.Completed<T>();
                 }
-                catch (Exception ex) { completion = new Notification<T>(ex); }
+                catch (Exception ex) { completion = Notification.Error<T>(ex); }
 
                 await yield(completion);
             });
