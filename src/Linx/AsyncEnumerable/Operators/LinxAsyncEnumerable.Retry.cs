@@ -81,14 +81,15 @@
                 }
                 catch { token.ThrowIfCancellationRequested(); }
 
-                while (true)
-                    try
-                    {
-                        await time.Delay(waitTime, token).ConfigureAwait(false);
-                        await source.CopyTo(yield, token).ConfigureAwait(false);
-                        return;
-                    }
-                    catch { token.ThrowIfCancellationRequested(); }
+                using (var timer = time.GetTimer(token))
+                    while (true)
+                        try
+                        {
+                            await timer.Delay(waitTime).ConfigureAwait(false);
+                            await source.CopyTo(yield, token).ConfigureAwait(false);
+                            return;
+                        }
+                        catch { token.ThrowIfCancellationRequested(); }
             });
         }
 
@@ -115,18 +116,19 @@
                     error = ex;
                 }
 
-                foreach (var waitTime in waitTimes)
-                    try
-                    {
-                        await time.Delay(waitTime, token).ConfigureAwait(false);
-                        await source.CopyTo(yield, token).ConfigureAwait(false);
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        error = ex;
-                    }
+                using (var timer = time.GetTimer(token))
+                    foreach (var waitTime in waitTimes)
+                        try
+                        {
+                            await timer.Delay(waitTime).ConfigureAwait(false);
+                            await source.CopyTo(yield, token).ConfigureAwait(false);
+                            return;
+                        }
+                        catch (Exception ex)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            error = ex;
+                        }
 
                 throw error;
             });

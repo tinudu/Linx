@@ -27,23 +27,24 @@
                     .GetAsyncEnumerator();
                 try
                 {
-                    while (await ae.MoveNextAsync())
-                    {
-                        var current = ae.Current;
-                        await time.Delay(current.Timestamp + delay, token).ConfigureAwait(false);
-                        switch (current.Value.Kind)
+                    using (var timer = Time.Current.GetTimer(token))
+                        while (await ae.MoveNextAsync())
                         {
-                            case NotificationKind.Next:
-                                await yield(current.Value.Value);
-                                break;
-                            case NotificationKind.Error:
-                                throw current.Value.Error;
-                            case NotificationKind.Completed:
-                                return;
-                            default:
-                                throw new Exception(current.Value.Kind + "???");
+                            var current = ae.Current;
+                            await timer.Delay(current.Timestamp + delay).ConfigureAwait(false);
+                            switch (current.Value.Kind)
+                            {
+                                case NotificationKind.Next:
+                                    await yield(current.Value.Value);
+                                    break;
+                                case NotificationKind.Error:
+                                    throw current.Value.Error;
+                                case NotificationKind.Completed:
+                                    return;
+                                default:
+                                    throw new Exception(current.Value.Kind + "???");
+                            }
                         }
-                    }
                 }
                 finally { await ae.DisposeAsync(); }
             });

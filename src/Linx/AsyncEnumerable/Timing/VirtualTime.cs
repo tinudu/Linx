@@ -2,10 +2,12 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
     using Collections;
+    using TaskProviders;
 
     /// <summary>
     /// Virtuala time.
@@ -13,8 +15,8 @@
     public sealed class VirtualTime : ITime, IDisposable
     {
         private readonly PriorityQueue<Bucket> _queue = new PriorityQueue<Bucket>();
-        private readonly Dictionary<DateTime, List<ITimerCompleter>> _completersByDue = new Dictionary<DateTime, List<ITimerCompleter>>();
-        private readonly Stack<List<ITimerCompleter>> _pool = new Stack<List<ITimerCompleter>>(); // recicle empty timer lists
+        private readonly Dictionary<DateTime, List<IElapse>> _timersByDue = new Dictionary<DateTime, List<IElapse>>();
+        private readonly Stack<List<IElapse>> _pool = new Stack<List<IElapse>>(); // recicle empty timer lists
         private bool _isDisposed;
 
         /// <summary>
@@ -39,51 +41,27 @@
         public DateTimeOffset Now { get; private set; }
 
         /// <inheritdoc />
-        public Task Delay(DateTimeOffset due, CancellationToken token)
+        public Task Delay(TimeSpan delay, CancellationToken token) => Delay(Now + delay, token);
+
+        /// <inheritdoc />
+        public async Task Delay(DateTimeOffset due, CancellationToken token)
         {
-            lock (_queue)
+            if (due <= Now) return;
+            token.ThrowIfCancellationRequested();
+
+            var dueUtc = due.UtcDateTime;
+            var timer = new TaskTimer();
+            if (token.CanBeCanceled) timer.Ctr = token.Register(() =>
             {
-                if (_isDisposed) return Task.FromException(new ObjectDisposedException(nameof(VirtualTime)));
-                if (token.IsCancellationRequested) return Task.FromCanceled(token);
-
-                try // to schedule
-                {
-                    var dueUtc = due.UtcDateTime;
-                    if (!_completersByDue.TryGetValue(dueUtc, out var completers)) // no bucket for this time, so add
-                    {
-                        completers = GetEmptyCompleters();
-                        _queue.Enqueue(new Bucket(dueUtc, completers));
-                        _completersByDue.Add(dueUtc, completers);
-                    }
-
-                    var ttc = new TaskTimerCompleter { Atmb = new AsyncTaskMethodBuilder() };
-                    var task = ttc.Atmb.Task;
-                    completers.Add(ttc);
-                    if (token.CanBeCanceled)
-                        ttc.Ctr = token.Register(() =>
-                        {
-                            lock (_queue)
-                            {
-                                if (!completers.Remove(ttc)) return;
-                            }
-                            ttc.Atmb.SetException(new OperationCanceledException(token));
-                        });
-
-                    Monitor.Pulse(_queue);
-                    return task;
-                }
-                catch (Exception ex)
-                {
-                    return Task.FromException(ex);
-                }
-            }
+                Remove(dueUtc, timer);
+                timer.Elapse(new OperationCanceledException(token));
+            });
+            Add(dueUtc, timer);
+            await timer.Task;
         }
 
         /// <inheritdoc />
-        public async Task Delay(TimeSpan delay, CancellationToken token) => await Delay(Now + delay, token).ConfigureAwait(false);
-
-        /// <inheritdoc />
-        public ITimer CreateTimer(TimerElapsedDelegte onElapsed) => new Timer(this, onElapsed);
+        public ITimer GetTimer(CancellationToken token) => new Timer(this, token);
 
         /// <inheritdoc />
         public void Dispose()
@@ -92,8 +70,41 @@
             {
                 if (_isDisposed) return;
                 _isDisposed = true;
-                Time.Current = RealTime.Instance;
                 Monitor.Pulse(_queue);
+            }
+            Time.Current = RealTime.Instance;
+
+            var error = new ObjectDisposedException(nameof(VirtualTime));
+            foreach (var t in _timersByDue.Values.SelectMany(ts => ts))
+                t.Elapse(error);
+            _timersByDue.Clear();
+            _queue.Clear();
+            _pool.Clear();
+        }
+
+        private void Add(DateTime dueUtc, IElapse timer)
+        {
+            lock (_queue)
+            {
+                if (_isDisposed) throw new ObjectDisposedException(nameof(VirtualTime));
+                if (!_timersByDue.TryGetValue(dueUtc, out var timers))
+                {
+                    timers = _pool.Count > 0 ? _pool.Pop() : new List<IElapse>();
+                    _timersByDue.Add(dueUtc, timers);
+                    _queue.Enqueue(new Bucket(dueUtc, timers));
+                }
+
+                timers.Add(timer);
+                Monitor.Pulse(_queue);
+            }
+        }
+
+        private void Remove(DateTime dueUtc, IElapse timer)
+        {
+            lock (_queue)
+            {
+                if (!_isDisposed && _timersByDue.TryGetValue(dueUtc, out var timers))
+                    timers.Remove(timer);
             }
         }
 
@@ -105,196 +116,192 @@
                 // yield to other threads so they can schedule
                 Thread.Sleep(1);
 
-                ITimerCompleter completer;
+                IElapse timer;
                 lock (_queue)
                 {
                     if (_isDisposed)
-                    {
-                        _queue.Clear();
-                        _pool.Clear();
                         return;
-                    }
 
                     while (true)
                     {
-                        if(_queue.IsEmpty)
+                        if (_queue.IsEmpty)
                         {
-                            completer = null;
+                            timer = null;
                             break;
                         }
                         var bucket = _queue.Peek();
-                        if (bucket.Completers.Count > 0)
+                        if (bucket.Timers.Count > 0)
                         {
                             if (Now < bucket.DueUtc) Now = bucket.DueUtc;
-                            completer = bucket.Completers[0];
-                            bucket.Completers.RemoveAt(0);
+                            timer = bucket.Timers[0];
+                            bucket.Timers.RemoveAt(0);
                             break;
                         }
                         _queue.Dequeue();
-                        _completersByDue.Remove(bucket.DueUtc);
-                        _pool.Push(bucket.Completers);
+                        _timersByDue.Remove(bucket.DueUtc);
+                        _pool.Push(bucket.Timers);
                     }
 
-                    if (completer == null)
+                    if (timer == null)
                         Monitor.Wait(_queue);
                 }
-                completer?.Complete();
+                timer?.Elapse(null);
             }
         }
 
-        // assumes lock
-        private List<ITimerCompleter> GetEmptyCompleters() => _pool.Count > 0 ? _pool.Pop() : new List<ITimerCompleter>();
+        private interface IElapse
+        {
+            void Elapse(Exception exception);
+        }
 
         private struct Bucket : IComparable<Bucket>
         {
             public readonly DateTime DueUtc;
-            public readonly List<ITimerCompleter> Completers;
+            public readonly List<IElapse> Timers;
 
-            public Bucket(DateTime dueUtc, List<ITimerCompleter> completers)
+            public Bucket(DateTime dueUtc, List<IElapse> timers)
             {
                 DueUtc = dueUtc;
-                Completers = completers;
+                Timers = timers;
             }
 
             public int CompareTo(Bucket other) => DueUtc.CompareTo(other.DueUtc);
         }
 
-        private interface ITimerCompleter
+        private sealed class TaskTimer : IElapse
         {
-            void Complete();
-        }
+            private AsyncTaskMethodBuilder _atmb = new AsyncTaskMethodBuilder();
+            private int _state;
 
-        private sealed class TaskTimerCompleter : ITimerCompleter
-        {
-            public AsyncTaskMethodBuilder Atmb;
             public CancellationTokenRegistration Ctr;
+            public Task Task => _atmb.Task;
 
-            public void Complete()
+            public void Elapse(Exception exception)
             {
+                if (Interlocked.CompareExchange(ref _state, 1, 0) != 0) return;
                 Ctr.Dispose();
-                Atmb.SetResult();
+                if (exception == null) _atmb.SetResult();
+                else _atmb.SetException(exception);
             }
         }
 
-        private sealed class Timer : ITimer, ITimerCompleter
+        private sealed class Timer : ITimer, IElapse
         {
-            private enum State { Disabled, Enabled, Disposed }
+            private const int _sInitial = 0;
+            private const int _sWaiting = 1;
+            private const int _sCanceled = 2;
+            private const int _sDisposed = 3;
 
-            private readonly VirtualTime _vt;
-            private readonly TimerElapsedDelegte _onElapsed;
-            private State _state;
-            private DateTimeOffset _due;
+            private readonly ManualResetTaskProvider _tp = new ManualResetTaskProvider();
+            private readonly VirtualTime _time;
+            private readonly CancellationToken _token;
+            private CancellationTokenRegistration _ctr;
+            private int _state;
+            private DateTime _dueUtc;
 
-            public Timer(VirtualTime vt, TimerElapsedDelegte onElapsed)
+            public Timer(VirtualTime time, CancellationToken token)
             {
-                _vt = vt;
-                _onElapsed = onElapsed ?? throw new ArgumentNullException(nameof(onElapsed));
+                _time = time;
+                _token = token;
+                if (_token.CanBeCanceled) _ctr = token.Register(TokenCanceled);
             }
 
-            private void Add(DateTimeOffset due)
+            public ValueTask Delay(DateTimeOffset due)
             {
-                var dueUtc = due.UtcDateTime;
-                if (!_vt._completersByDue.TryGetValue(dueUtc, out var completers)) // no bucket for this time, so add
+                _tp.Reset();
+                var state = Atomic.Lock(ref _state);
+                switch (state)
                 {
-                    completers = _vt.GetEmptyCompleters();
-                    _vt._queue.Enqueue(new Bucket(dueUtc, completers));
-                    _vt._completersByDue.Add(dueUtc, completers);
+                    case _sInitial:
+                        if (due <= _time.Now)
+                        {
+                            _state = _sInitial;
+                            _tp.SetResult();
+                        }
+                        else
+                        {
+                            _dueUtc = due.UtcDateTime;
+                            _state = _sWaiting;
+                            try { _time.Add(_dueUtc, this); }
+                            catch (Exception ex)
+                            {
+                                if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) == _sWaiting)
+                                    _tp.SetException(ex);
+                            }
+                        }
+
+                        break;
+                    case _sCanceled:
+                        _state = _sCanceled;
+                        _tp.SetException(new OperationCanceledException(_token));
+                        break;
+                    case _sDisposed:
+                        _state = _sDisposed;
+                        _tp.SetException(new ObjectDisposedException(nameof(ITimer)));
+                        break;
+                    default: // _sWaiting???
+                        _state = state;
+                        _tp.SetException(new InvalidOperationException());
+                        break;
                 }
-                completers.Add(this);
-                _state = State.Enabled;
-                _due = due;
-                Monitor.Pulse(_vt._queue);
+
+                return _tp.Task;
             }
 
-            private void Remove()
+            public ValueTask Delay(TimeSpan due) => Delay(_time.Now + due);
+
+            public void Elapse()
             {
-                _vt._completersByDue[_due.UtcDateTime].Remove(this);
-                _state = State.Disabled;
-            }
-
-            public void Enable(TimeSpan delay) => Enable(_vt.Now + delay);
-
-            public void Enable(DateTimeOffset due)
-            {
-                lock (_vt._queue)
-                {
-                    if (_vt._isDisposed) throw new ObjectDisposedException(nameof(VirtualTime));
-
-                    switch (_state)
-                    {
-                        case State.Disabled:
-                            Add(due);
-                            break;
-                        case State.Enabled:
-                            if (due == _due) return;
-                            Remove();
-                            Add(due);
-                            break;
-                        case State.Disposed:
-                            throw new ObjectDisposedException(nameof(ITimer));
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                }
-            }
-
-            public void Disable()
-            {
-                lock (_vt._queue)
-                {
-                    if (_vt._isDisposed) throw new ObjectDisposedException(nameof(VirtualTime));
-
-                    switch (_state)
-                    {
-                        case State.Disabled:
-                            break;
-                        case State.Enabled:
-                            Remove();
-                            break;
-                        case State.Disposed:
-                            throw new ObjectDisposedException(nameof(ITimer));
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                }
+                if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) != _sWaiting) return;
+                _time.Remove(_dueUtc, this);
+                _tp.SetResult();
             }
 
             public void Dispose()
             {
-                lock (_vt._queue)
-                    switch (_state)
-                    {
-                        case State.Disabled:
-                            _state = State.Disposed;
-                            break;
-                        case State.Enabled:
-                            if (!_vt._isDisposed) Remove();
-                            _state = State.Disposed;
-                            break;
-                        case State.Disposed:
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sInitial:
+                        _state = _sDisposed;
+                        _ctr.Dispose();
+                        break;
+                    case _sWaiting:
+                        _state = _sDisposed;
+                        _ctr.Dispose();
+                        _tp.SetException(new ObjectDisposedException(nameof(ITimer)));
+                        break;
+                    default: // Canceled, Disposed
+                        _state = _sDisposed;
+                        break;
+                }
             }
 
-            public void Complete()
+            private void TokenCanceled()
             {
-                DateTimeOffset due;
-                lock (_vt._queue)
-                    switch (_state)
-                    {
-                        case State.Enabled:
-                            due = _due;
-                            _state = State.Disabled;
-                            break;
-                        case State.Disabled:
-                        case State.Disposed:
-                            return;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                try { _onElapsed(this, due); } catch { /**/ }
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sInitial:
+                        _state = _sCanceled;
+                        _ctr.Dispose();
+                        break;
+                    case _sWaiting:
+                        _state = _sCanceled;
+                        _ctr.Dispose();
+                        _tp.SetException(new OperationCanceledException(_token));
+                        break;
+                    default: // Canceled, Disposed
+                        _state = state;
+                        break;
+                }
+            }
+
+            public void Elapse(Exception exception)
+            {
+                if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) != _sWaiting) return;
+                if (exception == null) _tp.SetResult();
+                else _tp.SetException(exception);
             }
         }
     }

@@ -17,14 +17,14 @@
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
-                var time = Time.Current;
-                while (await ae.MoveNextAsync())
-                {
-                    Debug.WriteLine($"Next@{Time.Current.Now.TimeOfDay.TotalSeconds}");
-                    await time.Delay(delay, token).ConfigureAwait(false);
-                    Debug.WriteLine($"Observing {ae.Current}@{Time.Current.Now.TimeOfDay.TotalSeconds}");
-                    await yield(ae.Current);
-                }
+                using (var timer = Time.Current.GetTimer(token))
+                    while (await ae.MoveNextAsync())
+                    {
+                        Debug.WriteLine($"Next@{Time.Current.Now.TimeOfDay.TotalSeconds}");
+                        await timer.Delay(delay).ConfigureAwait(false);
+                        Debug.WriteLine($"Observing {ae.Current}@{Time.Current.Now.TimeOfDay.TotalSeconds}");
+                        await yield(ae.Current);
+                    }
             }
             finally { await ae.DisposeAsync(); }
         });
@@ -34,14 +34,14 @@
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
-                var time = Time.Current;
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    await time.Delay(delay, token).ConfigureAwait(false);
-                    Assert.Equal(current, ae.Current);
-                    await yield(current);
-                }
+                using (var timer = Time.Current.GetTimer(token))
+                    while (await ae.MoveNextAsync())
+                    {
+                        var current = ae.Current;
+                        await timer.Delay(delay).ConfigureAwait(false);
+                        Assert.Equal(current, ae.Current);
+                        await yield(current);
+                    }
             }
             finally { await ae.DisposeAsync(); }
         });
@@ -179,17 +179,17 @@
         {
             var source = LinxAsyncEnumerable.Produce<int>(async (yield, token) =>
             {
-                var time = Time.Current;
-                foreach (var i in Enumerable.Range(1, 10))
-                {
-                    await time.Delay(TimeSpan.FromSeconds(i), token).ConfigureAwait(false);
-                    await yield(i);
-                }
+                using (var timer = Time.Current.GetTimer(token))
+                    foreach (var i in Enumerable.Range(1, 10))
+                    {
+                        await timer.Delay(TimeSpan.FromSeconds(i)).ConfigureAwait(false);
+                        await yield(i);
+                    }
             });
+            var testee = source.Timeout(TimeSpan.FromSeconds(3.5));
 
             using (new VirtualTime())
             {
-                var testee = source.Timeout(TimeSpan.FromSeconds(3.5));
                 var ae = testee.ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {

@@ -2,7 +2,9 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
+    using TaskProviders;
     using Timing;
 
     partial class LinxAsyncEnumerable
@@ -33,35 +35,57 @@
                 }
                 if (token.CanBeCanceled) eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
 
-                var timer = Time.Current.CreateTimer((t, d) => Cancel(new TimeoutException()));
                 Exception internalError;
                 try
                 {
                     var ae = source.WithCancellation(eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                     try
                     {
-                        while (true)
+                        using (var timer = Time.Current.GetTimer(default))
                         {
-                            var tMoveNext = ae.MoveNextAsync();
-                            var aMoveNext = tMoveNext.GetAwaiter();
-                            bool hasNext;
-                            if (aMoveNext.IsCompleted)
-                                hasNext = aMoveNext.GetResult();
-                            else
+                            var waiting = 0;
+                            var tp = new ManualResetTaskProvider();
+
+                            void TimerElapsed()
                             {
-                                timer.Enable(dueTime);
-                                try { hasNext = await tMoveNext; }
-                                finally { timer.Disable(); }
+                                // ReSharper disable once AccessToModifiedClosure
+                                if (Interlocked.Decrement(ref waiting) != 0)
+                                    Cancel(new TimeoutException());
+                                else
+                                    tp.SetResult();
                             }
-                            if (!hasNext) break;
-                            await yield(ae.Current);
+
+                            void MoveNextCompleted()
+                            {
+                                // ReSharper disable once AccessToModifiedClosure
+                                if (Interlocked.Decrement(ref waiting) != 0)
+                                    // ReSharper disable once AccessToDisposedClosure
+                                    timer.Elapse();
+                                else
+                                    tp.SetResult();
+                            }
+
+                            while (true)
+                            {
+                                var aMoveNext = ae.MoveNextAsync().GetAwaiter();
+                                if (!aMoveNext.IsCompleted)
+                                {
+                                    waiting = 2;
+                                    tp.Reset();
+                                    aMoveNext.OnCompleted(MoveNextCompleted);
+                                    timer.Delay(dueTime).ConfigureAwait(false).GetAwaiter().OnCompleted(TimerElapsed);
+                                    await tp.Task.ConfigureAwait(false);
+                                }
+
+                                if (!aMoveNext.GetResult()) break;
+                                await yield(ae.Current);
+                            }
                         }
                     }
                     finally { await ae.DisposeAsync(); }
                     internalError = null;
                 }
                 catch (Exception ex) { internalError = ex; }
-                finally { timer.Dispose(); }
 
                 var cancel = Atomic.Lock(ref canceled) == 0;
                 eh.SetInternalError(internalError);

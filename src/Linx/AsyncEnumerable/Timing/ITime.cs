@@ -15,19 +15,18 @@
         DateTimeOffset Now { get; }
 
         /// <summary>
-        /// Wait for the specified amount of time.
+        /// Delay for the specified interval.
         /// </summary>
         Task Delay(TimeSpan delay, CancellationToken token);
 
         /// <summary>
-        /// Delay until <paramref name="due"/> is reached.
+        /// Delay until the specified time is reached.
         /// </summary>
         Task Delay(DateTimeOffset due, CancellationToken token);
 
         /// <summary>
-        /// Create a new timer.
+        /// Create a timer.
         /// </summary>
-        /// <param name="onElapsed">Delegate to be called when the timer elapses.</param>
-        ITimer CreateTimer(TimerElapsedDelegte onElapsed);
+        ITimer GetTimer(CancellationToken token);
     }
 }

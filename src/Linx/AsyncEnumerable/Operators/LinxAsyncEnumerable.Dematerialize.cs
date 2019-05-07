@@ -52,23 +52,24 @@
             {
                 var time = Time.Current;
                 var t = time.Now;
-                foreach (var ti in source)
-                {
-                    t += ti.Interval;
-                    await time.Delay(t, token).ConfigureAwait(false);
-                    switch (ti.Value.Kind)
+                using (var timer = time.GetTimer(token))
+                    foreach (var ti in source)
                     {
-                        case NotificationKind.Next:
-                            await yield(ti.Value.Value);
-                            break;
-                        case NotificationKind.Error:
-                            throw ti.Value.Error;
-                        case NotificationKind.Completed:
-                            return;
-                        default:
-                            throw new Exception(ti.Value.Kind + "???");
+                        t += ti.Interval;
+                        await timer.Delay(t).ConfigureAwait(false);
+                        switch (ti.Value.Kind)
+                        {
+                            case NotificationKind.Next:
+                                await yield(ti.Value.Value);
+                                break;
+                            case NotificationKind.Error:
+                                throw ti.Value.Error;
+                            case NotificationKind.Completed:
+                                return;
+                            default:
+                                throw new Exception(ti.Value.Kind + "???");
+                        }
                     }
-                }
                 await token.WhenCanceled().ConfigureAwait(false);
             });
         }

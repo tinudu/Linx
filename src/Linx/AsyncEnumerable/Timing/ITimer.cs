@@ -1,13 +1,7 @@
 ﻿namespace Linx.AsyncEnumerable.Timing
 {
     using System;
-
-    /// <summary>
-    /// Callback delegate for a <see cref="ITimer"/>.
-    /// </summary>
-    /// <param name="timer">The <see cref="ITimer"/> that elapsed.</param>
-    /// <param name="time">The time the timer was due.</param>
-    public delegate void TimerElapsedDelegte(ITimer timer, DateTimeOffset time);
+    using System.Threading.Tasks;
 
     /// <summary>
     /// Abstraction of a timer.
@@ -15,18 +9,18 @@
     public interface ITimer : IDisposable
     {
         /// <summary>
-        /// Enables the timer to fire at the specified delay from now.
+        /// Delay for the specified interval.
         /// </summary>
-        void Enable(TimeSpan delay);
+        ValueTask Delay(TimeSpan due);
 
         /// <summary>
-        /// Enables the timer to fire at the specified time.
+        /// Delay until the specified time is reached.
         /// </summary>
-        void Enable(DateTimeOffset due);
+        ValueTask Delay(DateTimeOffset due);
 
         /// <summary>
-        /// Disables the timer.
+        /// Causes a current wait operation to complete prematurely.
         /// </summary>
-        void Disable();
+        void Elapse();
     }
 }

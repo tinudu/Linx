@@ -18,12 +18,13 @@
                 var time = Time.Current;
                 var value = 0;
                 var due = time.Now;
-                do
-                {
-                    await yield(value++);
-                    due += period;
-                    await time.Delay(due, token).ConfigureAwait(false);
-                } while (true);
+                using (var timer = time.GetTimer(token))
+                    do
+                    {
+                        await yield(value++);
+                        due += period;
+                        await timer.Delay(due).ConfigureAwait(false);
+                    } while (true);
                 // ReSharper disable once FunctionNeverReturns
             });
         }
