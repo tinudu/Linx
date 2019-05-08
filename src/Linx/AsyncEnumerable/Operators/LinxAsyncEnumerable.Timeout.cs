@@ -21,18 +21,15 @@
             {
                 var eh = ErrorHandler.Init();
                 var canceled = 0;
+
                 void Cancel(Exception externalError)
                 {
                     // ReSharper disable once AccessToModifiedClosure
-                    if (Atomic.Lock(ref canceled) == 0)
-                    {
-                        eh.SetExternalError(externalError);
-                        canceled = 1;
-                        eh.Cancel();
-                    }
-                    else
-                        canceled = 1;
+                    if (Interlocked.CompareExchange(ref canceled, 1, 0) != 0) return;
+                    eh.SetExternalError(externalError);
+                    eh.Cancel();
                 }
+
                 if (token.CanBeCanceled) eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
 
                 Exception internalError;
@@ -43,24 +40,24 @@
                     {
                         using (var timer = Time.Current.GetTimer(default))
                         {
-                            var waiting = 0;
+                            var continuations = 0;
                             var tp = new ManualResetTaskProvider();
-
-                            void TimerElapsed()
-                            {
-                                // ReSharper disable once AccessToModifiedClosure
-                                if (Interlocked.Decrement(ref waiting) != 0)
-                                    Cancel(new TimeoutException());
-                                else
-                                    tp.SetResult();
-                            }
 
                             void MoveNextCompleted()
                             {
                                 // ReSharper disable once AccessToModifiedClosure
-                                if (Interlocked.Decrement(ref waiting) != 0)
+                                if (Interlocked.Decrement(ref continuations) != 0)
                                     // ReSharper disable once AccessToDisposedClosure
                                     timer.Elapse();
+                                else
+                                    tp.SetResult();
+                            }
+
+                            void TimerElapsed()
+                            {
+                                // ReSharper disable once AccessToModifiedClosure
+                                if (Interlocked.Decrement(ref continuations) != 0)
+                                    Cancel(new TimeoutException());
                                 else
                                     tp.SetResult();
                             }
@@ -70,7 +67,7 @@
                                 var aMoveNext = ae.MoveNextAsync().GetAwaiter();
                                 if (!aMoveNext.IsCompleted)
                                 {
-                                    waiting = 2;
+                                    continuations = 2;
                                     tp.Reset();
                                     aMoveNext.OnCompleted(MoveNextCompleted);
                                     timer.Delay(dueTime).ConfigureAwait(false).GetAwaiter().OnCompleted(TimerElapsed);
@@ -87,10 +84,9 @@
                 }
                 catch (Exception ex) { internalError = ex; }
 
-                var cancel = Atomic.Lock(ref canceled) == 0;
                 eh.SetInternalError(internalError);
-                canceled = 1;
-                if (cancel) eh.Cancel();
+                if (Interlocked.CompareExchange(ref canceled, 1, 0) == 0)
+                    eh.Cancel();
                 eh.ThrowIfError();
             });
         }
