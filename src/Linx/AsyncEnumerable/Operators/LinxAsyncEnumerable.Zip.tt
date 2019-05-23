@@ -36,7 +36,7 @@ namespace Linx.AsyncEnumerable
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
@@ -107,8 +107,8 @@ namespace Linx.AsyncEnumerable
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<#= arg.GenArgList #> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
                 private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -290,7 +290,7 @@ namespace Linx.AsyncEnumerable
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
+                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try

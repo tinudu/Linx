@@ -7,7 +7,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
@@ -50,8 +50,8 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, TResult> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
                 private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -221,7 +221,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
+                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -318,8 +318,8 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, TResult> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
                 private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -491,7 +491,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
+                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -592,8 +592,8 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, TResult> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
                 private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -767,7 +767,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
+                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -872,8 +872,8 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, TResult> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
                 private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -1049,7 +1049,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
+                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -1158,8 +1158,8 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
                 private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -1337,7 +1337,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
+                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -1450,8 +1450,8 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
                 private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -1631,7 +1631,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
+                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
@@ -1748,8 +1748,8 @@
                 private const int _sFinal = 5;
 
                 private readonly ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpMoveNext = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider[] _tpsPushing = new ManualResetTaskProvider[_n];
+                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
                 private uint _tpsPushingMask;
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -1931,7 +1931,7 @@
                     {
                         _eh.InternalToken.ThrowIfCancellationRequested();
 
-                        var cpPushing = _tpsPushing[index] = new ManualResetTaskProvider();
+                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
                         var flag = 1U << index;
                         var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try

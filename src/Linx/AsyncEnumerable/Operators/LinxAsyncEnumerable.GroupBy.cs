@@ -5,7 +5,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
@@ -58,8 +58,8 @@
                 private const int _sFinal = 5;
 
                 private readonly GroupByEnumerable<TSource, TKey> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpAccepting = new ManualResetTaskProvider<bool>(); // pending MoveNextAsync
-                private readonly ManualResetTaskProvider _tpEmitting = new ManualResetTaskProvider(); // await MoveNextAsync either on the group enumerator or a group
+                private readonly ManualResetValueTaskSource<bool> _tpAccepting = new ManualResetValueTaskSource<bool>(); // pending MoveNextAsync
+                private readonly ManualResetValueTaskSource _tpEmitting = new ManualResetValueTaskSource(); // await MoveNextAsync either on the group enumerator or a group
                 private readonly Dictionary<TKey, Group> _groups;
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource(); // request cancellation when Canceling[Accepting] and _nGroups == 0
                 private CancellationTokenRegistration _ctr;
@@ -280,7 +280,7 @@
                     private readonly Enumerator _enumerator;
                     public TKey Key { get; }
 
-                    public readonly ManualResetTaskProvider<bool> TpAccepting = new ManualResetTaskProvider<bool>();
+                    public readonly ManualResetValueTaskSource<bool> TpAccepting = new ManualResetValueTaskSource<bool>();
                     public CancellationTokenRegistration Ctr;
                     public GroupState State;
                     public Exception Error;

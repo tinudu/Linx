@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
@@ -31,7 +31,7 @@
                 private const int _sPulling = 1;
                 private const int _sFinal = 2;
 
-                private readonly ManualResetTaskProvider<bool> _tp = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetValueTaskSource<bool> _tp = new ManualResetValueTaskSource<bool>();
                 private CancellationTokenRegistration _ctr;
                 private int _state;
                 private Exception _error;

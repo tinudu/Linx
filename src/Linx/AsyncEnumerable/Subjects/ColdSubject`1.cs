@@ -5,7 +5,7 @@
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     /// <summary>
     /// A <see cref="ISubject{T}"/> that disallowes late subscribers.
@@ -137,8 +137,8 @@
         {
             private readonly ColdSubject<T> _subject;
 
-            public readonly ManualResetTaskProvider<bool> TpPulling = new ManualResetTaskProvider<bool>();
-            public readonly ManualResetTaskProvider TpPushing = new ManualResetTaskProvider();
+            public readonly ManualResetValueTaskSource<bool> TpPulling = new ManualResetValueTaskSource<bool>();
+            public readonly ManualResetValueTaskSource TpPushing = new ManualResetValueTaskSource();
             public CancellationTokenRegistration Ctr;
             public EnumeratorState State;
             public T Current { get; set; }

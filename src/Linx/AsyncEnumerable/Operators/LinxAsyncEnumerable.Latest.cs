@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
@@ -49,7 +49,7 @@
                 private const int _sFinal = 8; // final stage with or without error
 
                 private readonly LatestOneEnumerable<T> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpPull = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetValueTaskSource<bool> _tpPull = new ManualResetValueTaskSource<bool>();
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
@@ -299,7 +299,7 @@
                 private const int _sFinal = 7;
 
                 private readonly LatestManyEnumerable<T> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpPull = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetValueTaskSource<bool> _tpPull = new ManualResetValueTaskSource<bool>();
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;

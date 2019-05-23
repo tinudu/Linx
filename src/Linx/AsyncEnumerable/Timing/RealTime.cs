@@ -4,7 +4,7 @@
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     /// <summary>
     /// The real time.
@@ -38,7 +38,7 @@
             private const int _sCanceled = 2;
             private const int _sDisposed = 3;
 
-            private readonly ManualResetTaskProvider _tp = new ManualResetTaskProvider();
+            private readonly ManualResetValueTaskSource _tp = new ManualResetValueTaskSource();
             private readonly System.Threading.Timer _timer;
             private readonly CancellationToken _token;
             private CancellationTokenRegistration _ctr;

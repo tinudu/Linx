@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
     using Timing;
 
     partial class LinxAsyncEnumerable
@@ -41,7 +41,7 @@
                         using (var timer = Time.Current.GetTimer(default))
                         {
                             var continuations = 0;
-                            var tp = new ManualResetTaskProvider();
+                            var tp = new ManualResetValueTaskSource();
 
                             void MoveNextCompleted()
                             {

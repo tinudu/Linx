@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
@@ -59,8 +59,8 @@
                 private const int _fIncrementing = 8;
 
                 private readonly ParallelEnumerable<TSource, TResult> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpPulling = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider _tpIncrementing = new ManualResetTaskProvider();
+                private readonly ManualResetValueTaskSource<bool> _tpPulling = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource _tpIncrementing = new ManualResetValueTaskSource();
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;

@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
@@ -43,7 +43,7 @@
 
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource();
                 private readonly Func<T1, T2, TResult> _resultSelector;
-                private readonly ManualResetTaskProvider<bool> _tpPull = new ManualResetTaskProvider<bool>();
+                private readonly ManualResetValueTaskSource<bool> _tpPull = new ManualResetValueTaskSource<bool>();
                 private CancellationTokenRegistration _ctr;
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state;

@@ -6,7 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskProviders;
+    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
@@ -46,8 +46,8 @@
                 private const int _sFinal = 7;
 
                 private readonly BufferEnumerable<T> _enumerable;
-                private readonly ManualResetTaskProvider<bool> _tpPull = new ManualResetTaskProvider<bool>();
-                private readonly ManualResetTaskProvider _tpPush = new ManualResetTaskProvider();
+                private readonly ManualResetValueTaskSource<bool> _tpPull = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource _tpPush = new ManualResetValueTaskSource();
                 private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;

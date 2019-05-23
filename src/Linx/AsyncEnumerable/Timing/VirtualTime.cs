@@ -7,7 +7,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Collections;
-    using TaskProviders;
+    using TaskSources;
 
     /// <summary>
     /// Virtuala time.
@@ -192,7 +192,7 @@
             private const int _sCanceled = 2;
             private const int _sDisposed = 3;
 
-            private readonly ManualResetTaskProvider _tp = new ManualResetTaskProvider();
+            private readonly ManualResetValueTaskSource _tp = new ManualResetValueTaskSource();
             private readonly VirtualTime _time;
             private readonly CancellationToken _token;
             private CancellationTokenRegistration _ctr;
