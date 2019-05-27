@@ -22,15 +22,13 @@
                 var eh = ErrorHandler.Init();
                 var canceled = 0;
 
-                void Cancel(Exception externalError)
+                if (token.CanBeCanceled) eh.ExternalRegistration = token.Register(() =>
                 {
                     // ReSharper disable once AccessToModifiedClosure
                     if (Interlocked.CompareExchange(ref canceled, 1, 0) != 0) return;
-                    eh.SetExternalError(externalError);
+                    eh.SetExternalError(new OperationCanceledException(token));
                     eh.Cancel();
-                }
-
-                if (token.CanBeCanceled) eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
+                });
 
                 Exception internalError;
                 try
@@ -57,7 +55,12 @@
                             {
                                 // ReSharper disable once AccessToModifiedClosure
                                 if (Interlocked.Decrement(ref continuations) != 0)
-                                    Cancel(new TimeoutException());
+                                {
+                                    // ReSharper disable once AccessToModifiedClosure
+                                    if (Interlocked.CompareExchange(ref canceled, 1, 0) != 0) return;
+                                    eh.SetInternalError(new TimeoutException());
+                                    eh.Cancel();
+                                }
                                 else
                                     tp.SetResult();
                             }
@@ -85,8 +88,7 @@
                 catch (Exception ex) { internalError = ex; }
 
                 eh.SetInternalError(internalError);
-                if (Interlocked.CompareExchange(ref canceled, 1, 0) == 0)
-                    eh.Cancel();
+                if (Interlocked.CompareExchange(ref canceled, 1, 0) == 0) eh.Cancel();
                 eh.ThrowIfError();
             });
         }

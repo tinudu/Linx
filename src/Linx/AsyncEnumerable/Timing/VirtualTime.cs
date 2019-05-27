@@ -192,7 +192,7 @@
             private const int _sCanceled = 2;
             private const int _sDisposed = 3;
 
-            private readonly ManualResetValueTaskSource _tp = new ManualResetValueTaskSource();
+            private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
             private readonly VirtualTime _time;
             private readonly CancellationToken _token;
             private CancellationTokenRegistration _ctr;
@@ -208,7 +208,7 @@
 
             public ValueTask Delay(DateTimeOffset due)
             {
-                _tp.Reset();
+                _ts.Reset();
                 var state = Atomic.Lock(ref _state);
                 switch (state)
                 {
@@ -216,7 +216,7 @@
                         if (due <= _time.Now)
                         {
                             _state = _sInitial;
-                            _tp.SetResult();
+                            _ts.SetResult();
                         }
                         else
                         {
@@ -226,26 +226,26 @@
                             catch (Exception ex)
                             {
                                 if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) == _sWaiting)
-                                    _tp.SetException(ex);
+                                    _ts.SetException(ex);
                             }
                         }
 
                         break;
                     case _sCanceled:
                         _state = _sCanceled;
-                        _tp.SetException(new OperationCanceledException(_token));
+                        _ts.SetException(new OperationCanceledException(_token));
                         break;
                     case _sDisposed:
                         _state = _sDisposed;
-                        _tp.SetException(new ObjectDisposedException(nameof(ITimer)));
+                        _ts.SetException(new ObjectDisposedException(nameof(ITimer)));
                         break;
                     default: // _sWaiting???
                         _state = state;
-                        _tp.SetException(new InvalidOperationException());
+                        _ts.SetException(new InvalidOperationException());
                         break;
                 }
 
-                return _tp.Task;
+                return _ts.Task;
             }
 
             public ValueTask Delay(TimeSpan due) => Delay(_time.Now + due);
@@ -254,7 +254,7 @@
             {
                 if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) != _sWaiting) return;
                 _time.Remove(_dueUtc, this);
-                _tp.SetResult();
+                _ts.SetResult();
             }
 
             public void Dispose()
@@ -269,7 +269,7 @@
                     case _sWaiting:
                         _state = _sDisposed;
                         _ctr.Dispose();
-                        _tp.SetException(new ObjectDisposedException(nameof(ITimer)));
+                        _ts.SetException(new ObjectDisposedException(nameof(ITimer)));
                         break;
                     default: // Canceled, Disposed
                         _state = _sDisposed;
@@ -289,7 +289,7 @@
                     case _sWaiting:
                         _state = _sCanceled;
                         _ctr.Dispose();
-                        _tp.SetException(new OperationCanceledException(_token));
+                        _ts.SetException(new OperationCanceledException(_token));
                         break;
                     default: // Canceled, Disposed
                         _state = state;
@@ -300,8 +300,7 @@
             public void Elapse(Exception exception)
             {
                 if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) != _sWaiting) return;
-                if (exception == null) _tp.SetResult();
-                else _tp.SetException(exception);
+                _ts.SetExceptionOrResult(exception);
             }
         }
     }
