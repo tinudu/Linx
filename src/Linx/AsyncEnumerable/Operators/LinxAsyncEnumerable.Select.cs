@@ -30,6 +30,27 @@
         /// <summary>
         /// Projects each element of a sequence into a new form.
         /// </summary>
+        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, int, TResult> selector)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (selector == null) throw new ArgumentNullException(nameof(selector));
+
+            return Produce<TResult>(async (yield, token) =>
+            {
+                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+                try
+                {
+                    var i = 0;
+                    while (await ae.MoveNextAsync())
+                        await yield(selector(ae.Current, i++));
+                }
+                finally { await ae.DisposeAsync(); }
+            });
+        }
+
+        /// <summary>
+        /// Projects each element of a sequence into a new form.
+        /// </summary>
         public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, CancellationToken, Task<TResult>> selector)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
@@ -42,6 +63,27 @@
                 {
                     while (await ae.MoveNextAsync())
                         await yield(await selector(ae.Current, token).ConfigureAwait(false));
+                }
+                finally { await ae.DisposeAsync(); }
+            });
+        }
+
+        /// <summary>
+        /// Projects each element of a sequence into a new form.
+        /// </summary>
+        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, int, CancellationToken, Task<TResult>> selector)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (selector == null) throw new ArgumentNullException(nameof(selector));
+
+            return Produce<TResult>(async (yield, token) =>
+            {
+                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+                try
+                {
+                    var i = 0;
+                    while (await ae.MoveNextAsync())
+                        await yield(await selector(ae.Current, i++, token).ConfigureAwait(false));
                 }
                 finally { await ae.DisposeAsync(); }
             });
