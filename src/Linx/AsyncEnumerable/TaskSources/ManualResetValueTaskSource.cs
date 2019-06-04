@@ -46,6 +46,7 @@
     /// <summary>
     /// Controls a manually resettable <see cref="ValueTask{T}"/>.
     /// </summary>
+    [DebuggerNonUserCode]
     public sealed class ManualResetValueTaskSource<T> : IValueTaskSource<T>, IValueTaskSource
     {
         private ManualResetValueTaskSourceCore<T> _core = new ManualResetValueTaskSourceCore<T>();

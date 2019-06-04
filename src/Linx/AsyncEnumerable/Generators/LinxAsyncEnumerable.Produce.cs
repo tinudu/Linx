@@ -41,22 +41,22 @@
             private sealed class Enumerator : IAsyncEnumerator<T>
             {
                 private const int _sInitial = 0;
-                private const int _sPulling = 1;
-                private const int _sPushing = 2;
+                private const int _sAccepting = 1;
+                private const int _sEmitting = 2;
                 private const int _sCanceling = 3;
-                private const int _sCancelingPulling = 4;
+                private const int _sCancelingAccepting = 4;
                 private const int _sFinal = 5;
 
-                private readonly ProduceEnumerable<T> _enumerable;
-                private ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
-                private ManualResetValueTaskSource _tpOnNext = new ManualResetValueTaskSource();
-                private ErrorHandler _eh = ErrorHandler.Init();
+                private readonly ProduceEnumerable<T> _source;
+                private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
+                private readonly ManualResetValueTaskSource _tsEmitting = new ManualResetValueTaskSource();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
+                private ErrorHandler _eh = ErrorHandler.Init();
                 private int _state;
 
-                public Enumerator(ProduceEnumerable<T> enumerable, CancellationToken token)
+                public Enumerator(ProduceEnumerable<T> source, CancellationToken token)
                 {
-                    _enumerable = enumerable;
+                    _source = source;
                     if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
                 }
 
@@ -64,33 +64,33 @@
 
                 public ValueTask<bool> MoveNextAsync()
                 {
-                    _tpMoveNext.Reset();
+                    _tsAccepting.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sInitial:
-                            _state = _sPulling;
+                            _state = _sAccepting;
                             Produce();
                             break;
-                        case _sPushing:
-                            _state = _sPulling;
-                            _tpOnNext.SetResult();
+                        case _sEmitting:
+                            _state = _sAccepting;
+                            _tsEmitting.SetResult();
                             break;
                         case _sCanceling:
-                            _state = _sCancelingPulling;
+                            _state = _sCancelingAccepting;
                             break;
                         case _sFinal:
                             Current = default;
                             _state = _sFinal;
-                            _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
+                            _tsAccepting.SetExceptionOrResult(_eh.Error, false);
                             break;
-                        default: // Pulling, CancelingPulling
+                        default: // Accepting, CancelingAccepting???
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _tpMoveNext.Task;
+                    return _tsAccepting.Task;
                 }
 
                 public ValueTask DisposeAsync()
@@ -101,28 +101,28 @@
 
                 private ValueTask OnNext(T value)
                 {
-                    _tpOnNext.Reset();
+                    _tsEmitting.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
-                        case _sPulling:
+                        case _sAccepting:
                             Current = value;
-                            _state = _sPushing;
-                            _tpMoveNext.SetResult(true);
+                            _state = _sEmitting;
+                            _tsAccepting.SetResult(true);
                             break;
                         case _sCanceling:
-                        case _sCancelingPulling:
+                        case _sCancelingAccepting:
+                        case _sFinal:
                             _state = state;
-                            Atomic.WaitCanceled(_eh.InternalToken);
-                            _tpOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _tsEmitting.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
-                        default: // Initial, Pushing, Final ???
+                        default: // Initial, Emitting???
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _tpOnNext.Task;
+                    return _tsEmitting.Task;
                 }
 
                 private void Cancel(Exception error)
@@ -132,23 +132,24 @@
                     {
                         case _sInitial:
                             _eh.SetExternalError(error);
+                            _eh.SetInternalError(new OperationCanceledException(_eh.InternalToken));
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
                             break;
-                        case _sPulling:
+                        case _sAccepting:
                             _eh.SetExternalError(error);
-                            _state = _sCancelingPulling;
+                            _state = _sCancelingAccepting;
                             _eh.Cancel();
                             break;
-                        case _sPushing:
+                        case _sEmitting:
                             _eh.SetExternalError(error);
                             _state = _sCanceling;
                             _eh.Cancel();
-                            _tpOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _tsEmitting.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
                         case _sCanceling:
-                        case _sCancelingPulling:
+                        case _sCancelingAccepting:
                         case _sFinal:
                             _state = state;
                             break;
@@ -163,28 +164,28 @@
                     Exception error;
                     try
                     {
-                        await _enumerable._producer(OnNext, _eh.InternalToken).ConfigureAwait(false);
+                        await _source._producer(OnNext, _eh.InternalToken).ConfigureAwait(false);
                         error = null;
                     }
                     catch (Exception ex) { error = ex; }
 
                     var state = Atomic.Lock(ref _state);
-                    _eh.SetInternalError(error);
+                    if (error != null) _eh.SetInternalError(error);
                     switch (state)
                     {
-                        case _sPulling:
+                        case _sAccepting:
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
                             Current = default;
-                            _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
+                            _tsAccepting.SetExceptionOrResult(_eh.Error, false);
                             break;
 
-                        case _sPushing:
+                        case _sEmitting:
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
-                            _tpOnNext.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _tsEmitting.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
 
                         case _sCanceling:
@@ -192,11 +193,11 @@
                             _atmbDisposed.SetResult();
                             break;
 
-                        case _sCancelingPulling:
+                        case _sCancelingAccepting:
                             _state = _sFinal;
                             _atmbDisposed.SetResult();
                             Current = default;
-                            _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
+                            _tsAccepting.SetExceptionOrResult(_eh.Error, false);
                             break;
 
                         default: // Initial, Final??

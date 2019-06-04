@@ -295,7 +295,6 @@
                                     case _sCanceling:
                                     case _sCancelingAccepting:
                                         _state = state;
-                                        Atomic.WaitCanceled(_eh.InternalToken);
                                         throw new OperationCanceledException(_eh.InternalToken);
 
                                     default: // Initial, Final???
@@ -345,7 +344,6 @@
                                     case _sCanceling:
                                     case _sCancelingAccepting:
                                         _state = state;
-                                        Atomic.WaitCanceled(_eh.InternalToken);
                                         throw new OperationCanceledException(_eh.InternalToken);
 
                                     default: // Initial, Final???

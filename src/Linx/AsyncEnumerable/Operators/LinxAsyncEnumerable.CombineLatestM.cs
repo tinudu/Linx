@@ -210,7 +210,6 @@
                                         case _sCanceling:
                                         case _sCancelingPulling:
                                             _state = state;
-                                            Atomic.WaitCanceled(_cts.Token);
                                             throw new OperationCanceledException(_cts.Token);
 
                                         default: // Last, Final???

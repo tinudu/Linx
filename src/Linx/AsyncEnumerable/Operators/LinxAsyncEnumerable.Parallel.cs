@@ -252,6 +252,8 @@
                                     _tpPulling.SetExceptionOrResult(_eh.Error, false);
                                 }
                             }
+                            else
+                                _state = _sCanceling;
                             break;
                         default: // Initial, Final
                             _state = state;

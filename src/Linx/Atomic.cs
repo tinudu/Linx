@@ -56,16 +56,5 @@
                 if ((oldState & LockBit) == 0) return oldState;
             } while (true);
         }
-
-        /// <summary>
-        /// Spin wait until the token is canceled.
-        /// </summary>
-        public static void WaitCanceled(CancellationToken token)
-        {
-            if (token.IsCancellationRequested) return;
-            var sw = new SpinWait();
-            do sw.SpinOnce();
-            while (!token.IsCancellationRequested);
-        }
     }
 }
