@@ -21,7 +21,7 @@
                 try
                 {
                     while (await ae.MoveNextAsync())
-                        await yield(selector(ae.Current));
+                        await yield(selector(ae.Current)).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });
@@ -42,7 +42,7 @@
                 {
                     var i = 0;
                     while (await ae.MoveNextAsync())
-                        await yield(selector(ae.Current, i++));
+                        await yield(selector(ae.Current, i++)).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });
@@ -83,7 +83,7 @@
                 {
                     var i = 0;
                     while (await ae.MoveNextAsync())
-                        await yield(await selector(ae.Current, i++, token).ConfigureAwait(false));
+                        await yield(await selector(ae.Current, i++, token).ConfigureAwait(false)).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });

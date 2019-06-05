@@ -24,7 +24,7 @@
                     {
                         var current = ae.Current;
                         if (predicate(current))
-                            await yield(current);
+                            await yield(current).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }
@@ -48,7 +48,7 @@
                     {
                         var current = ae.Current;
                         if (await predicate(current, token).ConfigureAwait(false))
-                            await yield(current);
+                            await yield(current).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }

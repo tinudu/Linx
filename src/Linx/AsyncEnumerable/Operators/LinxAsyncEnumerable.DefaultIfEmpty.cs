@@ -24,12 +24,12 @@
                 try
                 {
                     if (!await ae.MoveNextAsync())
-                        await yield(@default);
+                        await yield(@default).ConfigureAwait(false);
                     else
                     {
-                        await yield(ae.Current);
+                        await yield(ae.Current).ConfigureAwait(false);
                         while (await ae.MoveNextAsync())
-                            await yield(ae.Current);
+                            await yield(ae.Current).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }

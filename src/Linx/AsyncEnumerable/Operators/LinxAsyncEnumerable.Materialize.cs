@@ -22,7 +22,7 @@
                     try
                     {
                         while (await ae.MoveNextAsync())
-                            await yield(Notification.Next(ae.Current));
+                            await yield(Notification.Next(ae.Current)).ConfigureAwait(false);
                     }
                     finally { await ae.DisposeAsync(); }
 
@@ -30,7 +30,7 @@
                 }
                 catch (Exception ex) { completion = Notification.Error<T>(ex); }
 
-                await yield(completion);
+                await yield(completion).ConfigureAwait(false);
             });
         }
     }

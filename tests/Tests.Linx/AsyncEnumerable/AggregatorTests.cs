@@ -5,6 +5,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
+    using global::Linx.AsyncEnumerable.TaskSources;
     using Xunit;
 
     public class AggregatorTests
@@ -78,10 +79,10 @@
             var cts = new CancellationTokenSource();
             var src = LinxAsyncEnumerable.Produce<int>(async (yield, token) =>
             {
-                await yield(1);
-                await yield(2);
+                await yield(1).ConfigureAwait(false);
+                await yield(2).ConfigureAwait(false);
                 cts.Cancel();
-                await yield(3);
+                await yield(3).ConfigureAwait(false);
             });
             var tResult = src.MultiAggregate(
                 (s, t) => s.ToList(t),

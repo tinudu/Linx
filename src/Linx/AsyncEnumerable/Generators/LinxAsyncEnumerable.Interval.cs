@@ -21,7 +21,7 @@
                 using (var timer = time.GetTimer(token))
                     do
                     {
-                        await yield(value++);
+                        await yield(value++).ConfigureAwait(false);
                         due += period;
                         await timer.Delay(due).ConfigureAwait(false);
                     } while (true);

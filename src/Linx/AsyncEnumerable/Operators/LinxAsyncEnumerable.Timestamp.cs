@@ -21,7 +21,7 @@
                 try
                 {
                     while (await ae.MoveNextAsync())
-                        await yield(new Timestamped<T>(time.Now, ae.Current));
+                        await yield(new Timestamped<T>(time.Now, ae.Current)).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });

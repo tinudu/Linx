@@ -35,7 +35,7 @@
                             switch (current.Value.Kind)
                             {
                                 case NotificationKind.Next:
-                                    await yield(current.Value.Value);
+                                    await yield(current.Value.Value).ConfigureAwait(false);
                                     break;
                                 case NotificationKind.Error:
                                     throw current.Value.Error;

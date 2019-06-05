@@ -31,7 +31,7 @@
 
                     while (true)
                     {
-                        await yield(current);
+                        await yield(current).ConfigureAwait(false);
                         if (!await ae.MoveNextAsync()) return;
                     }
                 }

@@ -21,14 +21,14 @@
                 {
                     if (!await ae.MoveNextAsync()) return;
                     var prev = ae.Current;
-                    await yield(prev);
+                    await yield(prev).ConfigureAwait(false);
 
                     while (await ae.MoveNextAsync())
                     {
                         var current = ae.Current;
                         if (comparer.Equals(current, prev)) continue;
                         prev = current;
-                        await yield(prev);
+                        await yield(prev).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }

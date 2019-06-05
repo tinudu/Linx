@@ -19,7 +19,7 @@
                 try
                 {
                     while (await ae.MoveNextAsync() && ae.Current is TResult next)
-                        await yield(next);
+                        await yield(next).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });

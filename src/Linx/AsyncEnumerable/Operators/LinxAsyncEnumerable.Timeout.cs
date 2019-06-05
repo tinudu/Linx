@@ -78,7 +78,7 @@
                                 }
 
                                 if (!aMoveNext.GetResult()) break;
-                                await yield(ae.Current);
+                                await yield(ae.Current).ConfigureAwait(false);
                             }
                         }
                     }

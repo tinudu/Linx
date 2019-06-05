@@ -22,7 +22,7 @@
                     while (await ae.MoveNextAsync())
                     {
                         var current = ae.Current;
-                        await yield(current);
+                        await yield(current).ConfigureAwait(false);
                         if (predicate(current)) return;
                     }
                 }
@@ -47,7 +47,7 @@
                     while (await ae.MoveNextAsync())
                     {
                         var current = ae.Current;
-                        await yield(current);
+                        await yield(current).ConfigureAwait(false);
                         if (predicate(current, i++)) return;
                     }
                 }

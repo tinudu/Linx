@@ -23,7 +23,7 @@
                         Debug.WriteLine($"Next@{Time.Current.Now.TimeOfDay.TotalSeconds}");
                         await timer.Delay(delay).ConfigureAwait(false);
                         Debug.WriteLine($"Observing {ae.Current}@{Time.Current.Now.TimeOfDay.TotalSeconds}");
-                        await yield(ae.Current);
+                        await yield(ae.Current).ConfigureAwait(false);
                     }
             }
             finally { await ae.DisposeAsync(); }
@@ -40,7 +40,7 @@
                         var current = ae.Current;
                         await timer.Delay(delay).ConfigureAwait(false);
                         Assert.Equal(current, ae.Current);
-                        await yield(current);
+                        await yield(current).ConfigureAwait(false);
                     }
             }
             finally { await ae.DisposeAsync(); }
@@ -183,7 +183,7 @@
                     foreach (var i in Enumerable.Range(1, 10))
                     {
                         await timer.Delay(TimeSpan.FromSeconds(i)).ConfigureAwait(false);
-                        await yield(i);
+                        await yield(i).ConfigureAwait(false);
                     }
             });
             var testee = source.Timeout(TimeSpan.FromSeconds(3.5));

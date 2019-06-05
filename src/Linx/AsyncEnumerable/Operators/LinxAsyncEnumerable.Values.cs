@@ -22,7 +22,7 @@
                     {
                         var current = ae.Current;
                         if (!current.HasValue) continue;
-                        await yield(current.GetValueOrDefault());
+                        await yield(current.GetValueOrDefault()).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }

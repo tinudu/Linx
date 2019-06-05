@@ -12,7 +12,7 @@
         public static IAsyncEnumerable<T> Return<T>(T value)
             => Produce<T>(async (yield, token) =>
             {
-                await yield(value);
+                await yield(value).ConfigureAwait(false);
             });
 
         /// <summary>
@@ -21,7 +21,7 @@
         public static IAsyncEnumerable<T> Return<T>(Func<T> getValue)
             => Produce<T>(async (yield, token) =>
             {
-                await yield(getValue());
+                await yield(getValue()).ConfigureAwait(false);
             });
 
         /// <summary>
@@ -30,7 +30,7 @@
         public static IAsyncEnumerable<T> Return<T>(Func<Task<T>> getValue)
             => Produce<T>(async (yield, token) =>
             {
-                await yield(await getValue().ConfigureAwait(false));
+                await yield(await getValue().ConfigureAwait(false)).ConfigureAwait(false);
             });
     }
 }

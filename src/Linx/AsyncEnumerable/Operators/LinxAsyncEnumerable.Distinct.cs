@@ -24,7 +24,7 @@
                     {
                         var current = ae.Current;
                         if (distinct.Add(current))
-                            await yield(current);
+                            await yield(current).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }

@@ -23,7 +23,7 @@
                     while (await ae.MoveNextAsync())
                     {
                         if (skip > 0) skip--;
-                        else await yield(ae.Current);
+                        else await yield(ae.Current).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }

@@ -24,7 +24,7 @@
                 {
                     while (await ae.MoveNextAsync())
                         foreach (var r in collectionSelector(ae.Current))
-                            await yield(r);
+                            await yield(r).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });
@@ -48,7 +48,7 @@
                     var i = 0;
                     while (await ae.MoveNextAsync())
                         foreach (var r in collectionSelector(ae.Current, i++))
-                            await yield(r);
+                            await yield(r).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });
@@ -75,7 +75,7 @@
                     {
                         var current = ae.Current;
                         foreach (var r in collectionSelector(current))
-                            await yield(resultSelector(current, r));
+                            await yield(resultSelector(current, r)).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }
@@ -106,7 +106,7 @@
                     {
                         var current = ae.Current;
                         foreach (var r in collectionSelector(current, i++))
-                            await yield(resultSelector(current, r));
+                            await yield(resultSelector(current, r)).ConfigureAwait(false);
                     }
                 }
                 finally { await ae.DisposeAsync(); }
