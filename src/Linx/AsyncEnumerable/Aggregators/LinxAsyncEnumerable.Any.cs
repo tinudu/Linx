@@ -14,8 +14,8 @@
         public static async Task<bool> Any<T>(this IAsyncEnumerable<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try { return await ae.MoveNextAsync(); }
             finally { await ae.DisposeAsync(); }

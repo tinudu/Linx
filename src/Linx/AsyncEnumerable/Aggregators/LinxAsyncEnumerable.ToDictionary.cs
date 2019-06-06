@@ -18,8 +18,8 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
@@ -48,8 +48,8 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             if (valueSelector == null) throw new ArgumentNullException(nameof(valueSelector));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {

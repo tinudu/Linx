@@ -9,6 +9,6 @@
         /// <summary>
         /// Aggregate elements into an array.
         /// </summary>
-        public static async Task<T[]> ToArray<T>(this IAsyncEnumerable<T> source, CancellationToken token) => (await source.ToList(token)).ToArray();
+        public static async Task<T[]> ToArray<T>(this IAsyncEnumerable<T> source, CancellationToken token) => (await source.ToList(token).ConfigureAwait(false)).ToArray();
     }
 }

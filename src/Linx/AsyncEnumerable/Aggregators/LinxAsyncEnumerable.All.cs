@@ -14,8 +14,8 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.ConfigureAwait(false).WithCancellation(token).GetAsyncEnumerator();
             try
             {

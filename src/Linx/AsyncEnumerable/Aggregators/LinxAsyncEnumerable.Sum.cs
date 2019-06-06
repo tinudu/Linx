@@ -13,8 +13,8 @@
         public static async Task<int> Sum(this IAsyncEnumerable<int> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
@@ -47,8 +47,8 @@
         public static async Task<long> Sum(this IAsyncEnumerable<long> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
@@ -81,8 +81,8 @@
         public static async Task<double> Sum(this IAsyncEnumerable<double> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
@@ -115,8 +115,8 @@
         public static async Task<float> Sum(this IAsyncEnumerable<float> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
@@ -149,8 +149,8 @@
         public static async Task<decimal> Sum(this IAsyncEnumerable<decimal> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {

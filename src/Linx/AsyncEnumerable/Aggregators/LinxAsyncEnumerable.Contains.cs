@@ -14,8 +14,8 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = EqualityComparer<T>.Default;
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {

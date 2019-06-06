@@ -13,8 +13,8 @@
         public static async Task<int> Count<T>(this IAsyncEnumerable<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {

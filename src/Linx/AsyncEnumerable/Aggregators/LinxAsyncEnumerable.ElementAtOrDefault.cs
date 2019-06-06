@@ -14,8 +14,8 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (index < 0) return default;
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {

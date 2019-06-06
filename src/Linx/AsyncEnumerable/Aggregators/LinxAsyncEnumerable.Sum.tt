@@ -27,8 +27,8 @@ namespace Linx.AsyncEnumerable
         public static async Task<<#= t.Type #>> Sum(this IAsyncEnumerable<<#= t.Type #>> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-
             token.ThrowIfCancellationRequested();
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {

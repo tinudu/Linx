@@ -8,20 +8,23 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Aggregate elements into a list.
+        /// Returns the element at a specified index in a sequence.
         /// </summary>
-        public static async Task<List<T>> ToList<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<T?> ElementAtOrNull<T>(this IAsyncEnumerable<T> source, int index, CancellationToken token) where T: struct
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+            if (index < 0) return default;
             token.ThrowIfCancellationRequested();
 
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
-                var list = new List<T>();
+                var i = 0;
                 while (await ae.MoveNextAsync())
-                    list.Add(ae.Current);
-                return list;
+                    if (i++ == index)
+                        return ae.Current;
+
+                return default;
             }
             finally { await ae.DisposeAsync(); }
         }
