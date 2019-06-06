@@ -60,12 +60,12 @@
 
                 private readonly MergeEnumerable<T> _enumerable;
                 private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-                private ManualResetValueTaskSource _tsMaxConcurrent;
-                private ErrorHandler _eh = ErrorHandler.Init();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
-                private Queue<(T next, ManualResetValueTaskSource ts)> _ready;
+                private ErrorHandler _eh = ErrorHandler.Init();
                 private int _state;
                 private int _active;
+                private Queue<(T next, ManualResetValueTaskSource ack)> _ready;
+                private ManualResetValueTaskSource _tsMaxConcurrent;
 
                 public Enumerator(MergeEnumerable<T> enumerable, CancellationToken token)
                 {
@@ -89,16 +89,16 @@
                             break;
 
                         case _sEmitting:
-                            if (_ready != null && _ready.Count > 0) // next available
+                            if (_ready == null || _ready.Count == 0)
+                                _state = _sAccepting;
+                            else
                             {
-                                var (next, ts) = _ready.Dequeue();
+                                var (next, ack) = _ready.Dequeue();
                                 Current = next;
                                 _state = _sEmitting;
-                                ts.SetResult();
+                                ack.SetResult();
                                 _tsAccepting.SetResult(true);
                             }
-                            else
-                                _state = _sAccepting;
                             break;
 
                         case _sCanceling:
@@ -135,63 +135,39 @@
                         case _sInitial:
                             Debug.Assert(external);
                             _eh.SetExternalError(error);
+                            _eh.SetInternalError(new OperationCanceledException(_eh.InternalToken));
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
                             break;
 
                         case _sAccepting:
-                            {
-                                if (external) _eh.SetExternalError(error);
-                                else _eh.SetInternalError(error);
-
-                                ManualResetValueTaskSource tsMaxConcurrent;
-                                if (_tsMaxConcurrent != null) { tsMaxConcurrent = _tsMaxConcurrent; _tsMaxConcurrent = null; }
-                                else tsMaxConcurrent = null;
-                                _ready = null;
-
-                                _state = _sCancelingAccepting;
-                                _eh.Cancel();
-                                tsMaxConcurrent?.SetException(new OperationCanceledException(_eh.InternalToken));
-                            }
-                            break;
-
                         case _sEmitting:
+                            if (external) _eh.SetExternalError(error);
+                            else _eh.SetInternalError(error);
+
+                            Queue<(T next, ManualResetValueTaskSource ack)> ready;
+                            if (_ready != null)
                             {
-                                if (external) _eh.SetExternalError(error);
-                                else _eh.SetInternalError(error);
-
-                                ManualResetValueTaskSource tsMaxConcurrent;
-                                if (_tsMaxConcurrent != null)
-                                {
-                                    tsMaxConcurrent = _tsMaxConcurrent;
-                                    _tsMaxConcurrent = null;
-                                }
-                                else tsMaxConcurrent = null;
-
-                                Queue<(T next, ManualResetValueTaskSource ts)> ready;
-                                if (_ready != null)
-                                {
-                                    ready = _ready.Count > 0 ? _ready : null;
-                                    _ready = null;
-                                }
-                                else ready = null;
-
-                                _state = _sCanceling;
-                                _eh.Cancel();
-
-                                if (tsMaxConcurrent != null || ready != null)
-                                {
-                                    var e = new OperationCanceledException(_eh.InternalToken);
-                                    tsMaxConcurrent?.SetException(e);
-                                    if (ready != null)
-                                        do
-                                        {
-                                            var next = ready.Dequeue();
-                                            next.ts.SetException(e);
-                                        } while (ready.Count > 0);
-                                }
+                                ready = _ready.Count > 0 ? _ready : null;
+                                _ready = null;
                             }
+                            else
+                                ready = null;
+
+                            var tsMaxConcurrent = _tsMaxConcurrent;
+                            _tsMaxConcurrent = null;
+
+                            _state = _sCancelingAccepting;
+                            _eh.Cancel();
+
+                            if (ready != null)
+                            {
+                                var oce = new OperationCanceledException(_eh.InternalToken);
+                                foreach (var (_, ack) in ready)
+                                    ack.SetException(oce);
+                            }
+                            tsMaxConcurrent?.SetException(new OperationCanceledException(_eh.InternalToken));
                             break;
 
                         case _sCanceling:
@@ -210,10 +186,13 @@
                 {
                     var state = Atomic.Lock(ref _state);
                     Debug.Assert(_active > 0);
+
                     if (--_active == 0)
                     {
-                        Debug.Assert(_tsMaxConcurrent == null && (_ready == null || _ready.Count == 0));
+                        Debug.Assert(_ready == null || _ready.Count == 0);
                         _ready = null;
+
+                        Debug.Assert(_tsMaxConcurrent == null);
 
                         switch (state)
                         {
@@ -266,30 +245,27 @@
                     try
                     {
                         var tsMaxConcurrent = new ManualResetValueTaskSource();
+
                         var ae = _enumerable._sources.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                         try
                         {
                             while (await ae.MoveNextAsync())
                             {
                                 var current = ae.Current;
+                                bool wait;
+
                                 var state = Atomic.Lock(ref _state);
                                 switch (state)
                                 {
                                     case _sAccepting:
                                     case _sEmitting:
-                                        bool wait;
-                                        if (++_active > _enumerable._maxConcurrent)
+                                        wait = ++_active > _enumerable._maxConcurrent;
+                                        if (wait)
                                         {
                                             tsMaxConcurrent.Reset();
                                             _tsMaxConcurrent = tsMaxConcurrent;
-                                            wait = true;
                                         }
-                                        else
-                                            wait = false;
-
                                         _state = state;
-                                        Produce(current);
-                                        if (wait) await tsMaxConcurrent.Task;
                                         break;
 
                                     case _sCanceling:
@@ -301,6 +277,9 @@
                                         _state = state;
                                         throw new Exception(state + "???");
                                 }
+
+                                Produce(current);
+                                if (wait) await tsMaxConcurrent.Task.ConfigureAwait(false);
                             }
                         }
                         finally { await ae.DisposeAsync(); }

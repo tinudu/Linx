@@ -258,13 +258,15 @@
                                 throw new Exception(state + "???");
                         }
                     }
-                    else
+                    else if (_tsMaxConcurrent != null)
                     {
                         var tsMaxConcurrent = _tsMaxConcurrent;
                         _tsMaxConcurrent = null;
                         _state = state;
-                        tsMaxConcurrent?.SetResult();
+                        tsMaxConcurrent.SetResult();
                     }
+                    else
+                        _state = state;
                 }
 
                 private async void Produce()
