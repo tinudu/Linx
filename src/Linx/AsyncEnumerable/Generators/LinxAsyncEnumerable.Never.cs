@@ -28,7 +28,7 @@
             private sealed class Enumerator : IAsyncEnumerator<T>
             {
                 private const int _sInitial = 0;
-                private const int _sPulling = 1;
+                private const int _sAccepting = 1;
                 private const int _sFinal = 2;
 
                 private readonly ManualResetValueTaskSource<bool> _tp = new ManualResetValueTaskSource<bool>();
@@ -51,13 +51,13 @@
                     switch (state)
                     {
                         case _sInitial:
-                            _state = _sPulling;
+                            _state = _sAccepting;
                             break;
                         case _sFinal:
                             _state = _sFinal;
                             _tp.SetException(_error);
                             break;
-                        default: // Pulling???
+                        default: // Accepting???
                             _state = state;
                             throw new Exception(_state + "???");
                     }
@@ -81,7 +81,7 @@
                             _state = _sFinal;
                             _ctr.Dispose();
                             break;
-                        case _sPulling:
+                        case _sAccepting:
                             _error = error;
                             _state = _sFinal;
                             _ctr.Dispose();
