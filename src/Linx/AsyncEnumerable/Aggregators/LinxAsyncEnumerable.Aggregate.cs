@@ -54,5 +54,29 @@
             }
             finally { await ae.DisposeAsync(); }
         }
+
+        /// <summary>
+        /// Applies an accumulator function over a sequence.
+        /// </summary>
+        public static async Task<T> Aggregate<T>(
+            this IAsyncEnumerable<T> source,
+            Func<T, T, T> accumulator,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));
+            token.ThrowIfCancellationRequested();
+
+            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+            try
+            {
+                if (!await ae.MoveNextAsync()) throw new InvalidOperationException(Strings.SequenceContainsNoElement);
+                var seed = ae.Current;
+                while (await ae.MoveNextAsync())
+                    seed = accumulator(seed, ae.Current);
+                return seed;
+            }
+            finally { await ae.DisposeAsync(); }
+        }
     }
 }

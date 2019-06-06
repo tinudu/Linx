@@ -17,9 +17,9 @@
 
             return Produce<T>(async (yield, token) =>
             {
-                var time = Time.Current;
                 var ae = source
-                    .Materialize()
+                    .Select(Notification.Next)
+                    .Append(Notification.Completed<T>())
                     .Timestamp()
                     .Buffer()
                     .WithCancellation(token)
@@ -32,18 +32,8 @@
                         {
                             var current = ae.Current;
                             await timer.Delay(current.Timestamp + delay).ConfigureAwait(false);
-                            switch (current.Value.Kind)
-                            {
-                                case NotificationKind.Next:
-                                    await yield(current.Value.Value).ConfigureAwait(false);
-                                    break;
-                                case NotificationKind.Error:
-                                    throw current.Value.Error;
-                                case NotificationKind.Completed:
-                                    return;
-                                default:
-                                    throw new Exception(current.Value.Kind + "???");
-                            }
+                            if (current.Value.Kind == NotificationKind.Completed) return;
+                            await yield(current.Value.Value).ConfigureAwait(false);
                         }
                 }
                 finally { await ae.DisposeAsync(); }

@@ -16,11 +16,10 @@
             if (second == null) throw new ArgumentNullException(nameof(second));
             token.ThrowIfCancellationRequested();
 
-            var nCompleted = Return(Notification.Completed<T>());
-            var nNext1 = first.Select(Notification.Next).Concat(nCompleted);
-            var nNext2 = second.Select(Notification.Next).Concat(nCompleted);
-            return await nNext1
-                .Zip(nNext2, NotificationComparer<T>.GetComparer(comparer).Equals)
+            var m1 = first.Select(Notification.Next).Append(Notification.Completed<T>());
+            var m2 = second.Select(Notification.Next).Append(Notification.Completed<T>());
+            return await m1
+                .Zip(m2, NotificationComparer<T>.GetComparer(comparer).Equals)
                 .All(eq => eq, token)
                 .ConfigureAwait(false);
         }
