@@ -15,8 +15,8 @@
 
             return Produce<TSource>(async (yield, token) =>
             {
-                try { await source.CopyTo(yield, token); }
-                catch (TException ex) { await handler(ex).CopyTo(yield, token); }
+                try { await source.CopyTo(yield, token).ConfigureAwait(false); }
+                catch (TException ex) { await handler(ex).CopyTo(yield, token).ConfigureAwait(false); }
             });
         }
     }
