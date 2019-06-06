@@ -24,11 +24,5 @@
                 finally { await ae.DisposeAsync(); }
             });
         }
-
-        /// <summary>
-        /// Filters the elements of an observable sequence based on the specified type.
-        /// </summary>
-        public static IAsyncEnumerable<TResult> OfType<TResult>(this IAsyncEnumerable<object> source, TResult sample) => source.OfType<TResult>();
-
     }
 }

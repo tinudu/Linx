@@ -35,9 +35,9 @@
                                 throw new Exception(current.Kind + "???");
                         }
                     }
-                    await token.WhenCanceled().ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
+                await token.WhenCanceled().ConfigureAwait(false);
             });
         }
 

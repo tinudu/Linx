@@ -23,14 +23,12 @@
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
-                    if (!await ae.MoveNextAsync())
-                        await yield(@default).ConfigureAwait(false);
-                    else
-                    {
-                        await yield(ae.Current).ConfigureAwait(false);
-                        while (await ae.MoveNextAsync())
+                    if (await ae.MoveNextAsync())
+                        do
                             await yield(ae.Current).ConfigureAwait(false);
-                    }
+                        while (await ae.MoveNextAsync());
+                    else
+                        await yield(@default).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
             });
