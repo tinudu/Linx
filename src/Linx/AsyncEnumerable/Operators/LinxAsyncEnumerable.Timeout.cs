@@ -15,7 +15,7 @@
         public static IAsyncEnumerable<T> Timeout<T>(this IAsyncEnumerable<T> source, TimeSpan dueTime)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            if (dueTime <= TimeSpan.Zero) return Throw<T>(new TimeoutException());
+            if (dueTime <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(dueTime));
 
             return Produce<T>(async (yield, token) =>
             {
@@ -25,9 +25,14 @@
                 if (token.CanBeCanceled) eh.ExternalRegistration = token.Register(() =>
                 {
                     // ReSharper disable once AccessToModifiedClosure
-                    if (Interlocked.CompareExchange(ref canceled, 1, 0) != 0) return;
-                    eh.SetExternalError(new OperationCanceledException(token));
-                    eh.Cancel();
+                    if( Atomic.Lock(ref canceled) == 0)
+                    {
+                        eh.SetExternalError(new OperationCanceledException(token));
+                        canceled = 1;
+                        eh.Cancel();
+                    }
+                    else
+                        canceled = 1;
                 });
 
                 Exception internalError;
@@ -39,7 +44,7 @@
                         using (var timer = Time.Current.GetTimer(default))
                         {
                             var continuations = 0;
-                            var tp = new ManualResetValueTaskSource();
+                            var ts = new ManualResetValueTaskSource();
 
                             void MoveNextCompleted()
                             {
@@ -48,7 +53,7 @@
                                     // ReSharper disable once AccessToDisposedClosure
                                     timer.Elapse();
                                 else
-                                    tp.SetResult();
+                                    ts.SetResult();
                             }
 
                             void TimerElapsed()
@@ -62,7 +67,7 @@
                                     eh.Cancel();
                                 }
                                 else
-                                    tp.SetResult();
+                                    ts.SetResult();
                             }
 
                             while (true)
@@ -71,10 +76,10 @@
                                 if (!aMoveNext.IsCompleted)
                                 {
                                     continuations = 2;
-                                    tp.Reset();
+                                    ts.Reset();
                                     aMoveNext.OnCompleted(MoveNextCompleted);
                                     timer.Delay(dueTime).ConfigureAwait(false).GetAwaiter().OnCompleted(TimerElapsed);
-                                    await tp.Task.ConfigureAwait(false);
+                                    await ts.Task.ConfigureAwait(false);
                                 }
 
                                 if (!aMoveNext.GetResult()) break;

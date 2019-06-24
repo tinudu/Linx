@@ -6,6 +6,9 @@
 
     partial class LinxAsyncEnumerable
     {
+        /// <summary>
+        /// Correlates the elements of two sequences based on matching keys.
+        /// </summary>
         public static IAsyncEnumerable<TResult> Join<TOuter, TInner, TKey, TResult>(
             this IAsyncEnumerable<TOuter> outer,
             IEnumerable<TInner> inner,

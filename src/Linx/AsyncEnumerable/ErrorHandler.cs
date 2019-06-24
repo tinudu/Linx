@@ -33,6 +33,7 @@
         {
             _ctsInternal = new CancellationTokenSource();
             _internalError = _externalError = null;
+            ExternalRegistration = default;
         }
 
         /// <summary>

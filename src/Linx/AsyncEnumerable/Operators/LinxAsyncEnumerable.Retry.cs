@@ -18,6 +18,7 @@
                 while (true)
                     try
                     {
+                        // ReSharper disable once PossibleMultipleEnumeration
                         await source.CopyTo(yield, token).ConfigureAwait(false);
                         return;
                     }
@@ -37,6 +38,7 @@
                 Exception error;
                 try
                 {
+                    // ReSharper disable once PossibleMultipleEnumeration
                     await source.CopyTo(yield, token).ConfigureAwait(false);
                     return;
                 }
@@ -50,6 +52,7 @@
                 {
                     try
                     {
+                        // ReSharper disable once PossibleMultipleEnumeration
                         await source.CopyTo(yield, token).ConfigureAwait(false);
                         return;
                     }
@@ -76,6 +79,7 @@
                 var time = Time.Current;
                 try
                 {
+                    // ReSharper disable once PossibleMultipleEnumeration
                     await source.CopyTo(yield, token).ConfigureAwait(false);
                     return;
                 }
@@ -86,6 +90,7 @@
                         try
                         {
                             await timer.Delay(waitTime).ConfigureAwait(false);
+                            // ReSharper disable once PossibleMultipleEnumeration
                             await source.CopyTo(yield, token).ConfigureAwait(false);
                             return;
                         }
@@ -107,6 +112,7 @@
                 Exception error;
                 try
                 {
+                    // ReSharper disable once PossibleMultipleEnumeration
                     await source.CopyTo(yield, token).ConfigureAwait(false);
                     return;
                 }
@@ -121,6 +127,7 @@
                         try
                         {
                             await timer.Delay(waitTime).ConfigureAwait(false);
+                            // ReSharper disable once PossibleMultipleEnumeration
                             await source.CopyTo(yield, token).ConfigureAwait(false);
                             return;
                         }

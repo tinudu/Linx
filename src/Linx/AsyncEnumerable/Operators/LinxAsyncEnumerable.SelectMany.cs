@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -94,8 +93,6 @@
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            var bla = source.Select((s, i) => collectionSelector(s, i).Select(c => resultSelector(s, c)));//.Concat();
-
             return Produce<TResult>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -119,7 +116,7 @@
         public static IAsyncEnumerable<TResult> SelectMany<TSource, TCollection, TResult>(
             this IAsyncEnumerable<TSource> source,
             Func<TSource, IAsyncEnumerable<TCollection>> collectionSelector,
-            Func<TSource, TCollection, TResult> resultSelector) 
+            Func<TSource, TCollection, TResult> resultSelector)
             => source.Select(s => collectionSelector(s).Select(c => resultSelector(s, c))).Merge();
 
         /// <summary>
@@ -128,7 +125,7 @@
         public static IAsyncEnumerable<TResult> SelectMany<TSource, TCollection, TResult>(
             this IAsyncEnumerable<TSource> source,
             Func<TSource, int, IAsyncEnumerable<TCollection>> collectionSelector,
-            Func<TSource, TCollection, TResult> resultSelector) 
+            Func<TSource, TCollection, TResult> resultSelector)
             => source.Select((s, i) => collectionSelector(s, i).Select(c => resultSelector(s, c))).Merge();
     }
 }

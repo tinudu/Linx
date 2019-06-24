@@ -10,8 +10,8 @@
         /// Returns a sequence that produces a value after each period.
         /// </summary>
         /// <param name="period"><see cref="TimeSpan"/> between elements.</param>
-        /// <param name="initial">Optioinal. <see cref="TimeSpan"/> before the first element.</param>
-        public static IAsyncEnumerable<long> Interval(TimeSpan period, TimeSpan initial = default)
+        /// <param name="delayFirst">Optional. Whether to delay before emitting the first item.</param>
+        public static IAsyncEnumerable<long> Interval(TimeSpan period, bool delayFirst = false)
         {
             if (period <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(period));
 
@@ -22,9 +22,9 @@
                 {
                     var value = 0;
                     var due = time.Now;
-                    if (initial >= TimeSpan.Zero)
+                    if (delayFirst)
                     {
-                        due += initial;
+                        due += period;
                         await timer.Delay(due).ConfigureAwait(false);
                     }
                     do
