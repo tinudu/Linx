@@ -41,7 +41,7 @@
         public DateTimeOffset Now { get; private set; }
 
         /// <inheritdoc />
-        public Task Delay(TimeSpan delay, CancellationToken token) => Delay(Now + delay, token);
+        public Task Delay(TimeSpan due, CancellationToken token) => Delay(Now + due, token);
 
         /// <inheritdoc />
         public async Task Delay(DateTimeOffset due, CancellationToken token)

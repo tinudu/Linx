@@ -23,7 +23,7 @@
         public DateTimeOffset Now => DateTimeOffset.Now;
 
         /// <inheritdoc />
-        public Task Delay(TimeSpan delay, CancellationToken token) => delay > TimeSpan.Zero ? Task.Delay(delay, token) : Task.CompletedTask;
+        public Task Delay(TimeSpan due, CancellationToken token) => due > TimeSpan.Zero ? Task.Delay(due, token) : Task.CompletedTask;
 
         /// <inheritdoc />
         public Task Delay(DateTimeOffset due, CancellationToken token) => Delay(due - DateTimeOffset.Now, token);

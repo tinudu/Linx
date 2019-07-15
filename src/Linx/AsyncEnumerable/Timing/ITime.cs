@@ -17,7 +17,7 @@
         /// <summary>
         /// Delay for the specified interval.
         /// </summary>
-        Task Delay(TimeSpan delay, CancellationToken token);
+        Task Delay(TimeSpan due, CancellationToken token);
 
         /// <summary>
         /// Delay until the specified time is reached.

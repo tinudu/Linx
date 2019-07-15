@@ -5,7 +5,6 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
-    using global::Linx.AsyncEnumerable.TaskSources;
     using Xunit;
 
     public class AggregatorTests
