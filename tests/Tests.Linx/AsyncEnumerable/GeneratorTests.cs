@@ -4,7 +4,7 @@
     using System.Linq;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
-    using global::Linx.AsyncEnumerable.Timing;
+    using global::Linx.Timing;
     using Xunit;
 
     public class GeneratorTests

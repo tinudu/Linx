@@ -7,7 +7,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
-    using global::Linx.AsyncEnumerable.Timing;
+    using global::Linx.Timing;
     using Xunit;
 
     internal static class MyOperators

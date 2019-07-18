@@ -1,4 +1,4 @@
-﻿namespace Linx.AsyncEnumerable.Timing
+﻿namespace Linx.Timing
 {
     using System.Threading;
 
