@@ -1,7 +1,6 @@
-﻿namespace Linx.AsyncEnumerable.TaskSources
+﻿namespace Linx.TaskSources
 {
     // NOTE: expected to exist similarly in future framework/core versions, when it will be replaced.
-
     using System;
     using System.Diagnostics;
     using System.Threading.Tasks;
