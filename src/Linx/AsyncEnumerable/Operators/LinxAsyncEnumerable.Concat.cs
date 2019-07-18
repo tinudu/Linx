@@ -19,7 +19,8 @@
                 try
                 {
                     while (await aeOuter.MoveNextAsync())
-                        await aeOuter.Current.CopyTo(yield, token).ConfigureAwait(false);
+                        if (!await aeOuter.Current.CopyTo(yield, token).ConfigureAwait(false))
+                            return;
                 }
                 finally { await aeOuter.DisposeAsync(); }
             });
@@ -35,7 +36,8 @@
             return Produce<T>(async (yield, token) =>
             {
                 foreach (var source in sources)
-                    await source.CopyTo(yield, token).ConfigureAwait(false);
+                    if (!await source.CopyTo(yield, token).ConfigureAwait(false))
+                        return;
             });
         }
 

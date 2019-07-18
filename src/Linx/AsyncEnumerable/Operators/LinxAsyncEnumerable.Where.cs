@@ -23,8 +23,8 @@
                     while (await ae.MoveNextAsync())
                     {
                         var current = ae.Current;
-                        if (predicate(current))
-                            await yield(current).ConfigureAwait(false);
+                        if (!predicate(current)) continue;
+                        if (!await yield(current).ConfigureAwait(false)) return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }
@@ -47,8 +47,8 @@
                     while (await ae.MoveNextAsync())
                     {
                         var current = ae.Current;
-                        if (await predicate(current, token).ConfigureAwait(false))
-                            await yield(current).ConfigureAwait(false);
+                        if (!await predicate(current, token).ConfigureAwait(false)) continue;
+                        if (!await yield(current).ConfigureAwait(false)) return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }

@@ -23,8 +23,8 @@
                     while (await ae.MoveNextAsync())
                     {
                         var current = ae.Current;
-                        if (distinct.Add(current))
-                            await yield(current).ConfigureAwait(false);
+                        if (!distinct.Add(current)) continue;
+                        if (!await yield(current).ConfigureAwait(false)) return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }

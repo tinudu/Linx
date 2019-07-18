@@ -78,8 +78,8 @@
             var cts = new CancellationTokenSource();
             var src = LinxAsyncEnumerable.Produce<int>(async (yield, token) =>
             {
-                await yield(1).ConfigureAwait(false);
-                await yield(2).ConfigureAwait(false);
+                if (!await yield(1).ConfigureAwait(false)) return;
+                if (!await yield(2).ConfigureAwait(false)) return;
                 cts.Cancel();
                 await yield(3).ConfigureAwait(false);
             });

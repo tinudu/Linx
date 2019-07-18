@@ -22,7 +22,7 @@
                 {
                     while (await ae.MoveNextAsync())
                     {
-                        await yield(ae.Current).ConfigureAwait(false);
+                        if (!await yield(ae.Current).ConfigureAwait(false)) return;
                         if (--remaining == 0) break;
                     }
                 }

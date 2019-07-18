@@ -25,7 +25,7 @@
                         switch (current.Kind)
                         {
                             case NotificationKind.Next:
-                                await yield(current.Value).ConfigureAwait(false);
+                                if (!await yield(current.Value).ConfigureAwait(false)) return;
                                 break;
                             case NotificationKind.Completed:
                                 return;
@@ -60,7 +60,7 @@
                         switch (ti.Value.Kind)
                         {
                             case NotificationKind.Next:
-                                await yield(ti.Value.Value).ConfigureAwait(false);
+                                if (!await yield(ti.Value.Value).ConfigureAwait(false)) return;
                                 break;
                             case NotificationKind.Error:
                                 throw ti.Value.Error;

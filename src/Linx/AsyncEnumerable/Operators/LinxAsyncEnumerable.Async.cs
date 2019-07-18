@@ -15,7 +15,8 @@
             return Produce<T>(async (yield, token) =>
             {
                 foreach (var element in source)
-                    await yield(element).ConfigureAwait(false);
+                    if (!await yield(element).ConfigureAwait(false))
+                        return;
             });
         }
     }

@@ -24,9 +24,7 @@
                 try
                 {
                     if (await ae.MoveNextAsync())
-                        do
-                            await yield(ae.Current).ConfigureAwait(false);
-                        while (await ae.MoveNextAsync());
+                        do { } while (await yield(ae.Current).ConfigureAwait(false) && await ae.MoveNextAsync());
                     else
                         await yield(@default).ConfigureAwait(false);
                 }

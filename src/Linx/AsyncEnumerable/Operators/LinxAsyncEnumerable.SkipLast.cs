@@ -23,7 +23,9 @@
                     while (await ae.MoveNextAsync())
                     {
                         if (q.Count == count)
-                            await yield(q.Dequeue()).ConfigureAwait(false);
+                            if (!await yield(q.Dequeue()).ConfigureAwait(false))
+                                return;
+
                         q.Enqueue(ae.Current);
                     }
                 }

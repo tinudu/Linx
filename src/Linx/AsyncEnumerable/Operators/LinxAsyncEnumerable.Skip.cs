@@ -22,8 +22,10 @@
                     var skip = count;
                     while (await ae.MoveNextAsync())
                     {
-                        if (skip > 0) skip--;
-                        else await yield(ae.Current).ConfigureAwait(false);
+                        if (skip > 0)
+                            skip--;
+                        else if (!await yield(ae.Current).ConfigureAwait(false))
+                            return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }

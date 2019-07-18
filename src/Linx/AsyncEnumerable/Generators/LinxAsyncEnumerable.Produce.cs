@@ -35,29 +35,31 @@
 
             public ProduceEnumerable(ProducerDelegate<T> producer) => _producer = producer;
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(_producer, token);
 
             [DebuggerNonUserCode]
             private sealed class Enumerator : IAsyncEnumerator<T>
             {
-                private const int _sInitial = 0;
-                private const int _sAccepting = 1;
-                private const int _sEmitting = 2;
-                private const int _sCanceling = 3;
-                private const int _sCancelingAccepting = 4;
-                private const int _sFinal = 5;
+                private const int _sInitial = 0; // Produce() not called yet
+                private const int _sAccepting = 1; // pending MoveNextAsync()
+                private const int _sEmitting = 2; // pending Yield()
+                private const int _sCompleted = 3; // Produce completed
+                private const int _sDisposing = 4; // but not Completed
+                private const int _sDisposingAccepting = 5; // Disposing and Accepting
+                private const int _sDisposed = 6; // Disposed
 
-                private readonly ProduceEnumerable<T> _source;
+                private readonly ProducerDelegate<T> _producer;
+                private readonly CancellationToken _token;
                 private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-                private readonly ManualResetValueTaskSource _tsEmitting = new ManualResetValueTaskSource();
+                private readonly ManualResetValueTaskSource<bool> _tsYield = new ManualResetValueTaskSource<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private ErrorHandler _eh = ErrorHandler.Init();
                 private int _state;
+                private Exception _error;
 
-                public Enumerator(ProduceEnumerable<T> source, CancellationToken token)
+                public Enumerator(ProducerDelegate<T> producer, CancellationToken token)
                 {
-                    _source = source;
-                    if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
+                    _producer = producer;
+                    _token = token;
                 }
 
                 public T Current { get; private set; }
@@ -69,23 +71,33 @@
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
-                        case _sInitial:
+                        case _sInitial: // first call
                             _state = _sAccepting;
                             Produce();
                             break;
+
                         case _sEmitting:
                             _state = _sAccepting;
-                            _tsEmitting.SetResult();
+                            if (_token.IsCancellationRequested) _tsYield.SetException(new OperationCanceledException(_token));
+                            else _tsYield.SetResult(true);
                             break;
-                        case _sCanceling:
-                            _state = _sCancelingAccepting;
-                            break;
-                        case _sFinal:
+
+                        case _sCompleted:
                             Current = default;
-                            _state = _sFinal;
-                            _tsAccepting.SetExceptionOrResult(_eh.Error, false);
+                            _state = _sCompleted;
+                            _tsAccepting.SetExceptionOrResult(_error, false);
                             break;
-                        default: // Accepting, CancelingAccepting???
+
+                        case _sDisposing:
+                            _state = _sDisposingAccepting;
+                            break;
+
+                        case _sDisposed:
+                            _state = _sDisposed;
+                            _tsAccepting.SetException(AsyncEnumeratorDisposedException.Instance);
+                            break;
+
+                        default: // Accepting, DisposingAccepting ???
                             _state = state;
                             throw new Exception(state + "???");
                     }
@@ -95,112 +107,115 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    var state = Atomic.Lock(ref _state);
+
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _state = _sDisposed;
+                            _atmbDisposed.SetResult();
+                            break;
+
+                        case _sAccepting:
+                            _state = _sDisposingAccepting;
+                            break;
+
+                        case _sEmitting:
+                            _state = _sDisposing;
+                            _tsYield.SetResult(false);
+                            break;
+
+                        case _sCompleted:
+                            Current = default;
+                            _error = null;
+                            _state = _sDisposed;
+                            _atmbDisposed.SetResult();
+                            break;
+
+                        default: // disposing or disposed
+                            _state = state;
+                            break;
+                    }
+
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
-                private ValueTask OnNext(T value)
+                private ValueTask<bool> Yield(T element)
                 {
-                    _tsEmitting.Reset();
+                    _tsYield.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sAccepting:
-                            Current = value;
-                            _state = _sEmitting;
-                            _tsAccepting.SetResult(true);
+                            if (_token.IsCancellationRequested)
+                            {
+                                _state = _sAccepting;
+                                _tsYield.SetException(new OperationCanceledException(_token));
+                            }
+                            else
+                            {
+                                Current = element;
+                                _state = _sEmitting;
+                                _tsAccepting.SetResult(true);
+                            }
                             break;
-                        case _sCanceling:
-                        case _sCancelingAccepting:
-                        case _sFinal:
+
+                        case _sCompleted:
+                        case _sDisposing:
+                        case _sDisposingAccepting:
+                        case _sDisposed:
                             _state = state;
-                            _tsEmitting.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _tsYield.SetResult(false);
                             break;
+
                         default: // Initial, Emitting???
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _tsEmitting.Task;
-                }
-
-                private void Cancel(Exception error)
-                {
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                            _eh.SetExternalError(error);
-                            _eh.SetInternalError(new OperationCanceledException(_eh.InternalToken));
-                            _state = _sFinal;
-                            _eh.Cancel();
-                            _atmbDisposed.SetResult();
-                            break;
-                        case _sAccepting:
-                            _eh.SetExternalError(error);
-                            _state = _sCancelingAccepting;
-                            _eh.Cancel();
-                            break;
-                        case _sEmitting:
-                            _eh.SetExternalError(error);
-                            _state = _sCanceling;
-                            _eh.Cancel();
-                            _tsEmitting.SetException(new OperationCanceledException(_eh.InternalToken));
-                            break;
-                        case _sCanceling:
-                        case _sCancelingAccepting:
-                        case _sFinal:
-                            _state = state;
-                            break;
-                        default:
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
+                    return _tsYield.Task;
                 }
 
                 private async void Produce()
                 {
-                    Exception error;
                     try
                     {
-                        await _source._producer(OnNext, _eh.InternalToken).ConfigureAwait(false);
-                        error = null;
+                        _token.ThrowIfCancellationRequested();
+                        await _producer(Yield, _token).ConfigureAwait(false);
                     }
-                    catch (Exception ex) { error = ex; }
+                    catch (Exception ex) { _error = ex; }
 
                     var state = Atomic.Lock(ref _state);
-                    if (error != null) _eh.SetInternalError(error);
                     switch (state)
                     {
                         case _sAccepting:
-                            _state = _sFinal;
-                            _eh.Cancel();
-                            _atmbDisposed.SetResult();
                             Current = default;
-                            _tsAccepting.SetExceptionOrResult(_eh.Error, false);
+                            _state = _sCompleted;
+                            _tsAccepting.SetExceptionOrResult(_error, false);
                             break;
 
                         case _sEmitting:
-                            _state = _sFinal;
-                            _eh.Cancel();
-                            _atmbDisposed.SetResult();
-                            _tsEmitting.SetException(new OperationCanceledException(_eh.InternalToken));
+                            _state = _sCompleted;
+                            _tsYield.SetResult(false);
                             break;
 
-                        case _sCanceling:
-                            _state = _sFinal;
-                            _atmbDisposed.SetResult();
-                            break;
-
-                        case _sCancelingAccepting:
-                            _state = _sFinal;
-                            _atmbDisposed.SetResult();
+                        case _sDisposing:
                             Current = default;
-                            _tsAccepting.SetExceptionOrResult(_eh.Error, false);
+                            _error = null;
+                            _state = _sDisposed;
+                            _atmbDisposed.SetResult();
                             break;
 
-                        default: // Initial, Final??
+                        case _sDisposingAccepting:
+                            Current = default;
+                            _error = null;
+                            _state = _sDisposed;
+                            _atmbDisposed.SetResult();
+                            _tsAccepting.SetException(AsyncEnumeratorDisposedException.Instance);
+                            break;
+
+                        default: // Initial, Completed, Disposed ???
                             _state = state;
                             throw new Exception(state + "???");
                     }

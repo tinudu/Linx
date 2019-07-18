@@ -24,7 +24,7 @@
                         if (!await ae.MoveNextAsync()) return;
                         var current = ae.Current;
                         if (!predicate(current)) return;
-                        await yield(current).ConfigureAwait(false);
+                        if (!await yield(current).ConfigureAwait(false)) return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }
@@ -50,7 +50,7 @@
                         if (!await ae.MoveNextAsync()) return;
                         var current = ae.Current;
                         if (!predicate(current, i++)) return;
-                        await yield(current).ConfigureAwait(false);
+                        if (!await yield(current).ConfigureAwait(false)) return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }

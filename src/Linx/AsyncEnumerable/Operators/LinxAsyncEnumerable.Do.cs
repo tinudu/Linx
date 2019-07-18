@@ -32,7 +32,7 @@
                         {
                             var current = ae.Current;
                             onNext(current);
-                            await yield(current).ConfigureAwait(false);
+                            if (!await yield(current).ConfigureAwait(false)) return;
                         }
                     }
                     finally { await ae.DisposeAsync(); }

@@ -28,8 +28,8 @@
                     while (await ae.MoveNextAsync())
                     {
                         var (x, b) = ae.Current;
-                        if (b ? set1.Add(x) && set2.Contains(x) : set2.Add(x) && set1.Contains(x))
-                            await yield(x).ConfigureAwait(false);
+                        if (b ? !set1.Add(x) || !set2.Contains(x) : !set2.Add(x) || !set1.Contains(x)) continue;
+                        if (!await yield(x).ConfigureAwait(false)) return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }

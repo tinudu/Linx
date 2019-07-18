@@ -22,7 +22,8 @@
                     try
                     {
                         while (await ae.MoveNextAsync())
-                            await yield(Notification.Next(ae.Current)).ConfigureAwait(false);
+                            if (!await yield(Notification.Next(ae.Current)).ConfigureAwait(false))
+                                return;
                     }
                     finally { await ae.DisposeAsync(); }
 

@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
     {
@@ -15,14 +14,7 @@
 
             return Produce<T>(async (yield, token) =>
             {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
-                        await yield(ae.Current).ConfigureAwait(false);
-                }
-                finally { await ae.DisposeAsync(); }
-
+                if (!await source.CopyTo(yield, token).ConfigureAwait(false)) return;
                 await yield(element).ConfigureAwait(false);
             });
         }

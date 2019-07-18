@@ -25,7 +25,7 @@
                 if (token.CanBeCanceled) eh.ExternalRegistration = token.Register(() =>
                 {
                     // ReSharper disable once AccessToModifiedClosure
-                    if( Atomic.Lock(ref canceled) == 0)
+                    if (Atomic.Lock(ref canceled) == 0)
                     {
                         eh.SetExternalError(new OperationCanceledException(token));
                         canceled = 1;
@@ -83,7 +83,7 @@
                                 }
 
                                 if (!aMoveNext.GetResult()) break;
-                                await yield(ae.Current).ConfigureAwait(false);
+                                if (!await yield(ae.Current).ConfigureAwait(false)) return;
                             }
                         }
                     }

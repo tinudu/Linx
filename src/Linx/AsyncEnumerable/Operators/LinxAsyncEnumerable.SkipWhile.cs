@@ -20,19 +20,20 @@
                 try
                 {
                     if (!await ae.MoveNextAsync()) return;
+                    var current = ae.Current;
 
-                    T current;
                     while (true)
                     {
-                        current = ae.Current;
                         if (!predicate(current)) break;
                         if (!await ae.MoveNextAsync()) return;
+                        current = ae.Current;
                     }
 
                     while (true)
                     {
-                        await yield(current).ConfigureAwait(false);
+                        if (!await yield(current).ConfigureAwait(false)) return;
                         if (!await ae.MoveNextAsync()) return;
+                        current = ae.Current;
                     }
                 }
                 finally { await ae.DisposeAsync(); }

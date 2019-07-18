@@ -25,8 +25,8 @@
                     while (await ae.MoveNextAsync())
                     {
                         var current = ae.Current;
-                        if (!excluded.Contains(current) && included.Add(current))
-                            await yield(current).ConfigureAwait(false);
+                        if (excluded.Contains(current) || !included.Add(current)) continue;
+                        if (!await yield(current).ConfigureAwait(false)) return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }

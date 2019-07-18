@@ -29,7 +29,7 @@
                     }
                     do
                     {
-                        await yield(value++).ConfigureAwait(false);
+                        if (!await yield(value++).ConfigureAwait(false)) return;
                         due += period;
                         await timer.Delay(due).ConfigureAwait(false);
                     } while (true);

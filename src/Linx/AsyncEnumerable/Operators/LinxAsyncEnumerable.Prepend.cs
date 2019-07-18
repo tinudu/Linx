@@ -15,15 +15,8 @@
 
             return Produce<T>(async (yield, token) =>
             {
-                await yield(element).ConfigureAwait(false);
-
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
-                        await yield(ae.Current).ConfigureAwait(false);
-                }
-                finally { await ae.DisposeAsync(); }
+                if (!await yield(element).ConfigureAwait(false)) return;
+                await source.CopyTo(yield, token).ConfigureAwait(false);
             });
         }
     }

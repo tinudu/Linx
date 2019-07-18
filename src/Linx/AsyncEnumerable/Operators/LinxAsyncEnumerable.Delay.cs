@@ -33,7 +33,7 @@
                             var current = ae.Current;
                             await timer.Delay(current.Timestamp + delay).ConfigureAwait(false);
                             if (current.Value.Kind == NotificationKind.Completed) return;
-                            await yield(current.Value.Value).ConfigureAwait(false);
+                            if (!await yield(current.Value.Value).ConfigureAwait(false)) return;
                         }
                 }
                 finally { await ae.DisposeAsync(); }

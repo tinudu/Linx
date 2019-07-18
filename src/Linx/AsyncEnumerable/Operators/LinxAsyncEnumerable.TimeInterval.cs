@@ -26,7 +26,7 @@
                         var now = time.Now;
                         var i = now - t;
                         t = now;
-                        await yield(new TimeInterval<T>(i, ae.Current)).ConfigureAwait(false);
+                        if (!await yield(new TimeInterval<T>(i, ae.Current)).ConfigureAwait(false)) return;
                     }
                 }
                 finally { await ae.DisposeAsync(); }

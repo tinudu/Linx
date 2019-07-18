@@ -44,7 +44,8 @@
                             try
                             {
                                 while (await aeInner.MoveNextAsync())
-                                    await yield(aeInner.Current).ConfigureAwait(false);
+                                    if (!await yield(aeInner.Current).ConfigureAwait(false))
+                                        return;
                             }
                             finally { await aeInner.DisposeAsync(); }
                         }

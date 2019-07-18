@@ -20,8 +20,7 @@
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
-                    while (await ae.MoveNextAsync())
-                        await yield(selector(ae.Current)).ConfigureAwait(false);
+                    while (await ae.MoveNextAsync() && await yield(selector(ae.Current)).ConfigureAwait(false)) { }
                 }
                 finally { await ae.DisposeAsync(); }
             });
@@ -41,8 +40,7 @@
                 try
                 {
                     var i = 0;
-                    while (await ae.MoveNextAsync())
-                        await yield(selector(ae.Current, i++)).ConfigureAwait(false);
+                    while (await ae.MoveNextAsync() && await yield(selector(ae.Current, i++)).ConfigureAwait(false)) { }
                 }
                 finally { await ae.DisposeAsync(); }
             });
@@ -61,8 +59,7 @@
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
-                    while (await ae.MoveNextAsync())
-                        await yield(await selector(ae.Current, token).ConfigureAwait(false));
+                    while (await ae.MoveNextAsync() && await yield(await selector(ae.Current, token).ConfigureAwait(false))) { }
                 }
                 finally { await ae.DisposeAsync(); }
             });
@@ -82,8 +79,7 @@
                 try
                 {
                     var i = 0;
-                    while (await ae.MoveNextAsync())
-                        await yield(await selector(ae.Current, i++, token).ConfigureAwait(false)).ConfigureAwait(false);
+                    while (await ae.MoveNextAsync() && await yield(await selector(ae.Current, i++, token).ConfigureAwait(false)).ConfigureAwait(false)) { }
                 }
                 finally { await ae.DisposeAsync(); }
             });
