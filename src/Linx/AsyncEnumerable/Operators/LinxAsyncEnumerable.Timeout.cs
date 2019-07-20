@@ -17,7 +17,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (dueTime <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(dueTime));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var eh = ErrorHandler.Init();
                 var canceled = 0;

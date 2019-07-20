@@ -76,7 +76,7 @@
         {
             SynchronizationContext.SetSynchronizationContext(null);
             var cts = new CancellationTokenSource();
-            var src = LinxAsyncEnumerable.Produce<int>(async (yield, token) =>
+            var src = LinxAsyncEnumerable.Generate<int>(async (yield, token) =>
             {
                 if (!await yield(1).ConfigureAwait(false)) return;
                 if (!await yield(2).ConfigureAwait(false)) return;

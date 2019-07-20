@@ -12,7 +12,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 if (!await source.CopyTo(yield, token).ConfigureAwait(false)) return;
                 await yield(element).ConfigureAwait(false);

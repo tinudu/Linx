@@ -17,7 +17,7 @@
 
             var seq = first.Select(x => (x, true)).Merge(second.Select(x => (x, false)));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var set1 = new HashSet<T>(comparer);
                 var set2 = new HashSet<T>(comparer);

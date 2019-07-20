@@ -11,7 +11,7 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Buffers items in case the consumer is slower than the producer.
+        /// Buffers items in case the consumer is slower than the generator.
         /// </summary>
         public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source, int maxSize = int.MaxValue)
         {

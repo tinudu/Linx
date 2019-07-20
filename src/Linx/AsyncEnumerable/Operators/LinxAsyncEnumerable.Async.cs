@@ -12,7 +12,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 foreach (var element in source)
                     if (!await yield(element).ConfigureAwait(false))

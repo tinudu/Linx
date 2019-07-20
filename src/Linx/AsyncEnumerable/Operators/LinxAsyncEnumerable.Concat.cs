@@ -13,7 +13,7 @@
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var aeOuter = sources.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
@@ -33,7 +33,7 @@
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 foreach (var source in sources)
                     if (!await source.CopyTo(yield, token).ConfigureAwait(false))

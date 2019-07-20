@@ -13,7 +13,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try

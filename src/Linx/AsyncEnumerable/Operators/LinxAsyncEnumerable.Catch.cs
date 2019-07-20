@@ -13,7 +13,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (handler == null) throw new ArgumentNullException(nameof(handler));
 
-            return Produce<TSource>(async (yield, token) =>
+            return Generate<TSource>(async (yield, token) =>
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 catch (TException ex) { await handler(ex).CopyTo(yield, token).ConfigureAwait(false); }

@@ -13,7 +13,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<Notification<T>>(async (yield, token) =>
+            return Generate<Notification<T>>(async (yield, token) =>
             {
                 Notification<T> completion;
                 try

@@ -9,16 +9,16 @@
     /// </summary>
     /// <param name="element">The element.</param>
     /// <returns>true if further elements are requested. false otherwise.</returns>
-    /// <exception cref="System.OperationCanceledException">The enumerator <see cref="CancellationToken"/> requested cancellation.</exception>
-    public delegate ValueTask<bool> YieldDelegate<in T>(T element);
+    /// <exception cref="System.OperationCanceledException">The enumeration is being canceled.</exception>
+    public delegate ValueTask<bool> YieldAsyncDelegate<in T>(T element);
 
     /// <summary>
-    /// Coroutine to asynchronously produce sequence elements.
+    /// Coroutine to generate a sequence.
     /// </summary>
-    /// <param name="yield"><see cref="YieldDelegate{T}"/> to which to yield elements.</param>
+    /// <param name="yield"><see cref="YieldAsyncDelegate{T}"/> to which to yield sequence elements.</param>
     /// <param name="token">Token on which cancellation is requested.</param>
-    /// <returns>A task that completes when the sequence completed with or without error.</returns>
-    public delegate Task ProducerDelegate<out T>(YieldDelegate<T> yield, CancellationToken token);
+    /// <returns>A task that, when completed, notifies the end of the sequence.</returns>
+    public delegate Task GeneratorDelegate<out T>(YieldAsyncDelegate<T> yield, CancellationToken token);
 
     /// <summary>
     /// Delegate to produce an aggregate from a sequence.

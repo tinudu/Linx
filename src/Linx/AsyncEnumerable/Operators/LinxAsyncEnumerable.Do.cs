@@ -7,7 +7,7 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Produce side effects while enumerating a sequence.
+        /// Generate side effects while enumerating a sequence.
         /// </summary>
         public static IAsyncEnumerable<T> Do<T>(this IAsyncEnumerable<T> source, Action<T> onNext = null, Action<Exception> onError = null, Action onCompleted = null)
         {
@@ -21,7 +21,7 @@
                 onNext = value => { try { d(value); } catch { /**/ } };
             }
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 try
                 {

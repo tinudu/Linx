@@ -15,7 +15,7 @@
             if (second == null) throw new ArgumentNullException(nameof(second));
             if (comparer == null) comparer = EqualityComparer<T>.Default;
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var excluded = second as ISet<T> ?? new HashSet<T>(second, comparer);
                 var included = new HashSet<T>(comparer);

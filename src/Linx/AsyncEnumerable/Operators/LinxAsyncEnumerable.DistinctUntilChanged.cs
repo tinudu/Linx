@@ -14,7 +14,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = EqualityComparer<T>.Default;
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try

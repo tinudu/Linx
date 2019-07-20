@@ -14,7 +14,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try

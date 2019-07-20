@@ -15,7 +15,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (delay <= TimeSpan.Zero) return source;
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var ae = source
                     .Select(Notification.Next)

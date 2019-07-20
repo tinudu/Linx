@@ -13,7 +13,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 while (true)
                     try
@@ -33,7 +33,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 Exception error;
                 try
@@ -74,7 +74,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var time = Time.Current;
                 try
@@ -106,7 +106,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (waitTimes == null) throw new ArgumentNullException(nameof(waitTimes));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var time = Time.Current;
                 Exception error;

@@ -14,7 +14,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<Timestamped<T>>(async (yield, token) =>
+            return Generate<Timestamped<T>>(async (yield, token) =>
             {
                 var time = Time.Current;
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();

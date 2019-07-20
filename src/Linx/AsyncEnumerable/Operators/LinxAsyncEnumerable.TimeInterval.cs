@@ -14,7 +14,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Produce<TimeInterval<T>>(async (yield, token) =>
+            return Generate<TimeInterval<T>>(async (yield, token) =>
             {
                 var time = Time.Current;
                 var t = time.Now;

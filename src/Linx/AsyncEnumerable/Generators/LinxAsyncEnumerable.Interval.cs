@@ -15,7 +15,7 @@
         {
             if (period <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(period));
 
-            return Produce<long>(async (yield, token) =>
+            return Generate<long>(async (yield, token) =>
             {
                 var time = Time.Current;
                 using (var timer = time.GetTimer(token))

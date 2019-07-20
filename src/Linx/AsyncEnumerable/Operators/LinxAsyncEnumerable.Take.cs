@@ -14,7 +14,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (count <= 0) return Empty<T>();
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 var remaining = count;

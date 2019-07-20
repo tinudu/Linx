@@ -16,7 +16,7 @@
             if (resourceFactory == null) throw new ArgumentNullException(nameof(resourceFactory));
             if (sequenceFactory == null) throw new ArgumentNullException(nameof(sequenceFactory));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 var resource = resourceFactory();
                 try { await sequenceFactory(resource).CopyTo(yield, token).ConfigureAwait(false); }

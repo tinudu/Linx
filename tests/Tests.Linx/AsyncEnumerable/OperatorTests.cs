@@ -12,7 +12,7 @@
 
     internal static class MyOperators
     {
-        public static IAsyncEnumerable<T> ObserveAfter<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxAsyncEnumerable.Produce<T>(async (yield, token) =>
+        public static IAsyncEnumerable<T> ObserveAfter<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxAsyncEnumerable.Generate<T>(async (yield, token) =>
         {
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
@@ -29,7 +29,7 @@
             finally { await ae.DisposeAsync(); }
         });
 
-        public static IAsyncEnumerable<T> ObserveImmediate<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxAsyncEnumerable.Produce<T>(async (yield, token) =>
+        public static IAsyncEnumerable<T> ObserveImmediate<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxAsyncEnumerable.Generate<T>(async (yield, token) =>
         {
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
@@ -177,7 +177,7 @@
         [Fact]
         public async Task TestTimeout()
         {
-            var source = LinxAsyncEnumerable.Produce<int>(async (yield, token) =>
+            var source = LinxAsyncEnumerable.Generate<int>(async (yield, token) =>
             {
                 using (var timer = Time.Current.GetTimer(token))
                     foreach (var i in Enumerable.Range(1, 10))

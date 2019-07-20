@@ -271,7 +271,7 @@
                     TooLate, // GetAsyncEnumerator not called, will throw
                     Accepting, // pending MoveNextAsync
                     Enumerating, // enumeration started, not accepting
-                    Emitting, // same as Enumerating, but Produce() awaits _ccsEmitting
+                    Emitting, // same as Enumerating, but Generate() awaits _ccsEmitting
                     Final // final state with or without error
                 }
 
@@ -383,7 +383,7 @@
                             case GroupState.Enumerating:
                             case GroupState.Emitting:
                             case GroupState.Accepting:
-                                if (state == _sFinal) // let Produce() do the finalization
+                                if (state == _sFinal) // let Generate() do the finalization
                                 {
                                     _enumerator._state = state;
                                     return;

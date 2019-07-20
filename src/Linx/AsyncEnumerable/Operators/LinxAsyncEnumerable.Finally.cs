@@ -14,7 +14,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (@finally == null) throw new ArgumentNullException(nameof(@finally));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 finally { @finally(); }
@@ -29,7 +29,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (@finally == null) throw new ArgumentNullException(nameof(@finally));
 
-            return Produce<T>(async (yield, token) =>
+            return Generate<T>(async (yield, token) =>
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 finally { await @finally().ConfigureAwait(false); }

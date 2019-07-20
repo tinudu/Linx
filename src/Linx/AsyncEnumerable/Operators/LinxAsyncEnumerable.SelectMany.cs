@@ -16,7 +16,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
 
-            return Produce<TResult>(async (yield, token) =>
+            return Generate<TResult>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
@@ -40,7 +40,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
 
-            return Produce<TResult>(async (yield, token) =>
+            return Generate<TResult>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
@@ -67,7 +67,7 @@
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return Produce<TResult>(async (yield, token) =>
+            return Generate<TResult>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
@@ -96,7 +96,7 @@
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return Produce<TResult>(async (yield, token) =>
+            return Generate<TResult>(async (yield, token) =>
             {
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
