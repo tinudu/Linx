@@ -20,7 +20,7 @@
                 var time = Time.Current;
                 using (var timer = time.GetTimer(token))
                 {
-                    var value = 0;
+                    var value = 0L;
                     var due = time.Now;
                     if (delayFirst)
                     {

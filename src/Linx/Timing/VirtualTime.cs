@@ -114,7 +114,7 @@
             while (true)
             {
                 // yield to other threads so they can schedule
-                Thread.Sleep(1);
+                Thread.Sleep(16);
 
                 IElapse timer;
                 lock (_queue)

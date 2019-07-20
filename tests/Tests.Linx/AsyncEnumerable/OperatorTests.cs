@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
@@ -12,7 +11,7 @@
 
     internal static class MyOperators
     {
-        public static IAsyncEnumerable<T> ObserveAfter<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxAsyncEnumerable.Generate<T>(async (yield, token) =>
+        public static IAsyncEnumerable<T> ConsumeSlow<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxAsyncEnumerable.Generate<T>(async (yield, token) =>
         {
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
@@ -20,27 +19,8 @@
                 using (var timer = Time.Current.GetTimer(token))
                     while (await ae.MoveNextAsync())
                     {
-                        Debug.WriteLine($"Next@{Time.Current.Now.TimeOfDay.TotalSeconds}");
-                        await timer.Delay(delay).ConfigureAwait(false);
-                        Debug.WriteLine($"Observing {ae.Current}@{Time.Current.Now.TimeOfDay.TotalSeconds}");
                         if (!await yield(ae.Current).ConfigureAwait(false)) return;
-                    }
-            }
-            finally { await ae.DisposeAsync(); }
-        });
-
-        public static IAsyncEnumerable<T> ObserveImmediate<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxAsyncEnumerable.Generate<T>(async (yield, token) =>
-        {
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                using (var timer = Time.Current.GetTimer(token))
-                    while (await ae.MoveNextAsync())
-                    {
-                        var current = ae.Current;
                         await timer.Delay(delay).ConfigureAwait(false);
-                        Assert.Equal(current, ae.Current);
-                        if (!await yield(current).ConfigureAwait(false)) return;
                     }
             }
             finally { await ae.DisposeAsync(); }
@@ -91,15 +71,7 @@
             using (new VirtualTime())
             {
                 var tResult = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(1)).Take(15).Select(i => (int)i).Latest()
-                    .ObserveAfter(TimeSpan.FromSeconds(3.7)).ToList(default);
-                var result = await tResult;
-                Assert.True(new[] { 3, 7, 11, 14 }.SequenceEqual(result));
-            }
-
-            using (new VirtualTime())
-            {
-                var tResult = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(1)).Take(15).Select(i => (int)i).Latest()
-                    .ObserveImmediate(TimeSpan.FromSeconds(3.7)).ToList(default);
+                    .ConsumeSlow(TimeSpan.FromSeconds(3.7)).ToList(default);
                 var result = await tResult;
                 Assert.True(new[] { 0, 3, 7, 11, 14 }.SequenceEqual(result));
             }
