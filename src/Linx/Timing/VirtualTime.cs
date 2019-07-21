@@ -55,7 +55,7 @@
             {
                 case _sStopped:
                     _state = _sStarted;
-                    Advance();
+                    Task.Run(() => Advance()); // continuations with .ConfigureAwait(false) will be inlined
                     break;
 
                 case _sStarted:
@@ -218,38 +218,31 @@
                             case _sStopped:
                             case _sStarted:
                             case _sIdle:
-                                if (due >= _time.Now) // schedule
-                                    try
-                                    {
-                                        var dueUtc = due.UtcDateTime;
-                                        if (!_time._timersByDue.TryGetValue(dueUtc, out var timers))
-                                        {
-                                            timers = _time._pool.Count > 0 ? _time._pool.Pop() : new Queue<Timer>();
-                                            _time._queue.Enqueue(new Bucket(dueUtc, timers));
-                                            _time._timersByDue.Add(dueUtc, timers);
-                                        }
-
-                                        timers.Enqueue(this);
-                                        _state = _tWaiting;
-                                        if (timeState == _sIdle)
-                                        {
-                                            _time._state = _sStarted;
-                                            _time._tsIdle.SetResult();
-                                        }
-                                        else
-                                            _time._state = timeState;
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _state = _tInitial;
-                                        _time._state = timeState;
-                                        _ts.SetException(ex);
-                                    }
-                                else // complete immediately
+                                try
                                 {
-                                    _time._state = timeState;
+                                    var dueUtc = due.UtcDateTime;
+                                    if (!_time._timersByDue.TryGetValue(dueUtc, out var timers))
+                                    {
+                                        timers = _time._pool.Count > 0 ? _time._pool.Pop() : new Queue<Timer>();
+                                        _time._queue.Enqueue(new Bucket(dueUtc, timers));
+                                        _time._timersByDue.Add(dueUtc, timers);
+                                    }
+
+                                    timers.Enqueue(this);
+                                    _state = _tWaiting;
+                                    if (timeState == _sIdle)
+                                    {
+                                        _time._state = _sStarted;
+                                        _time._tsIdle.SetResult();
+                                    }
+                                    else
+                                        _time._state = timeState;
+                                }
+                                catch (Exception ex)
+                                {
                                     _state = _tInitial;
-                                    _ts.SetResult();
+                                    _time._state = timeState;
+                                    _ts.SetException(ex);
                                 }
                                 break;
 

@@ -60,18 +60,12 @@
         {
             using (var vt = new VirtualTime())
             {
-                var bla = Marble.Parse("-a-b-c-|").Dematerialize()
-                    .Select(Notification.Next)
-                    .Append(Notification.Completed<char>())
-                    .Timestamp()
-                    .ToList(default);
-                //var source = Marble.Parse("-a-b-c-|").Dematerialize();
-                //var testee = source.Delay(TimeSpan.FromSeconds(7)).Materialize().TimeInterval().ToList(default);
-                //var expected = Marble.Parse("----a-b-c-|");
+                var source = Marble.Parse("-a-b-c-d-|").Dematerialize();
+                var testee = source.Delay(TimeSpan.FromSeconds(3));
+                var expected = Marble.Parse("----a-b-c-d-|");
+                var eq = testee.AssertEqual(expected);
                 vt.Start();
-                var blaa = await bla;
-                //var result = await testee;
-                //Assert.True(expected.SequenceEqual(result));
+                await eq;
             }
         }
 

@@ -10,21 +10,17 @@
         /// <summary>
         /// Indicates the sequence by <paramref name="delay"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Delay<T>(this IAsyncEnumerable<T> source, TimeSpan delay)
+        public static IAsyncEnumerable<T> Delay<T>(this IAsyncEnumerable<T> source, TimeSpan delay, bool delayError = false)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (delay <= TimeSpan.Zero) return source;
 
+            var notifications = delayError ? source.Materialize() : source.Select(Notification.Next).Append(Notification.Completed<T>());
+            var timestamped = notifications.Timestamp().Buffer();
+
             return Generate<T>(async (yield, token) =>
             {
-                var ae = source
-                    .Select(Notification.Next)
-                    .Append(Notification.Completed<T>())
-                    .Timestamp()
-                    .Buffer()
-                    .WithCancellation(token)
-                    .ConfigureAwait(false)
-                    .GetAsyncEnumerator();
+                var ae = timestamped.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
                     using (var timer = Time.Current.GetTimer(token))
@@ -32,8 +28,18 @@
                         {
                             var current = ae.Current;
                             await timer.Delay(current.Timestamp + delay).ConfigureAwait(false);
-                            if (current.Value.Kind == NotificationKind.Completed) return;
-                            if (!await yield(current.Value.Value).ConfigureAwait(false)) return;
+                            switch (current.Value.Kind)
+                            {
+                                case NotificationKind.Completed:
+                                    return;
+                                case NotificationKind.Next:
+                                    if (!await yield(current.Value.Value).ConfigureAwait(false)) return;
+                                    break;
+                                case NotificationKind.Error:
+                                    throw current.Value.Error;
+                                default:
+                                    throw new Exception(current.Value.Kind + "???");
+                            }
                         }
                 }
                 finally { await ae.DisposeAsync(); }

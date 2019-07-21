@@ -20,7 +20,9 @@
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
-                    while (await ae.MoveNextAsync() && await yield(new Timestamped<T>(time.Now, ae.Current)).ConfigureAwait(false)) { }
+                    while (await ae.MoveNextAsync())
+                        if(!await yield(new Timestamped<T>(time.Now, ae.Current)).ConfigureAwait(false))
+                            return;
                 }
                 finally { await ae.DisposeAsync(); }
             });
