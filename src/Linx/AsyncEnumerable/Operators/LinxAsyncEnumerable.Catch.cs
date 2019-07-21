@@ -19,5 +19,11 @@
                 catch (TException ex) { await handler(ex).CopyTo(yield, token).ConfigureAwait(false); }
             });
         }
+
+        /// <summary>
+        /// Catches exceptions of type <typeparamref name="TException"/> and replaces it with the sequence returned by the specified <paramref name="handler"/>.
+        /// </summary>
+        public static IAsyncEnumerable<TSource> Catch<TSource, TException>(this IAsyncEnumerable<TSource> source, TException sample, Func<TException, IAsyncEnumerable<TSource>> handler) where TException : Exception
+            => source.Catch(handler);
     }
 }

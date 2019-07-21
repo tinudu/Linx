@@ -6,6 +6,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
+    using global::Linx.AsyncEnumerable.Testing;
     using global::Linx.Timing;
     using Xunit;
 
@@ -32,15 +33,16 @@
         [Fact]
         public async Task TestCombineLatest()
         {
-            using (new VirtualTime())
+            using (var vt = new VirtualTime())
             {
-                var seq1 = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(0.5)).Skip(1).Take(8);
-                var seq2 = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(0.7)).Skip(1).Take(7);
-                var testee = seq1.CombineLatest(seq2, (x, y) => 10 * x + y);
-                // seq1: ....1....2....3....4....5....6....7....8
-                // seq2: ......1......2......3......4......5......6......7
-                var result = await testee.ToList(default);
-                Assert.True(new[] { 11L, 21, 22, 32, 42, 43, 53, 54, 64, 65, 75, 85, 86, 87 }.SequenceEqual(result));
+                var seq1 = Marble.Parse("----A----B----C----D----E----F----G----H|").Dematerialize();
+                var seq2 = Marble.Parse("------a------b------c------d------e------f------g|").Dematerialize();
+                var testee = seq1.CombineLatest(seq2, (x, y) => $"{x}{y}");
+                var expected = new[] { "Aa", "Ba", "Bb", "Cb", "Db", "Dc", "Ec", "Ed", "Fd", "Gd", "Ge", "He", "Hf", "Hg" };
+                var tResult = testee.ToList(default);
+                vt.Start();
+                var result = await tResult;
+                Assert.True(expected.SequenceEqual(result));
             }
         }
 
@@ -56,12 +58,20 @@
         [Fact]
         public async Task TestDelay()
         {
-            using (new VirtualTime())
+            using (var vt = new VirtualTime())
             {
-                var source = Enumerable.Range(0, 10).Async().Zip(LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(0.5)), (i, t) => i);
-                var tResult = source.Delay(TimeSpan.FromSeconds(3)).ToList(default);
-                var result = await tResult;
-                Assert.True(Enumerable.Range(0, 10).SequenceEqual(result));
+                var bla = Marble.Parse("-a-b-c-|").Dematerialize()
+                    .Select(Notification.Next)
+                    .Append(Notification.Completed<char>())
+                    .Timestamp()
+                    .ToList(default);
+                //var source = Marble.Parse("-a-b-c-|").Dematerialize();
+                //var testee = source.Delay(TimeSpan.FromSeconds(7)).Materialize().TimeInterval().ToList(default);
+                //var expected = Marble.Parse("----a-b-c-|");
+                vt.Start();
+                var blaa = await bla;
+                //var result = await testee;
+                //Assert.True(expected.SequenceEqual(result));
             }
         }
 
@@ -149,28 +159,24 @@
         [Fact]
         public async Task TestTimeout()
         {
-            var source = LinxAsyncEnumerable.Generate<int>(async (yield, token) =>
+            var source = Marble.Parse("-a--b---c----d|").Dematerialize();
+            var testee = source
+                .Timeout(TimeSpan.FromSeconds(3.5))
+                .Materialize();
+            var expected = new[]
             {
-                using (var timer = Time.Current.GetTimer(token))
-                    foreach (var i in Enumerable.Range(1, 10))
-                    {
-                        await timer.Delay(TimeSpan.FromSeconds(i)).ConfigureAwait(false);
-                        if (!await yield(i).ConfigureAwait(false)) return;
-                    }
-            });
-            var testee = source.Timeout(TimeSpan.FromSeconds(3.5));
+                Notification.Next('a'),
+                Notification.Next('b'),
+                Notification.Next('c'),
+                Notification.Error<char>(new TimeoutException())
+            };
 
-            using (new VirtualTime())
+            using (var vt = new VirtualTime())
             {
-                var ae = testee.ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    Assert.True(await ae.MoveNextAsync() && ae.Current == 1);
-                    Assert.True(await ae.MoveNextAsync() && ae.Current == 2);
-                    Assert.True(await ae.MoveNextAsync() && ae.Current == 3);
-                    await Assert.ThrowsAsync<TimeoutException>(async () => await ae.MoveNextAsync());
-                }
-                finally { await ae.DisposeAsync(); }
+                var tResult = testee.ToList(default);
+                vt.Start();
+                var result = await tResult.ConfigureAwait(false);
+                Assert.True(expected.SequenceEqual(result));
             }
         }
 

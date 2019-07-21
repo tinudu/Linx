@@ -23,10 +23,13 @@
         public DateTimeOffset Now => DateTimeOffset.Now;
 
         /// <inheritdoc />
-        public Task Delay(TimeSpan due, CancellationToken token) => due > TimeSpan.Zero ? Task.Delay(due, token) : Task.CompletedTask;
+        public ValueTask Delay(TimeSpan due, CancellationToken token) => new ValueTask(due > TimeSpan.Zero ? Task.Delay(due, token) : Task.CompletedTask);
 
         /// <inheritdoc />
-        public Task Delay(DateTimeOffset due, CancellationToken token) => Delay(due - DateTimeOffset.Now, token);
+        public ValueTask Delay(int dueMillis, CancellationToken token) => new ValueTask(dueMillis > 0 ? Task.Delay(dueMillis, token) : Task.CompletedTask);
+
+        /// <inheritdoc />
+        public ValueTask Delay(DateTimeOffset due, CancellationToken token) => Delay(due - DateTimeOffset.Now, token);
 
         /// <inheritdoc />
         public ITimer GetTimer(CancellationToken token) => new Timer(token);
@@ -38,7 +41,7 @@
             private const int _sCanceled = 2;
             private const int _sDisposed = 3;
 
-            private readonly ManualResetValueTaskSource _tp = new ManualResetValueTaskSource();
+            private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
             private readonly System.Threading.Timer _timer;
             private readonly CancellationToken _token;
             private CancellationTokenRegistration _ctr;
@@ -51,56 +54,95 @@
                 if (_token.CanBeCanceled) _ctr = token.Register(TokenCanceled);
             }
 
-            public ValueTask Delay(DateTimeOffset due) => Delay(due - DateTimeOffset.Now);
-
             public ValueTask Delay(TimeSpan due)
             {
-                _tp.Reset();
+                _ts.Reset();
+
                 var state = Atomic.Lock(ref _state);
                 switch (state)
                 {
                     case _sInitial:
-                        var millis = due.Ticks / TimeSpan.TicksPerMillisecond;
-                        if (millis <= 0)
-                        {
-                            _state = _sInitial;
-                            _tp.SetResult();
-                        }
-                        else
+                        if (due > TimeSpan.Zero)
                         {
                             _state = _sWaiting;
-                            try { _timer.Change(millis, Timeout.Infinite); }
+                            try { _timer.Change(due, Timeout.InfiniteTimeSpan); }
                             catch (Exception ex)
                             {
                                 if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) == _sWaiting)
-                                    _tp.SetException(ex);
+                                    _ts.SetException(ex);
                             }
+                        }
+                        else
+                        {
+                            _state = _sInitial;
+                            _ts.SetResult();
                         }
 
                         break;
+
                     case _sCanceled:
                         _state = _sCanceled;
-                        _tp.SetException(new OperationCanceledException(_token));
+                        _ts.SetException(new OperationCanceledException(_token));
                         break;
+
                     case _sDisposed:
                         _state = _sDisposed;
-                        _tp.SetException(new ObjectDisposedException(nameof(ITimer)));
+                        _ts.SetException(new ObjectDisposedException(nameof(ITimer)));
                         break;
+
                     default: // _sWaiting???
                         _state = state;
-                        _tp.SetException(new InvalidOperationException());
-                        break;
+                        throw new Exception(state + "???");
                 }
 
-                return _tp.Task;
+                return _ts.Task;
             }
 
-            public void Elapse()
+            public ValueTask Delay(int dueMillis)
             {
-                if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) != _sWaiting) return;
-                _timer.Change(Timeout.Infinite, Timeout.Infinite);
-                _tp.SetResult();
+                _ts.Reset();
+
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sInitial:
+                        if (dueMillis > 0)
+                        {
+                            _state = _sWaiting;
+                            try { _timer.Change(dueMillis, Timeout.Infinite); }
+                            catch (Exception ex)
+                            {
+                                if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) == _sWaiting)
+                                    _ts.SetException(ex);
+                            }
+                        }
+                        else
+                        {
+                            _state = _sInitial;
+                            _ts.SetResult();
+                        }
+
+                        break;
+
+                    case _sCanceled:
+                        _state = _sCanceled;
+                        _ts.SetException(new OperationCanceledException(_token));
+                        break;
+
+                    case _sDisposed:
+                        _state = _sDisposed;
+                        _ts.SetException(new ObjectDisposedException(nameof(ITimer)));
+                        break;
+
+                    default: // _sWaiting???
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+
+                return _ts.Task;
             }
+
+            public ValueTask Delay(DateTimeOffset due) => Delay(due - DateTimeOffset.Now);
 
             public void Dispose()
             {
@@ -112,12 +154,14 @@
                         _ctr.Dispose();
                         _timer.Dispose();
                         break;
+
                     case _sWaiting:
                         _state = _sDisposed;
                         _ctr.Dispose();
                         _timer.Dispose();
-                        _tp.SetException(new ObjectDisposedException(nameof(ITimer)));
+                        _ts.SetException(new ObjectDisposedException(nameof(ITimer)));
                         break;
+
                     default: // Canceled, Disposed
                         _state = _sDisposed;
                         break;
@@ -134,12 +178,14 @@
                         _ctr.Dispose();
                         _timer.Dispose();
                         break;
+
                     case _sWaiting:
                         _state = _sCanceled;
                         _ctr.Dispose();
                         _timer.Dispose();
-                        _tp.SetException(new OperationCanceledException(_token));
+                        _ts.SetException(new OperationCanceledException(_token));
                         break;
+
                     default: // Canceled, Disposed
                         _state = state;
                         break;
@@ -149,7 +195,7 @@
             private void TimerCallback(object _)
             {
                 if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) == _sWaiting)
-                    _tp.SetResult();
+                    _ts.SetResult();
             }
         }
     }

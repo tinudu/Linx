@@ -17,12 +17,17 @@
         /// <summary>
         /// Delay for the specified interval.
         /// </summary>
-        Task Delay(TimeSpan due, CancellationToken token);
+       ValueTask Delay(TimeSpan due, CancellationToken token = default);
+
+        /// <summary>
+        /// Delay for the specified interval in milliseconds.
+        /// </summary>
+        ValueTask Delay(int dueMillis, CancellationToken token = default);
 
         /// <summary>
         /// Delay until the specified time is reached.
         /// </summary>
-        Task Delay(DateTimeOffset due, CancellationToken token);
+        ValueTask Delay(DateTimeOffset due, CancellationToken token = default);
 
         /// <summary>
         /// Create a timer.

@@ -19,82 +19,165 @@
 
             return Generate<T>(async (yield, token) =>
             {
-                var eh = ErrorHandler.Init();
-                var canceled = 0;
+                // ReSharper disable InconsistentNaming
+                const int _sInitial = 0; // MoveNextAsync returned within time
+                const int _sAccepting = 1; // pending MoveNextAsync - due time in _due
+                const int _sCanceling = 2; // canceling because of error or because completed
 
-                if (token.CanBeCanceled) eh.ExternalRegistration = token.Register(() =>
-                {
-                    // ReSharper disable once AccessToModifiedClosure
-                    if (Atomic.Lock(ref canceled) == 0)
-                    {
-                        eh.SetExternalError(new OperationCanceledException(token));
-                        canceled = 1;
-                        eh.Cancel();
-                    }
-                    else
-                        canceled = 1;
-                });
+                var _time = Time.Current;
+                var _cts = new CancellationTokenSource();
+                CancellationTokenRegistration _ctr = default;
+                var _state = _sInitial;
+                DateTimeOffset _due = default;
+                Exception _error = null;
+                var _isWatchdogIdle = false;
+                var _tsWatchdogIdle = new ManualResetValueTaskSource();
+                // ReSharper restore InconsistentNaming
 
-                Exception internalError;
+                if (token.CanBeCanceled) _ctr = token.Register(() => Cancel(new OperationCanceledException(token)));
+
+                var tTimerWatchdog = TimerWatchdog();
+
+                Exception err = null;
                 try
                 {
-                    var ae = source.WithCancellation(eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
+                    var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                     try
                     {
-                        using (var timer = Time.Current.GetTimer(default))
+                        while (true)
                         {
-                            var continuations = 0;
-                            var ts = new ManualResetValueTaskSource();
-
-                            void MoveNextCompleted()
+                            // set accepting
+                            var state = Atomic.Lock(ref _state);
+                            switch (state)
                             {
-                                // ReSharper disable once AccessToModifiedClosure
-                                if (Interlocked.Decrement(ref continuations) != 0)
-                                    // ReSharper disable once AccessToDisposedClosure
-                                    timer.Elapse();
-                                else
-                                    ts.SetResult();
+                                case _sInitial:
+                                    var idle = _isWatchdogIdle;
+                                    _isWatchdogIdle = false;
+                                    _due = _time.Now + dueTime;
+                                    _state = _sAccepting;
+                                    if (idle) _tsWatchdogIdle.SetResult();
+                                    break;
+
+                                case _sCanceling:
+                                    _state = _sCanceling;
+                                    return;
+
+                                default: // accepting???
+                                    _state = state;
+                                    throw new Exception(state + "???");
                             }
 
-                            void TimerElapsed()
+                            if(!await ae.MoveNextAsync()) return;
+
+                            // set initial
+                            state = Atomic.Lock(ref _state);
+                            switch (state)
                             {
-                                // ReSharper disable once AccessToModifiedClosure
-                                if (Interlocked.Decrement(ref continuations) != 0)
-                                {
-                                    // ReSharper disable once AccessToModifiedClosure
-                                    if (Interlocked.CompareExchange(ref canceled, 1, 0) != 0) return;
-                                    eh.SetInternalError(new TimeoutException());
-                                    eh.Cancel();
-                                }
-                                else
-                                    ts.SetResult();
+                                case _sAccepting:
+                                    _state = _sInitial;
+                                    break;
+
+                                case _sCanceling:
+                                    _state = _sCanceling;
+                                    return;
+
+                                default: // initial???
+                                    _state = state;
+                                    throw new Exception(state + "???");
                             }
 
-                            while (true)
-                            {
-                                var aMoveNext = ae.MoveNextAsync().GetAwaiter();
-                                if (!aMoveNext.IsCompleted)
-                                {
-                                    continuations = 2;
-                                    ts.Reset();
-                                    aMoveNext.OnCompleted(MoveNextCompleted);
-                                    timer.Delay(dueTime).ConfigureAwait(false).GetAwaiter().OnCompleted(TimerElapsed);
-                                    await ts.Task.ConfigureAwait(false);
-                                }
-
-                                if (!aMoveNext.GetResult()) break;
-                                if (!await yield(ae.Current).ConfigureAwait(false)) return;
-                            }
+                            if(!await yield(ae.Current)) return;
                         }
                     }
                     finally { await ae.DisposeAsync(); }
-                    internalError = null;
                 }
-                catch (Exception ex) { internalError = ex; }
+                catch (Exception ex) { err = ex; }
+                finally
+                {
+                    Cancel(err);
+                    await tTimerWatchdog.ConfigureAwait(false);
+                    if (_error != null) throw _error;
+                }
 
-                eh.SetInternalError(internalError);
-                if (Interlocked.CompareExchange(ref canceled, 1, 0) == 0) eh.Cancel();
-                eh.ThrowIfError();
+                void Cancel(Exception error)
+                {
+                    if (error is OperationCanceledException oce && oce.CancellationToken == _cts.Token)
+                        error = null;
+
+                    // ReSharper disable AccessToModifiedClosure
+                    var state = Atomic.Lock(ref _state);
+                    var idle = _isWatchdogIdle;
+                    _isWatchdogIdle = false;
+                    switch (state)
+                    {
+                        case _sInitial:
+                        case _sAccepting:
+                            _error = error;
+                            _state = _sCanceling;
+                            _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
+                            break;
+
+                        case _sCanceling:
+                            if (_error == null) _error = error;
+                            _state = _sCanceling;
+                            break;
+
+                        default:
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
+
+                    if (idle) _tsWatchdogIdle.SetResult();
+                    // ReSharper restore AccessToModifiedClosure
+                }
+
+                async Task TimerWatchdog()
+                {
+                    // ReSharper disable AccessToModifiedClosure
+                    try
+                    {
+                        using (var timer = _time.GetTimer(_cts.Token))
+                            while (true)
+                            {
+                                var state = Atomic.Lock(ref _state);
+                                switch (state)
+                                {
+                                    case _sInitial: // no time to wait for
+                                        _tsWatchdogIdle.Reset();
+                                        _isWatchdogIdle = true;
+                                        _state = _sInitial;
+                                        await _tsWatchdogIdle.Task.ConfigureAwait(false);
+                                        break;
+
+                                    case _sAccepting:
+                                        if (_time.Now < _due)
+                                        {
+                                            var due = _due;
+                                            _state = _sAccepting;
+                                            await timer.Delay(due).ConfigureAwait(false);
+                                        }
+                                        else
+                                        {
+                                            _state = _sAccepting;
+                                            throw new TimeoutException();
+                                        }
+
+                                        break;
+
+                                    case _sCanceling:
+                                        _state = _sCanceling;
+                                        return;
+
+                                    default:
+                                        _state = state;
+                                        throw new Exception(state + "???");
+                                }
+                            }
+                    }
+                    catch (Exception ex) { Cancel(ex); }
+                    // ReSharper restore AccessToModifiedClosure
+                }
             });
         }
     }

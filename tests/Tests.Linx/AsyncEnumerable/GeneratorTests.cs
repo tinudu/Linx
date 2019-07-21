@@ -12,9 +12,10 @@
         [Fact]
         public async Task TestInterval()
         {
-            using (new VirtualTime())
+            using (var vt = new VirtualTime())
             {
                 var t = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(1)).Select(i => (int)i).Take(5).ToList(default);
+                vt.Start();
                 var result = await t;
                 Assert.True(Enumerable.Range(0, 5).SequenceEqual(result));
             }
@@ -35,9 +36,10 @@
             {
                 var tResult = LinxAsyncEnumerable.Return(async () =>
                 {
-                    await Time.Current.Delay(delay, default).ConfigureAwait(false);
+                    await Time.Current.Delay(delay).ConfigureAwait(false);
                     return 42;
                 }).Single(default);
+                vt.Start();
                 Assert.Equal(42, await tResult);
                 Assert.Equal(vt.Now, now + delay);
             }
