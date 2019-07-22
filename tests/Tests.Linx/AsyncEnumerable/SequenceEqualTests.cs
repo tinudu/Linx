@@ -23,11 +23,19 @@
             var i1 = Marble.Parse("-a- b-  c-|").Dematerialize();
             var i2 = Marble.Parse(" a--b---c|").Dematerialize();
             var i3 = Marble.Parse("-a- b-  c-d").Dematerialize();
-            using (new VirtualTime())
+            using (var vt = new VirtualTime())
             {
-                Assert.True(await i1.SequenceEqual(i2, default));
-                Assert.False(await i1.SequenceEqual(i3, default));
+                var testee = i1.SequenceEqual(i2, default);
+                vt.Start();
+                Assert.True(await testee);
             }
+            using (var vt = new VirtualTime())
+            {
+                var testee = i1.SequenceEqual(i3, default);
+                vt.Start();
+                Assert.False(await testee);
+            }
+
         }
 
         [Fact]
@@ -36,10 +44,17 @@
             var i1 = Marble.Parse("-a- b-  c-|").Dematerialize();
             var i2 = Marble.Parse(" a--b---c#").Dematerialize();
             var i3 = Marble.Parse("-a- b-  c-d#").Dematerialize();
-            using (new VirtualTime())
+            using (var vt = new VirtualTime())
             {
-                await Assert.ThrowsAsync<MarbleException>(() => i1.SequenceEqual(i2, default));
-                Assert.False(await i1.SequenceEqual(i3, default));
+                var testee = i1.SequenceEqual(i2, default);
+                vt.Start();
+                await Assert.ThrowsAsync<MarbleException>(() => testee);
+            }
+            using (var vt = new VirtualTime())
+            {
+                var testee = i1.SequenceEqual(i3, default);
+                vt.Start();
+                Assert.False(await testee);
             }
         }
 
@@ -53,6 +68,7 @@
             {
                 var cts = new CancellationTokenSource();
                 var t = i1.SequenceEqual(i1, cts.Token);
+                vt.Start();
                 await vt.Delay(TimeSpan.FromHours(1), default);
                 cts.Cancel();
                 await Assert.ThrowsAsync<OperationCanceledException>(() => t);
@@ -62,7 +78,9 @@
             {
                 var cts = new CancellationTokenSource();
                 var t = i1.SequenceEqual(i2, cts.Token);
-                await vt.Delay(TimeSpan.FromSeconds(8), default);
+                var tCancel = vt.Delay(TimeSpan.FromSeconds(7), default);
+                vt.Start();
+                await tCancel;
                 cts.Cancel();
                 await Assert.ThrowsAsync<OperationCanceledException>(() => t);
             }

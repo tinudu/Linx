@@ -103,6 +103,7 @@
             _timersByDue.Clear();
             _queue.Clear();
             _pool.Clear();
+            Time.Current = RealTime.Instance;
         }
 
 
