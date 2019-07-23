@@ -16,7 +16,7 @@ namespace Linx.AsyncEnumerable
     {
 <#
 const int min = 2;
-const int max = 8;
+const int max = 2;
 foreach(var n in Enumerable.Range(min, max - min + 1))
 {
     var indexes = Enumerable.Range(1, n);
@@ -25,7 +25,7 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
         {
             GenArg = "T" + i,
             Source = "source" + i,
-            Value = "Value" + i
+            Next = "Next" + i
         })
         .ToList();
     var genArgs = $"<{string.Join(", ", names.Select(x => x.GenArg))}, TResult>";
@@ -65,8 +65,9 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
             {
                 private const int _sInitial = 0;
                 private const int _sAccepting = 1;
-                private const int _sEmitting = 2;
-                private const int _sCompleted = 3;
+                private const int _sEmittingMutable = 2;
+                private const int _sEmitting = 3;
+                private const int _sCompleted = 4;
 
                 private sealed class Context
                 {
@@ -74,10 +75,11 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
 
                     public int Unassigned = <#= n #>;
                     public int Active = <#= n #>;
-                    public bool HasNext;
 <# foreach(var x in names) { #>
-                    public <#= x.GenArg #> <#= x.Value #>;
+                    public <#= x.GenArg #> <#= x.Next #>;
 <# } #>
+                    public bool HasNext;
+                    public TResult Next;
 
                     public CancellationToken Token => _cts.Token;
 
@@ -87,7 +89,7 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
                         catch { /**/ }
                     }
 
-                    public TResult GetResult(Func<#= genArgs #> resultSelector) => resultSelector(<#= string.Join(", ", names.Select(x => x.Value)) #>);
+                    public TResult GetResult(Func<#= genArgs #> resultSelector) => resultSelector(<#= string.Join(", ", names.Select(x => x.Next)) #>);
                 }
 
                 private readonly CombineLatestEnumerable<#= genArgs #> _enumerable;
@@ -96,9 +98,19 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
                 private CancellationTokenRegistration _ctr;
                 private Context _context = new Context();
                 private int _state;
+                private TResult _current;
                 private Exception _error;
 
-                public TResult Current { get; private set; }
+                public TResult Current
+                {
+                    get
+                    {
+                        var state = Atomic.Lock(ref _state);
+                        var current = _current;
+                        _state = state == _sEmittingMutable ? _sEmitting : state;
+                        return current;
+                    }
+                }
 
                 public Enumerator(CombineLatestEnumerable<#= genArgs #> enumerable, CancellationToken token)
                 {
@@ -116,34 +128,24 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
                         case _sInitial:
                             _state = _sAccepting;
 <# foreach(var x in names) { #>
-                            Subscribe(_enumerable._<#= x.Source #>, (c, v) => c.<#= x.Value #> = v);
+                            Subscribe(_enumerable._<#= x.Source #>, (c, v) => c.<#= x.Next #> = v);
 <# } #>
                             break;
 
+                        case _sEmittingMutable:
                         case _sEmitting:
                             if (_error != null)
                             {
-                                Current = default;
+                                _current = default;
                                 _state = _sEmitting;
                                 _tsMoveNext.SetException(_error);
                             }
                             else if (_context.HasNext)
                             {
-                                try
-                                {
-                                    Current = _context.GetResult(_enumerable._resultSelector);
-                                    _context.HasNext = false;
-                                    _state = _sEmitting;
-                                }
-                                catch (Exception ex)
-                                {
-                                    _error = ex;
-                                    Current = default;
-                                    _state = _sEmitting;
-                                    _ctr.Dispose();
-                                    _context.TryCancel();
-                                }
-                                _tsMoveNext.SetExceptionOrResult(_error, true);
+                                _current = _context.Next;
+                                _context.HasNext = false;
+                                _state = _sEmittingMutable;
+                                _tsMoveNext.SetResult(true);
                             }
                             else
                                 _state = _sAccepting;
@@ -153,25 +155,16 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
                             if (_context != null)
                             {
                                 Debug.Assert(_error == null && _context.HasNext);
-                                try
-                                {
-                                    Current = _context.GetResult(_enumerable._resultSelector);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Current = default;
-                                    _error = ex;
-                                }
-
+                                _current = _context.Next;
                                 _context = null;
                                 _state = _sCompleted;
                                 _ctr.Dispose();
                                 _atmbDisposed.SetResult();
-                                _tsMoveNext.SetExceptionOrResult(_error, true);
+                                _tsMoveNext.SetResult(true);
                             }
                             else
                             {
-                                Current = default;
+                                _current = default;
                                 _state = _sCompleted;
                                 _tsMoveNext.SetExceptionOrResult(_error, false);
                             }
@@ -214,13 +207,14 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
 
                         case _sAccepting:
                             _error = error;
-                            Current = default;
+                            _current = default;
                             _state = _sEmitting;
                             _ctr.Dispose();
                             _context.TryCancel();
                             _tsMoveNext.SetException(error);
                             break;
 
+                        case _sEmittingMutable:
                         case _sEmitting:
                             _error = error;
                             _state = _sEmitting;
@@ -262,7 +256,7 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
                         case _sAccepting:
                             Debug.Assert(_error == null && !ctx.HasNext);
                             _context = null;
-                            Current = default;
+                            _current = default;
                             _state = _sCompleted;
                             _ctr.Dispose();
                             ctx.TryCancel();
@@ -270,6 +264,7 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
                             _tsMoveNext.SetResult(false);
                             break;
 
+                        case _sEmittingMutable:
                         case _sEmitting:
                             if (_error != null)
                             {
@@ -298,7 +293,7 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
                     }
                 }
 
-                private async void Subscribe<T>(IAsyncEnumerable<T> source, Action<Context, T> setValue)
+                private async void Subscribe<T>(IAsyncEnumerable<T> source, Action<Context, T> setNext)
                 {
                     try
                     {
@@ -317,28 +312,32 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
                                 if (!Linx.Exchange(ref any, true))
                                     _context.Unassigned--;
 
-                                setValue(_context, current);
+                                setNext(_context, current);
                                 if (_context.Unassigned > 0)
                                 {
                                     _state = state;
                                     continue;
                                 }
 
+                                TResult next;
+                                try { next = _context.GetResult(_enumerable._resultSelector); }
+                                catch { _state = state; throw; }
+
                                 switch (state)
                                 {
                                     case _sAccepting:
-                                        try { Current = _context.GetResult(_enumerable._resultSelector); }
-                                        catch
-                                        {
-                                            _state = _sAccepting;
-                                            throw;
-                                        }
-
-                                        _state = _sEmitting;
+                                        _current = next;
+                                        _state = _sEmittingMutable;
                                         _tsMoveNext.SetResult(true);
                                         break;
 
+                                    case _sEmittingMutable:
+                                        _current = next;
+                                        _state = _sEmittingMutable;
+                                        break;
+
                                     case _sEmitting:
+                                        _context.Next = next;
                                         _context.HasNext = true;
                                         _state = _sEmitting;
                                         break;
