@@ -53,8 +53,9 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
 <# } #>
                 Func<#= genArgs #> resultSelector)
             {
-                _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
-                _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
+<# foreach(var x in names) { #>
+                _<#= x.Source #> = <#= x.Source #> ?? throw new ArgumentNullException(nameof(<#= x.Source #>));
+<# } #>
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 

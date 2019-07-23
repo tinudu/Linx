@@ -356,6 +356,7 @@
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
                 _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
+                _source3 = source3 ?? throw new ArgumentNullException(nameof(source3));
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
@@ -685,6 +686,8 @@
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
                 _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
+                _source3 = source3 ?? throw new ArgumentNullException(nameof(source3));
+                _source4 = source4 ?? throw new ArgumentNullException(nameof(source4));
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
@@ -1019,6 +1022,9 @@
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
                 _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
+                _source3 = source3 ?? throw new ArgumentNullException(nameof(source3));
+                _source4 = source4 ?? throw new ArgumentNullException(nameof(source4));
+                _source5 = source5 ?? throw new ArgumentNullException(nameof(source5));
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
@@ -1358,6 +1364,10 @@
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
                 _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
+                _source3 = source3 ?? throw new ArgumentNullException(nameof(source3));
+                _source4 = source4 ?? throw new ArgumentNullException(nameof(source4));
+                _source5 = source5 ?? throw new ArgumentNullException(nameof(source5));
+                _source6 = source6 ?? throw new ArgumentNullException(nameof(source6));
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
@@ -1702,6 +1712,11 @@
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
                 _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
+                _source3 = source3 ?? throw new ArgumentNullException(nameof(source3));
+                _source4 = source4 ?? throw new ArgumentNullException(nameof(source4));
+                _source5 = source5 ?? throw new ArgumentNullException(nameof(source5));
+                _source6 = source6 ?? throw new ArgumentNullException(nameof(source6));
+                _source7 = source7 ?? throw new ArgumentNullException(nameof(source7));
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
@@ -2051,6 +2066,12 @@
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
                 _source2 = source2 ?? throw new ArgumentNullException(nameof(source2));
+                _source3 = source3 ?? throw new ArgumentNullException(nameof(source3));
+                _source4 = source4 ?? throw new ArgumentNullException(nameof(source4));
+                _source5 = source5 ?? throw new ArgumentNullException(nameof(source5));
+                _source6 = source6 ?? throw new ArgumentNullException(nameof(source6));
+                _source7 = source7 ?? throw new ArgumentNullException(nameof(source7));
+                _source8 = source8 ?? throw new ArgumentNullException(nameof(source8));
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
