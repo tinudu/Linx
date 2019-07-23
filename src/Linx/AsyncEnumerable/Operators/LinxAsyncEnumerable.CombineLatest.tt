@@ -16,7 +16,7 @@ namespace Linx.AsyncEnumerable
     {
 <#
 const int min = 2;
-const int max = 2;
+const int max = 8;
 foreach(var n in Enumerable.Range(min, max - min + 1))
 {
     var indexes = Enumerable.Range(1, n);
