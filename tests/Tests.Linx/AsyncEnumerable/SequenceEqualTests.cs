@@ -72,9 +72,8 @@
             {
                 var cts = new CancellationTokenSource();
                 var t = i1.SequenceEqual(i1, cts.Token);
+                CancelAfter(TimeSpan.FromHours(1), cts);
                 vt.Start();
-                await vt.Delay(TimeSpan.FromHours(1), default);
-                cts.Cancel();
                 await Assert.ThrowsAsync<OperationCanceledException>(() => t);
             }
 
@@ -82,12 +81,16 @@
             {
                 var cts = new CancellationTokenSource();
                 var t = i1.SequenceEqual(i2, cts.Token);
-                var tCancel = vt.Delay(TimeSpan.FromSeconds(7), default);
+                CancelAfter(TimeSpan.FromSeconds(7), cts);
                 vt.Start();
-                await tCancel;
-                cts.Cancel();
                 await Assert.ThrowsAsync<OperationCanceledException>(() => t);
             }
+        }
+
+        private static async void CancelAfter(TimeSpan due, CancellationTokenSource cts)
+        {
+            await Time.Current.Delay(due).ConfigureAwait(false);
+            cts.Cancel();
         }
     }
 }

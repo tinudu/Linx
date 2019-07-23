@@ -14,9 +14,9 @@
         /// Merges differently typed sequences into one.
         /// </summary>
         public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, TResult>(this
-            IAsyncEnumerable<T1> source1, 
-            IAsyncEnumerable<T2> source2, 
-            Func<T1, T2, TResult> resultSelector) 
+            IAsyncEnumerable<T1> source1,
+            IAsyncEnumerable<T2> source2,
+            Func<T1, T2, TResult> resultSelector)
             => new CombineLatestEnumerable<T1, T2, TResult>(source1, source2, resultSelector);
 
         private sealed class CombineLatestEnumerable<T1, T2, TResult> : IAsyncEnumerable<TResult>
@@ -26,8 +26,8 @@
             private readonly Func<T1, T2, TResult> _resultSelector;
 
             public CombineLatestEnumerable(
-                IAsyncEnumerable<T1> source1, 
-                IAsyncEnumerable<T2> source2, 
+                IAsyncEnumerable<T1> source1,
+                IAsyncEnumerable<T2> source2,
                 Func<T1, T2, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -335,10 +335,10 @@
         /// Merges differently typed sequences into one.
         /// </summary>
         public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, T3, TResult>(this
-            IAsyncEnumerable<T1> source1, 
-            IAsyncEnumerable<T2> source2, 
-            IAsyncEnumerable<T3> source3, 
-            Func<T1, T2, T3, TResult> resultSelector) 
+            IAsyncEnumerable<T1> source1,
+            IAsyncEnumerable<T2> source2,
+            IAsyncEnumerable<T3> source3,
+            Func<T1, T2, T3, TResult> resultSelector)
             => new CombineLatestEnumerable<T1, T2, T3, TResult>(source1, source2, source3, resultSelector);
 
         private sealed class CombineLatestEnumerable<T1, T2, T3, TResult> : IAsyncEnumerable<TResult>
@@ -349,9 +349,9 @@
             private readonly Func<T1, T2, T3, TResult> _resultSelector;
 
             public CombineLatestEnumerable(
-                IAsyncEnumerable<T1> source1, 
-                IAsyncEnumerable<T2> source2, 
-                IAsyncEnumerable<T3> source3, 
+                IAsyncEnumerable<T1> source1,
+                IAsyncEnumerable<T2> source2,
+                IAsyncEnumerable<T3> source3,
                 Func<T1, T2, T3, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -662,11 +662,11 @@
         /// Merges differently typed sequences into one.
         /// </summary>
         public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, T3, T4, TResult>(this
-            IAsyncEnumerable<T1> source1, 
-            IAsyncEnumerable<T2> source2, 
-            IAsyncEnumerable<T3> source3, 
-            IAsyncEnumerable<T4> source4, 
-            Func<T1, T2, T3, T4, TResult> resultSelector) 
+            IAsyncEnumerable<T1> source1,
+            IAsyncEnumerable<T2> source2,
+            IAsyncEnumerable<T3> source3,
+            IAsyncEnumerable<T4> source4,
+            Func<T1, T2, T3, T4, TResult> resultSelector)
             => new CombineLatestEnumerable<T1, T2, T3, T4, TResult>(source1, source2, source3, source4, resultSelector);
 
         private sealed class CombineLatestEnumerable<T1, T2, T3, T4, TResult> : IAsyncEnumerable<TResult>
@@ -678,10 +678,10 @@
             private readonly Func<T1, T2, T3, T4, TResult> _resultSelector;
 
             public CombineLatestEnumerable(
-                IAsyncEnumerable<T1> source1, 
-                IAsyncEnumerable<T2> source2, 
-                IAsyncEnumerable<T3> source3, 
-                IAsyncEnumerable<T4> source4, 
+                IAsyncEnumerable<T1> source1,
+                IAsyncEnumerable<T2> source2,
+                IAsyncEnumerable<T3> source3,
+                IAsyncEnumerable<T4> source4,
                 Func<T1, T2, T3, T4, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -995,12 +995,12 @@
         /// Merges differently typed sequences into one.
         /// </summary>
         public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, T3, T4, T5, TResult>(this
-            IAsyncEnumerable<T1> source1, 
-            IAsyncEnumerable<T2> source2, 
-            IAsyncEnumerable<T3> source3, 
-            IAsyncEnumerable<T4> source4, 
-            IAsyncEnumerable<T5> source5, 
-            Func<T1, T2, T3, T4, T5, TResult> resultSelector) 
+            IAsyncEnumerable<T1> source1,
+            IAsyncEnumerable<T2> source2,
+            IAsyncEnumerable<T3> source3,
+            IAsyncEnumerable<T4> source4,
+            IAsyncEnumerable<T5> source5,
+            Func<T1, T2, T3, T4, T5, TResult> resultSelector)
             => new CombineLatestEnumerable<T1, T2, T3, T4, T5, TResult>(source1, source2, source3, source4, source5, resultSelector);
 
         private sealed class CombineLatestEnumerable<T1, T2, T3, T4, T5, TResult> : IAsyncEnumerable<TResult>
@@ -1013,11 +1013,11 @@
             private readonly Func<T1, T2, T3, T4, T5, TResult> _resultSelector;
 
             public CombineLatestEnumerable(
-                IAsyncEnumerable<T1> source1, 
-                IAsyncEnumerable<T2> source2, 
-                IAsyncEnumerable<T3> source3, 
-                IAsyncEnumerable<T4> source4, 
-                IAsyncEnumerable<T5> source5, 
+                IAsyncEnumerable<T1> source1,
+                IAsyncEnumerable<T2> source2,
+                IAsyncEnumerable<T3> source3,
+                IAsyncEnumerable<T4> source4,
+                IAsyncEnumerable<T5> source5,
                 Func<T1, T2, T3, T4, T5, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -1334,13 +1334,13 @@
         /// Merges differently typed sequences into one.
         /// </summary>
         public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, TResult>(this
-            IAsyncEnumerable<T1> source1, 
-            IAsyncEnumerable<T2> source2, 
-            IAsyncEnumerable<T3> source3, 
-            IAsyncEnumerable<T4> source4, 
-            IAsyncEnumerable<T5> source5, 
-            IAsyncEnumerable<T6> source6, 
-            Func<T1, T2, T3, T4, T5, T6, TResult> resultSelector) 
+            IAsyncEnumerable<T1> source1,
+            IAsyncEnumerable<T2> source2,
+            IAsyncEnumerable<T3> source3,
+            IAsyncEnumerable<T4> source4,
+            IAsyncEnumerable<T5> source5,
+            IAsyncEnumerable<T6> source6,
+            Func<T1, T2, T3, T4, T5, T6, TResult> resultSelector)
             => new CombineLatestEnumerable<T1, T2, T3, T4, T5, T6, TResult>(source1, source2, source3, source4, source5, source6, resultSelector);
 
         private sealed class CombineLatestEnumerable<T1, T2, T3, T4, T5, T6, TResult> : IAsyncEnumerable<TResult>
@@ -1354,12 +1354,12 @@
             private readonly Func<T1, T2, T3, T4, T5, T6, TResult> _resultSelector;
 
             public CombineLatestEnumerable(
-                IAsyncEnumerable<T1> source1, 
-                IAsyncEnumerable<T2> source2, 
-                IAsyncEnumerable<T3> source3, 
-                IAsyncEnumerable<T4> source4, 
-                IAsyncEnumerable<T5> source5, 
-                IAsyncEnumerable<T6> source6, 
+                IAsyncEnumerable<T1> source1,
+                IAsyncEnumerable<T2> source2,
+                IAsyncEnumerable<T3> source3,
+                IAsyncEnumerable<T4> source4,
+                IAsyncEnumerable<T5> source5,
+                IAsyncEnumerable<T6> source6,
                 Func<T1, T2, T3, T4, T5, T6, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -1679,14 +1679,14 @@
         /// Merges differently typed sequences into one.
         /// </summary>
         public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, TResult>(this
-            IAsyncEnumerable<T1> source1, 
-            IAsyncEnumerable<T2> source2, 
-            IAsyncEnumerable<T3> source3, 
-            IAsyncEnumerable<T4> source4, 
-            IAsyncEnumerable<T5> source5, 
-            IAsyncEnumerable<T6> source6, 
-            IAsyncEnumerable<T7> source7, 
-            Func<T1, T2, T3, T4, T5, T6, T7, TResult> resultSelector) 
+            IAsyncEnumerable<T1> source1,
+            IAsyncEnumerable<T2> source2,
+            IAsyncEnumerable<T3> source3,
+            IAsyncEnumerable<T4> source4,
+            IAsyncEnumerable<T5> source5,
+            IAsyncEnumerable<T6> source6,
+            IAsyncEnumerable<T7> source7,
+            Func<T1, T2, T3, T4, T5, T6, T7, TResult> resultSelector)
             => new CombineLatestEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult>(source1, source2, source3, source4, source5, source6, source7, resultSelector);
 
         private sealed class CombineLatestEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> : IAsyncEnumerable<TResult>
@@ -1701,13 +1701,13 @@
             private readonly Func<T1, T2, T3, T4, T5, T6, T7, TResult> _resultSelector;
 
             public CombineLatestEnumerable(
-                IAsyncEnumerable<T1> source1, 
-                IAsyncEnumerable<T2> source2, 
-                IAsyncEnumerable<T3> source3, 
-                IAsyncEnumerable<T4> source4, 
-                IAsyncEnumerable<T5> source5, 
-                IAsyncEnumerable<T6> source6, 
-                IAsyncEnumerable<T7> source7, 
+                IAsyncEnumerable<T1> source1,
+                IAsyncEnumerable<T2> source2,
+                IAsyncEnumerable<T3> source3,
+                IAsyncEnumerable<T4> source4,
+                IAsyncEnumerable<T5> source5,
+                IAsyncEnumerable<T6> source6,
+                IAsyncEnumerable<T7> source7,
                 Func<T1, T2, T3, T4, T5, T6, T7, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));
@@ -2030,15 +2030,15 @@
         /// Merges differently typed sequences into one.
         /// </summary>
         public static IAsyncEnumerable<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(this
-            IAsyncEnumerable<T1> source1, 
-            IAsyncEnumerable<T2> source2, 
-            IAsyncEnumerable<T3> source3, 
-            IAsyncEnumerable<T4> source4, 
-            IAsyncEnumerable<T5> source5, 
-            IAsyncEnumerable<T6> source6, 
-            IAsyncEnumerable<T7> source7, 
-            IAsyncEnumerable<T8> source8, 
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> resultSelector) 
+            IAsyncEnumerable<T1> source1,
+            IAsyncEnumerable<T2> source2,
+            IAsyncEnumerable<T3> source3,
+            IAsyncEnumerable<T4> source4,
+            IAsyncEnumerable<T5> source5,
+            IAsyncEnumerable<T6> source6,
+            IAsyncEnumerable<T7> source7,
+            IAsyncEnumerable<T8> source8,
+            Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> resultSelector)
             => new CombineLatestEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(source1, source2, source3, source4, source5, source6, source7, source8, resultSelector);
 
         private sealed class CombineLatestEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : IAsyncEnumerable<TResult>
@@ -2054,14 +2054,14 @@
             private readonly Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> _resultSelector;
 
             public CombineLatestEnumerable(
-                IAsyncEnumerable<T1> source1, 
-                IAsyncEnumerable<T2> source2, 
-                IAsyncEnumerable<T3> source3, 
-                IAsyncEnumerable<T4> source4, 
-                IAsyncEnumerable<T5> source5, 
-                IAsyncEnumerable<T6> source6, 
-                IAsyncEnumerable<T7> source7, 
-                IAsyncEnumerable<T8> source8, 
+                IAsyncEnumerable<T1> source1,
+                IAsyncEnumerable<T2> source2,
+                IAsyncEnumerable<T3> source3,
+                IAsyncEnumerable<T4> source4,
+                IAsyncEnumerable<T5> source5,
+                IAsyncEnumerable<T6> source6,
+                IAsyncEnumerable<T7> source7,
+                IAsyncEnumerable<T8> source8,
                 Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> resultSelector)
             {
                 _source1 = source1 ?? throw new ArgumentNullException(nameof(source1));

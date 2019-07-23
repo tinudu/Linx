@@ -55,19 +55,6 @@
         }
 
         [Fact]
-        public async Task TestLatest()
-        {
-            using (var vt = new VirtualTime())
-            {
-                var tResult = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(1)).Take(15).Select(i => (int)i).Latest()
-                    .ConsumeSlow(TimeSpan.FromSeconds(3.7)).ToList(default);
-                vt.Start();
-                var result = await tResult;
-                Assert.True(new[] { 0, 3, 7, 11, 14 }.SequenceEqual(result));
-            }
-        }
-
-        [Fact]
         public async Task TestGroupBy()
         {
             var result = await new[] { 1, 2, 1, 3, 2, 3, 1, 1, 2 }.Async().GroupBy(i => i).Parallel(async (g, t) => new { g.Key, Count = await g.Count(t) }).ToDictionary(kc => kc.Key, kc => kc.Count, default);

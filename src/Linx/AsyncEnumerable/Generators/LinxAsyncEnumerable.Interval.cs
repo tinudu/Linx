@@ -9,11 +9,11 @@
         /// <summary>
         /// Returns a sequence that produces a value after each period.
         /// </summary>
-        /// <param name="period"><see cref="TimeSpan"/> between elements.</param>
+        /// <param name="interval"><see cref="TimeSpan"/> between elements.</param>
         /// <param name="delayFirst">Optional. Whether to delay before emitting the first item.</param>
-        public static IAsyncEnumerable<long> Interval(TimeSpan period, bool delayFirst = false)
+        public static IAsyncEnumerable<long> Interval(TimeSpan interval, bool delayFirst = false)
         {
-            if (period <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(period));
+            if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
 
             return Generate<long>(async (yield, token) =>
             {
@@ -24,13 +24,13 @@
                     var due = time.Now;
                     if (delayFirst)
                     {
-                        due += period;
+                        due += interval;
                         await timer.Delay(due).ConfigureAwait(false);
                     }
                     do
                     {
                         if (!await yield(value++).ConfigureAwait(false)) return;
-                        due += period;
+                        due += interval;
                         await timer.Delay(due).ConfigureAwait(false);
                     } while (true);
                 }
