@@ -31,27 +31,12 @@
     public sealed class OperatorTests
     {
         [Fact]
-        public async Task TestCombineLatest()
-        {
-            using (var vt = new VirtualTime())
-            {
-                var seq1 = Marble.Parse("----A----B----C----D----E----F----G----H|").Dematerialize();
-                var seq2 = Marble.Parse("------a------b------c------d------e------f------g|").Dematerialize();
-                var testee = seq1.CombineLatest(seq2, (x, y) => $"{x}{y}");
-                var expected = new[] { "Aa", "Ba", "Bb", "Cb", "Db", "Dc", "Ec", "Ed", "Fd", "Gd", "Ge", "He", "Hf", "Hg" };
-                var tResult = testee.ToList(default);
-                vt.Start();
-                var result = await tResult;
-                Assert.True(expected.SequenceEqual(result));
-            }
-        }
-
-
-        [Fact]
         public async Task TestConcat()
         {
             var r = LinxAsyncEnumerable.Range(0, 3);
+            // ReSharper disable PossibleMultipleEnumeration
             var result = await r.Concat(r).Concat(r).ToList(default);
+            // ReSharper restore PossibleMultipleEnumeration
             Assert.True(new[] { 0, 1, 2, 0, 1, 2, 0, 1, 2 }.SequenceEqual(result));
         }
 
@@ -154,24 +139,14 @@
         [Fact]
         public async Task TestTimeout()
         {
-            var source = Marble.Parse("-a--b---c----d|").Dematerialize();
-            var testee = source
-                .Timeout(TimeSpan.FromSeconds(3.5))
-                .Materialize();
-            var expected = new[]
-            {
-                Notification.Next('a'),
-                Notification.Next('b'),
-                Notification.Next('c'),
-                Notification.Error<char>(new TimeoutException())
-            };
+            var testee = Marble.Parse("a-b--c----d|").Dematerialize().Timeout(TimeSpan.FromSeconds(3));
+            var expect = Marble.Parse("a-b--c---#", new MarbleParserSettings { Error = new TimeoutException() });
 
             using (var vt = new VirtualTime())
             {
-                var tResult = testee.ToList(default);
+                var eq = testee.AssertEqual(expect);
                 vt.Start();
-                var result = await tResult.ConfigureAwait(false);
-                Assert.True(expected.SequenceEqual(result));
+                await eq;
             }
         }
 

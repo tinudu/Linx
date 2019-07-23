@@ -30,8 +30,7 @@
                 var _state = _sInitial;
                 DateTimeOffset _due = default;
                 Exception _error = null;
-                var _isWatchdogIdle = false;
-                var _tsWatchdogIdle = new ManualResetValueTaskSource();
+                ManualResetValueTaskSource _tsWatchdogIdle = null;
                 // ReSharper restore InconsistentNaming
 
                 if (token.CanBeCanceled) _ctr = token.Register(() => Cancel(new OperationCanceledException(token)));
@@ -51,11 +50,10 @@
                             switch (state)
                             {
                                 case _sInitial:
-                                    var idle = _isWatchdogIdle;
-                                    _isWatchdogIdle = false;
+                                    var idle = Linx.Clear(ref _tsWatchdogIdle);
                                     _due = _time.Now + dueTime;
                                     _state = _sAccepting;
-                                    if (idle) _tsWatchdogIdle.SetResult();
+                                    idle?.SetResult();
                                     break;
 
                                 case _sCanceling:
@@ -106,8 +104,7 @@
 
                     // ReSharper disable AccessToModifiedClosure
                     var state = Atomic.Lock(ref _state);
-                    var idle = _isWatchdogIdle;
-                    _isWatchdogIdle = false;
+                    var idle = Linx.Clear(ref _tsWatchdogIdle);
                     switch (state)
                     {
                         case _sInitial:
@@ -128,7 +125,7 @@
                             throw new Exception(state + "???");
                     }
 
-                    if (idle) _tsWatchdogIdle.SetResult();
+                    idle?.SetResult();
                     // ReSharper restore AccessToModifiedClosure
                 }
 
@@ -137,6 +134,8 @@
                     // ReSharper disable AccessToModifiedClosure
                     try
                     {
+                        var idle = new ManualResetValueTaskSource();
+
                         using (var timer = _time.GetTimer(_cts.Token))
                             while (true)
                             {
@@ -144,8 +143,8 @@
                                 switch (state)
                                 {
                                     case _sInitial: // no time to wait for
-                                        _tsWatchdogIdle.Reset();
-                                        _isWatchdogIdle = true;
+                                        idle.Reset();
+                                        _tsWatchdogIdle = idle;
                                         _state = _sInitial;
                                         await _tsWatchdogIdle.Task.ConfigureAwait(false);
                                         break;

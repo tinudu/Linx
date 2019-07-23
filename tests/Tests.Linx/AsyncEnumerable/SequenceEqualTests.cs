@@ -1,6 +1,7 @@
 ﻿namespace Tests.Linx.AsyncEnumerable
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
@@ -18,6 +19,7 @@
         }
 
         [Fact]
+        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Completed()
         {
             var i1 = Marble.Parse("-a- b-  c-|").Dematerialize();
@@ -39,6 +41,7 @@
         }
 
         [Fact]
+        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Error()
         {
             var i1 = Marble.Parse("-a- b-  c-|").Dematerialize();
@@ -59,6 +62,7 @@
         }
 
         [Fact]
+        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Cancel()
         {
             var i1 = Marble.Parse("-a- b-  c").Dematerialize();

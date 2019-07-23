@@ -55,7 +55,7 @@
             {
                 case _sStopped:
                     _state = _sStarted;
-                    Task.Run(() => Advance()); // continuations with .ConfigureAwait(false) will be inlined
+                    Task.Run(() => Advance());
                     break;
 
                 case _sStarted:

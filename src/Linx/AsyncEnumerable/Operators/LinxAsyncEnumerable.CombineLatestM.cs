@@ -33,324 +33,179 @@
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
                 private const int _sInitial = 0;
-                private const int _sCurrentMutable = 1;
-                private const int _sNext = 2;
-                private const int _sPulling = 3;
-                private const int _sLast = 4;
-                private const int _sCanceling = 5;
-                private const int _sCancelingPulling = 6;
-                private const int _sFinal = 7;
+                private const int _sAccepting = 1;
+                private const int _sEmitting = 2;
+                private const int _sCompleted = 3;
 
-                private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-                private readonly Func<T1, T2, TResult> _resultSelector;
-                private readonly ManualResetValueTaskSource<bool> _tpPull = new ManualResetValueTaskSource<bool>();
-                private CancellationTokenRegistration _ctr;
+                private sealed class Context
+                {
+                    private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+
+                    public int Unassigned = 2;
+                    public int Active = 2;
+                    public bool HasNext;
+                    public T1 Value1;
+                    public T2 Value2;
+
+                    public CancellationToken Token => _cts.Token;
+
+                    public void TryCancel()
+                    {
+                        try { _cts.Cancel(); }
+                        catch { /**/ }
+                    }
+
+                    public TResult GetResult(Func<T1, T2, TResult> resultSelector) => resultSelector(Value1, Value2);
+                }
+
+                private readonly CombineLatestEnumerable<T1, T2, TResult> _enumerable;
+                private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+                private CancellationTokenRegistration _ctr;
+                private Context _context = new Context();
                 private int _state;
-                private TResult _current;
-                private Tuple _next;
                 private Exception _error;
+
+                public TResult Current { get; private set; }
 
                 public Enumerator(CombineLatestEnumerable<T1, T2, TResult> enumerable, CancellationToken token)
                 {
-                    _resultSelector = enumerable._resultSelector;
-                    if (token.CanBeCanceled) _ctr = token.Register(() => Cancel(new OperationCanceledException(token)));
-                    var valuesCountDown = 2;
-                    var completedCountDown = 2;
-                    Produce(enumerable._source1, (e, v) => e._next.Value1 = v);
-                    Produce(enumerable._source2, (e, v) => e._next.Value2 = v);
-
-                    void OnCompleted(Exception error, bool any)
-                    {
-                        Debug.Assert(any || valuesCountDown > 0);
-
-                        if (_cts.IsCancellationRequested && error is OperationCanceledException oce && oce.CancellationToken == _cts.Token) error = null;
-
-                        var state = Atomic.Lock(ref _state);
-
-                        if (--completedCountDown > 0) // cancel?
-                        {
-                            switch (state)
-                            {
-                                case _sInitial:
-                                case _sPulling:
-                                    _state = state;
-                                    if (error != null || !any) Cancel(error);
-                                    break;
-
-                                case _sCanceling:
-                                case _sCancelingPulling:
-                                    _state = state;
-                                    if (error != null) _error = error;
-                                    break;
-
-                                default:
-                                    _state = state;
-                                    throw new Exception(state + "???");
-                            }
-
-                            return;
-                        }
-
-                        switch (state)
-                        {
-                            case _sInitial:
-                            case _sCurrentMutable:
-                                _next = default;
-                                _error = error;
-                                _state = _sFinal;
-                                try { _cts.Cancel(); } catch {/**/}
-                                _ctr.Dispose();
-                                _atmbDisposed.SetResult();
-                                break;
-
-                            case _sNext:
-                                if (error != null)
-                                {
-                                    _next = default;
-                                    _error = error;
-                                    _state = _sFinal;
-                                    _ctr.Dispose();
-                                    _atmbDisposed.SetResult();
-                                }
-                                else
-                                    _state = _sLast;
-                                try { _cts.Cancel(); } catch {/**/}
-                                break;
-
-                            case _sPulling:
-                                _next = default;
-                                _error = error;
-                                _state = _sFinal;
-                                try { _cts.Cancel(); } catch {/**/}
-                                _ctr.Dispose();
-                                _atmbDisposed.SetResult();
-                                if (_error == null) _tpPull.SetResult(false);
-                                else _tpPull.SetException(_error);
-                                break;
-
-                            case _sCanceling:
-                                if (error != null) _error = error;
-                                _state = _sFinal;
-                                break;
-
-                            case _sCancelingPulling:
-                                if (error != null) _error = error;
-                                _current = default;
-                                _state = _sFinal;
-                                if (_error == null) _tpPull.SetResult(false);
-                                else _tpPull.SetException(_error);
-                                break;
-
-                            default: // Last, Final???
-                                _state = state;
-                                throw new Exception(_state + "???");
-                        }
-                    }
-
-                    async void Produce<T>(IAsyncEnumerable<T> source, Action<Enumerator, T> setNext)
-                    {
-                        Exception error;
-                        var any = false;
-                        try
-                        {
-                            _cts.Token.ThrowIfCancellationRequested();
-
-                            var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                            try
-                            {
-                                while (await ae.MoveNextAsync())
-                                {
-                                    var state = Atomic.Lock(ref _state);
-
-                                    if (!any)
-                                    {
-                                        valuesCountDown--;
-                                        any = true;
-                                    }
-
-                                    switch (state)
-                                    {
-                                        case _sInitial:
-                                            try { setNext(this, ae.Current); }
-                                            catch { _state = _sInitial; throw; }
-                                            _state = valuesCountDown == 0 ? _sNext : _sInitial;
-                                            break;
-
-                                        case _sNext:
-                                            try { setNext(this, ae.Current); }
-                                            finally { _state = _sNext; }
-                                            break;
-
-                                        case _sCurrentMutable:
-                                            try
-                                            {
-                                                setNext(this, ae.Current);
-                                                _current = GetResult();
-                                            }
-                                            finally { _state = _sCurrentMutable; }
-                                            break;
-
-                                        case _sPulling:
-                                            try
-                                            {
-                                                setNext(this, ae.Current);
-                                                _current = GetResult();
-                                            }
-                                            catch { _state = _sPulling; throw; }
-                                            if (valuesCountDown == 0)
-                                            {
-                                                _state = _sCurrentMutable;
-                                                _tpPull.SetResult(true);
-                                            }
-                                            else
-                                                _state = _sPulling;
-                                            break;
-
-                                        case _sCanceling:
-                                        case _sCancelingPulling:
-                                            _state = state;
-                                            throw new OperationCanceledException(_cts.Token);
-
-                                        default: // Last, Final???
-                                            _state = state;
-                                            throw new Exception(state + "???");
-                                    }
-                                }
-                            }
-                            finally { await ae.DisposeAsync(); }
-
-                            error = null;
-                        }
-                        catch (Exception ex) { error = ex; }
-
-                        OnCompleted(error, any);
-                    }
+                    _enumerable = enumerable;
+                    if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
                 }
-
-                public TResult Current
-                {
-                    get
-                    {
-                        Atomic.TestAndSet(ref _state, _sCurrentMutable, _sInitial);
-                        return _current;
-                    }
-                }
-
-                private TResult GetResult() => _resultSelector(_next.Value1, _next.Value2);
 
                 public ValueTask<bool> MoveNextAsync()
                 {
-                    _tpPull.Reset();
+                    _tsMoveNext.Reset();
 
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sInitial:
-                        case _sCurrentMutable:
-                            _state = _sPulling;
+                            _state = _sAccepting;
+                            Subscribe(_enumerable._source1, (c, v) => c.Value1 = v);
+                            Subscribe(_enumerable._source2, (c, v) => c.Value2 = v);
                             break;
 
-                        case _sNext:
-                            try
+                        case _sEmitting:
+                            if (_error != null)
                             {
-                                _current = GetResult();
-                                _state = _sCurrentMutable;
-                                _tpPull.SetResult(true);
+                                Current = default;
+                                _state = _sEmitting;
+                                _tsMoveNext.SetException(_error);
                             }
-                            catch (Exception error)
+                            else if (_context.HasNext)
                             {
-                                _error = error;
-                                _next = default;
-                                _state = _sCancelingPulling;
-                                _ctr.Dispose();
-                                try { _cts.Cancel(); } catch { /**/ }
+                                try
+                                {
+                                    Current = _context.GetResult(_enumerable._resultSelector);
+                                    _context.HasNext = false;
+                                    _state = _sEmitting;
+                                }
+                                catch (Exception ex)
+                                {
+                                    _error = ex;
+                                    Current = default;
+                                    _state = _sEmitting;
+                                    _ctr.Dispose();
+                                    _context.TryCancel();
+                                }
+                                _tsMoveNext.SetExceptionOrResult(_error, true);
                             }
+                            else
+                                _state = _sAccepting;
                             break;
 
-                        case _sLast:
-                            try
+                        case _sCompleted:
+                            if (_context != null)
                             {
-                                _current = GetResult();
-                                _next = default;
-                                _state = _sFinal;
+                                Debug.Assert(_error == null && _context.HasNext);
+                                try
+                                {
+                                    Current = _context.GetResult(_enumerable._resultSelector);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Current = default;
+                                    _error = ex;
+                                }
+
+                                _context = null;
+                                _state = _sCompleted;
                                 _ctr.Dispose();
                                 _atmbDisposed.SetResult();
-                                _tpPull.SetResult(true);
+                                _tsMoveNext.SetExceptionOrResult(_error, true);
                             }
-                            catch (Exception error)
+                            else
                             {
-                                _current = default;
-                                _next = default;
-                                _error = error;
-                                _state = _sFinal;
-                                _ctr.Dispose();
-                                if (_error == null) _tpPull.SetResult(false);
-                                else _tpPull.SetException(_error);
+                                Current = default;
+                                _state = _sCompleted;
+                                _tsMoveNext.SetExceptionOrResult(_error, false);
                             }
                             break;
 
-                        case _sCanceling:
-                            _state = _sCancelingPulling;
-                            break;
-
-                        case _sFinal:
-                            _current = default;
-                            _state = _sFinal;
-                            if (_error == null) _tpPull.SetResult(false);
-                            else _tpPull.SetException(_error);
-                            break;
-
-                        default: // Pulling, CancelingPulling???
+                        default: // Accepting???
                             _state = state;
                             throw new Exception(state + "???");
                     }
 
-                    return _tpPull.Task;
+                    return _tsMoveNext.Task;
                 }
 
                 public ValueTask DisposeAsync()
                 {
-                    if (_state <= _sLast) Cancel(new ObjectDisposedException(nameof(IAsyncEnumerator<TResult>)));
+                    OnError(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
-                private void Cancel(Exception error)
+                private void OnError(Exception error)
                 {
                     Debug.Assert(error != null);
 
                     var state = Atomic.Lock(ref _state);
+                    if (_error != null)
+                    {
+                        _state = state;
+                        return;
+                    }
+
                     switch (state)
                     {
                         case _sInitial:
-                        case _sCurrentMutable:
-                        case _sNext:
                             _error = error;
-                            _next = default;
-                            _state = _sCanceling;
+                            _context = null;
+                            _state = _sCompleted;
                             _ctr.Dispose();
-                            try { _cts.Cancel(); } catch { /**/ }
+                            _atmbDisposed.SetResult();
                             break;
 
-                        case _sPulling:
+                        case _sAccepting:
                             _error = error;
-                            _next = default;
-                            _state = _sCancelingPulling;
+                            Current = default;
+                            _state = _sEmitting;
                             _ctr.Dispose();
-                            try { _cts.Cancel(); } catch { /**/ }
+                            _context.TryCancel();
+                            _tsMoveNext.SetException(error);
                             break;
 
-                        case _sLast:
+                        case _sEmitting:
                             _error = error;
-                            _next = default;
-                            _state = _sCanceling;
+                            _state = _sEmitting;
                             _ctr.Dispose();
+                            _context.TryCancel();
                             break;
 
-                        case _sCanceling:
-                        case _sCancelingPulling:
-                        case _sFinal:
-                            _state = state;
+                        case _sCompleted:
+                            var ctx = Linx.Clear(ref _context);
+                            if (ctx == null)
+                                _state = _sCompleted;
+                            else
+                            {
+                                _error = error;
+                                _state = _sCompleted;
+                                _ctr.Dispose();
+                                _atmbDisposed.SetResult();
+                            }
                             break;
 
                         default:
@@ -359,10 +214,112 @@
                     }
                 }
 
-                private struct Tuple
+                private void OnCompleted()
                 {
-                    public T1 Value1;
-                    public T2 Value2;
+                    var state = Atomic.Lock(ref _state);
+                    if (--_context.Active > 0)
+                    {
+                        _state = state;
+                        return;
+                    }
+
+                    var ctx = _context;
+                    switch (state)
+                    {
+                        case _sAccepting:
+                            Debug.Assert(_error == null && !ctx.HasNext);
+                            _context = null;
+                            Current = default;
+                            _state = _sCompleted;
+                            _ctr.Dispose();
+                            ctx.TryCancel();
+                            _atmbDisposed.SetResult();
+                            _tsMoveNext.SetResult(false);
+                            break;
+
+                        case _sEmitting:
+                            if (_error != null)
+                            {
+                                _context = null;
+                                _state = _sCompleted;
+                                _atmbDisposed.SetResult();
+                            }
+                            else if (ctx.HasNext)
+                            {
+                                _state = _sCompleted;
+                                ctx.TryCancel();
+                            }
+                            else
+                            {
+                                _context = null;
+                                _state = _sCompleted;
+                                _ctr.Dispose();
+                                ctx.TryCancel();
+                                _atmbDisposed.SetResult();
+                            }
+                            break;
+
+                        default: // initial, completed???
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
+                }
+
+                private async void Subscribe<T>(IAsyncEnumerable<T> source, Action<Context, T> setValue)
+                {
+                    try
+                    {
+                        _context.Token.ThrowIfCancellationRequested();
+                        var ae = source.WithCancellation(_context.Token).ConfigureAwait(false).GetAsyncEnumerator();
+                        try
+                        {
+                            var any = false;
+                            while (await ae.MoveNextAsync())
+                            {
+                                _context.Token.ThrowIfCancellationRequested();
+                                var current = ae.Current;
+
+                                var state = Atomic.Lock(ref _state);
+
+                                if (!Linx.Exchange(ref any, true))
+                                    _context.Unassigned--;
+
+                                setValue(_context, current);
+                                if (_context.Unassigned > 0)
+                                {
+                                    _state = state;
+                                    continue;
+                                }
+
+                                switch (state)
+                                {
+                                    case _sAccepting:
+                                        try { Current = _context.GetResult(_enumerable._resultSelector); }
+                                        catch
+                                        {
+                                            _state = _sAccepting;
+                                            throw;
+                                        }
+
+                                        _state = _sEmitting;
+                                        _tsMoveNext.SetResult(true);
+                                        break;
+
+                                    case _sEmitting:
+                                        _context.HasNext = true;
+                                        _state = _sEmitting;
+                                        break;
+
+                                    default: // initial, completed???
+                                        _state = state;
+                                        throw new Exception(state + "???");
+                                }
+                            }
+                        }
+                        finally { await ae.DisposeAsync(); }
+                    }
+                    catch (Exception ex) { OnError(ex); }
+                    finally { OnCompleted(); }
                 }
             }
         }

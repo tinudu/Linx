@@ -8,34 +8,50 @@
     using System.Threading.Tasks;
 
     /// <summary>
-    /// Static Linx methods.
+    /// Common convenience methods.
     /// </summary>
     public static class Linx
     {
         private static readonly Task _never = new AsyncTaskMethodBuilder().Task;
 
         /// <summary>
-        /// Clears the specified storage location.
+        /// Sets the value at specified storage location to the default value.
         /// </summary>
-        /// <returns>The value at that location before clearing.</returns>
+        /// <returns>The previous value at the location.</returns>
         [DebuggerNonUserCode]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Clear<T>(ref T storageLocation)
         {
-            var value = storageLocation;
+            var oldValue = storageLocation;
             storageLocation = default;
-            return value;
+            return oldValue;
+        }
+
+        /// <summary>
+        /// Exchanges the value at specified storage location with the specified value.
+        /// </summary>
+        /// <returns>The previous value at the location.</returns>
+        [DebuggerNonUserCode]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Exchange<T>(ref T storageLocation, T value)
+        {
+            var oldValue = storageLocation;
+            storageLocation = value;
+            return oldValue;
         }
 
         /// <summary>
         /// Invoke the specified action with the specified argument.
         /// </summary>
         [DebuggerNonUserCode]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Invoke<TArgument>(this TArgument argument, Action<TArgument> action) => action(argument);
 
         /// <summary>
         /// Invoke the specified function with the specified argument and return the result.
         /// </summary>
         [DebuggerNonUserCode]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static TResult Invoke<TArgument, TResult>(this TArgument argument, Func<TArgument, TResult> function) => function(argument);
 
         /// <summary>
