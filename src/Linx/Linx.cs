@@ -65,6 +65,11 @@
         public static IEqualityComparer<KeyValuePair<TKey, TValue>> KeyValueEqualityComparer<TKey, TValue>(IEqualityComparer<TKey> keyComparer, IEqualityComparer<TValue> valueComparer) => new KeyValueEqualityComparerImpl<TKey, TValue>(keyComparer, valueComparer);
 
         /// <summary>
+        /// Convert <paramref name="value"/> to a <see cref="Maybe{T}"/>.
+        /// </summary>
+        public static Maybe<T> Maybe<T>(T value) => value;
+
+        /// <summary>
         /// Gets a task that completes as <see cref="TaskStatus.Canceled"/> when the specified <paramref name="token"/> requests cancellation.
         /// </summary>
         public static Task WhenCanceled(this CancellationToken token)
@@ -79,7 +84,7 @@
         /// <summary>
         /// Wrap the specified value.
         /// </summary>
-        public static Wrapped<T> Wrap<T>(this T value) => new Wrapped<T>(value);
+        public static Wrapped<T> Wrap<T>(this T value) => value;
 
         private sealed class KeyValueEqualityComparerImpl<TKey, TValue> : IEqualityComparer<KeyValuePair<TKey, TValue>>
         {

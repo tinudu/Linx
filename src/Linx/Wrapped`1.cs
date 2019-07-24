@@ -20,7 +20,7 @@
         /// Gets a <see cref="IEqualityComparer{T}"/> that uses the specified <paramref name="comparer"/>.
         /// </summary>
         public static IEqualityComparer<Wrapped<T>> GetComparer(IEqualityComparer<T> comparer)
-            => comparer == null || comparer == EqualityComparer<T>.Default ? DefaultComparer : new EqualityComparer(comparer);
+            => comparer == null || ReferenceEquals(comparer, EqualityComparer<T>.Default) ? DefaultComparer : new EqualityComparer(comparer);
 
         /// <summary>
         /// Gets the wrapped value.
@@ -51,5 +51,15 @@
             public bool Equals(Wrapped<T> x, Wrapped<T> y) => x.Value == null ? y.Value == null : y.Value != null && _comparer.Equals(x.Value, y.Value);
             public int GetHashCode(Wrapped<T> obj) => obj.Value != null ? _comparer.GetHashCode(obj.Value) : _nullHash;
         }
+
+        /// <summary>
+        /// Implicit <see cref="Wrapped{T}"/> to <typeparamref name="T"/> conversion.
+        /// </summary>
+        public static implicit operator Wrapped<T>(T value) => new Wrapped<T>();
+
+        /// <summary>
+        /// Implicit <typeparamref name="T"/> to <see cref="Wrapped{T}"/> conversion.
+        /// </summary>
+        public static implicit operator T(Wrapped<T> wrapped) => wrapped.Value;
     }
 }
