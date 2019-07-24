@@ -323,7 +323,7 @@
 
             public void Complete(Exception exception)
             {
-                if (Atomic.TestAndSet(ref _state, _tWaiting, _tInitial) != _tWaiting) return;
+                if (Atomic.CompareExchange(ref _state, _tInitial, _tWaiting) != _tWaiting) return;
                 _ts.SetExceptionOrResult(exception);
             }
         }

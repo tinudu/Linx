@@ -68,7 +68,7 @@
                             try { _timer.Change(due, Timeout.InfiniteTimeSpan); }
                             catch (Exception ex)
                             {
-                                if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) == _sWaiting)
+                                if (Atomic.CompareExchange(ref _state, _sInitial, _sWaiting) == _sWaiting)
                                     _ts.SetException(ex);
                             }
                         }
@@ -112,7 +112,7 @@
                             try { _timer.Change(dueMillis, Timeout.Infinite); }
                             catch (Exception ex)
                             {
-                                if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) == _sWaiting)
+                                if (Atomic.CompareExchange(ref _state, _sInitial, _sWaiting) == _sWaiting)
                                     _ts.SetException(ex);
                             }
                         }
@@ -194,7 +194,7 @@
 
             private void TimerCallback(object _)
             {
-                if (Atomic.TestAndSet(ref _state, _sWaiting, _sInitial) == _sWaiting)
+                if (Atomic.CompareExchange(ref _state, _sInitial, _sWaiting) == _sWaiting)
                     _ts.SetResult();
             }
         }

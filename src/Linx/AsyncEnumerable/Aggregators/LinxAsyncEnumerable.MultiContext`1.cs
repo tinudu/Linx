@@ -64,7 +64,7 @@
             {
                 try { await Task.WhenAll(tasks).ConfigureAwait(false); }
                 catch (Exception ex) { HandleError(ex); }
-                if (Atomic.TestAndSet(ref _state, 0, 1) == 0) _eh.Cancel();
+                if (Atomic.CompareExchange(ref _state, 1, 0) == 0) _eh.Cancel();
                 _eh.ThrowIfError();
             }
 
