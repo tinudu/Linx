@@ -42,18 +42,17 @@
         /// <returns>The previous state.</returns>
         public static int Exchange(ref int state, int value)
         {
-            var oldState = Interlocked.Exchange(ref state, value);
-            if ((oldState & LockBit) == 0) return oldState;
+            var oldState = state;
+            if ((oldState & LockBit) == 0 && Interlocked.CompareExchange(ref state, value, oldState) == oldState) return oldState;
 
             var sw = new SpinWait();
             while (true)
             {
                 sw.SpinOnce();
-                oldState = Interlocked.Exchange(ref state, value);
-                if ((oldState & LockBit) == 0) return oldState;
+                oldState = state;
+                if ((oldState & LockBit) == 0 && Interlocked.CompareExchange(ref state, value, oldState) == oldState) return oldState;
             }
         }
-
 
         /// <summary>
         /// Spin wait until the lock bit is cleared, then set to <paramref name="value"/> iff the previous value is <paramref name="test"/>.
@@ -65,13 +64,13 @@
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="test"/> has the lock bit set.</exception>
         public static int CompareExchange(ref int state, int value, int test)
         {
+            if ((test & LockBit) != 0) throw new ArgumentOutOfRangeException(nameof(test), "Lock bit is set.");
+
             var oldState = Interlocked.CompareExchange(ref state, value, test);
             if ((oldState & LockBit) == 0) return oldState;
 
-            if ((test & LockBit) != 0) throw new ArgumentOutOfRangeException(nameof(test), "Lock bit is set.");
-
             var sw = new SpinWait();
-            while(true)
+            while (true)
             {
                 sw.SpinOnce();
                 oldState = Interlocked.CompareExchange(ref state, value, test);
