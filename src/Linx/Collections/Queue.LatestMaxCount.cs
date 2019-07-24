@@ -14,6 +14,7 @@
             public LatestMaxCountQueue(int maxCount)
             {
                 Debug.Assert(maxCount >= 2);
+                _maxCount = maxCount;
             }
 
             public int Count => _queue?.Count ?? 0;
