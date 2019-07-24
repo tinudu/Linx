@@ -121,6 +121,9 @@
 
         private async void Advance()
         {
+            // yield to other threads so they can schedule
+            Thread.Sleep(20);
+
             while (true)
             {
                 Timer timer;
