@@ -133,7 +133,7 @@
                     case _sStarted:
                         while (true)
                         {
-                            if (_queue.IsEmpty)
+                            if (_queue.Count == 0)
                             {
                                 timer = null;
                                 _tsIdle.Reset();

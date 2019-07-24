@@ -36,7 +36,9 @@
         }
 
         /// <inheritdoc />
-        public bool IsEmpty => _heap.Count == 0;
+        public int Count => _heap.Count;
+
+        bool IQueue<T>.IsFull => false;
 
         /// <inheritdoc />
         public void Enqueue(T item)
@@ -87,6 +89,12 @@
             DownHeap(last, 0);
             return first;
         }
+
+        /// <summary>
+        /// Not supported.
+        /// </summary>
+        /// <exception cref="NotSupportedException"/>
+        public IReadOnlyCollection<T> DequeueAll() => throw new NotSupportedException();
 
         /// <inheritdoc />
         public void Clear() => _heap.Clear();
