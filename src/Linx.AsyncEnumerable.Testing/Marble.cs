@@ -198,7 +198,7 @@
 
             public ParseContext(IEnumerable<char> diagram, Func<char, int, T> selector, MarbleParserSettings settingsOpt)
             {
-                _input = diagram.Where(ch => ch != ' ').GetLookAhead();
+                _input = diagram.Where(ch => ch != ' ').LookAhead();
                 Selector = selector;
                 FrameSize = settingsOpt?.FrameSize ?? MarbleParserSettings.DefaultFrameSize;
                 Error = settingsOpt?.Error ?? MarbleException.Singleton;
