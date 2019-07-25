@@ -3,12 +3,15 @@
     using System;
     using System.Collections.Generic;
 
-    partial class Linx
+    /// <summary>
+    /// Static <see cref="Wrapped{T}"/> methods.
+    /// </summary>
+    public static class Wrapped
     {
         /// <summary>
         /// Wrap the specified value.
         /// </summary>
-        public static Wrapped<T> Wrapped<T>(this T value) => new Wrapped<T>(value);
+        public static Wrapped<T> Create<T>(T value) => new Wrapped<T>(value);
     }
 
     /// <summary>

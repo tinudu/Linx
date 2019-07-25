@@ -2,19 +2,16 @@
 {
     using System;
 
-    partial class Linx
-    {
-        /// <summary>
-        /// Convert <paramref name="value"/> to a <see cref="Maybe{T}"/>.
-        /// </summary>
-        public static Maybe<T> Maybe<T>(this T value) => new Maybe<T>(value);
-    }
-
     /// <summary>
     /// Static <see cref="Maybe{T}"/> methods.
     /// </summary>
     public static class Maybe
     {
+        /// <summary>
+        /// Convert <paramref name="value"/> to a <see cref="Maybe{T}"/>.
+        /// </summary>
+        public static Maybe<T> Create<T>(T value) => new Maybe<T>(value);
+
         /// <summary>
         /// Try to parse the specified <see cref="string"/> using the specified <see cref="TryParseDelegate{T}"/> to a <see cref="Maybe{T}"/>.
         /// </summary>

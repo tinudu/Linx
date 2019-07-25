@@ -24,11 +24,11 @@
         }
 
         [Fact]
-        public void TestFactory()
+        public void TestCreate()
         {
-            TestMembers(42.Maybe(), true, 42);
-            TestMembers(default(string).Maybe(), true, null);
-            TestMembers(default(int?).Maybe(), true, null);
+            TestMembers(Maybe.Create(42), true, 42);
+            TestMembers(Maybe.Create<string>(null), true, null);
+            TestMembers(Maybe.Create<int?>(default), true, null);
         }
 
         [Fact]

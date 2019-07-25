@@ -1,7 +1,18 @@
-﻿namespace Linx.AsyncEnumerable
+﻿namespace Linx
 {
     using System;
     using System.Collections.Generic;
+
+    /// <summary>
+    /// Static <see cref="TimeInterval{T}"/> methods.
+    /// </summary>
+    public static class TimeInterval
+    {
+        /// <summary>
+        /// <see cref="TimeInterval{T}"/> factory method.
+        /// </summary>
+        public static TimeInterval<T> Create<T>(T value, TimeSpan interval) => new TimeInterval<T>(interval, value);
+    }
 
     /// <summary>
     /// Represents a time interval value.

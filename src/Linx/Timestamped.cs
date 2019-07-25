@@ -1,7 +1,18 @@
-﻿namespace Linx.AsyncEnumerable
+﻿namespace Linx
 {
     using System;
     using System.Collections.Generic;
+
+    /// <summary>
+    /// Static <see cref="Timestamped{T}"/> methods.
+    /// </summary>
+    public static class Timestamped
+    {
+        /// <summary>
+        /// Timestamp the specified value with the specified timestamp.
+        /// </summary>
+        public static Timestamped<T> Create<T>(DateTimeOffset timestamp, T value ) => new Timestamped<T>(timestamp, value);
+    }
 
     /// <summary>
     /// Represents a timestamped value.
