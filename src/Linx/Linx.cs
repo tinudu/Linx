@@ -10,7 +10,7 @@
     /// <summary>
     /// Common convenience methods.
     /// </summary>
-    public static class Linx
+    public static partial class Linx
     {
         private static readonly Task _never = new AsyncTaskMethodBuilder().Task;
 
@@ -63,11 +63,6 @@
         /// Create an equality comparer by specifying individual comparers for <typeparamref name="TKey"/> and <typeparamref name="TValue"/>.
         /// </summary>
         public static IEqualityComparer<KeyValuePair<TKey, TValue>> KeyValueEqualityComparer<TKey, TValue>(IEqualityComparer<TKey> keyComparer, IEqualityComparer<TValue> valueComparer) => new KeyValueEqualityComparerImpl<TKey, TValue>(keyComparer, valueComparer);
-
-        /// <summary>
-        /// Convert <paramref name="value"/> to a <see cref="Maybe{T}"/>.
-        /// </summary>
-        public static Maybe<T> Maybe<T>(T value) => value;
 
         /// <summary>
         /// Gets a task that completes as <see cref="TaskStatus.Canceled"/> when the specified <paramref name="token"/> requests cancellation.
