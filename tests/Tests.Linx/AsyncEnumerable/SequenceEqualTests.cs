@@ -72,8 +72,10 @@
             {
                 var cts = new CancellationTokenSource();
                 var t = i1.SequenceEqual(i1, cts.Token);
-                CancelAfter(TimeSpan.FromHours(1), cts);
+                // ReSharper disable once MethodSupportsCancellation
+                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromHours(1));
                 vt.Start();
+                await tCancel;
                 await Assert.ThrowsAsync<OperationCanceledException>(() => t);
             }
 
@@ -81,16 +83,12 @@
             {
                 var cts = new CancellationTokenSource();
                 var t = i1.SequenceEqual(i2, cts.Token);
-                CancelAfter(TimeSpan.FromSeconds(7), cts);
+                // ReSharper disable once MethodSupportsCancellation
+                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(7));
                 vt.Start();
+                await tCancel;
                 await Assert.ThrowsAsync<OperationCanceledException>(() => t);
             }
-        }
-
-        private static async void CancelAfter(TimeSpan due, CancellationTokenSource cts)
-        {
-            await Time.Current.Delay(due).ConfigureAwait(false);
-            cts.Cancel();
         }
     }
 }
