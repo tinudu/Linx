@@ -22,7 +22,7 @@
         public static RegX EmptyString { get; }
 
         private static readonly IEqualityComparer<HashSet<RegX>> _setComparer = HashSet<RegX>.CreateSetComparer();
-        private static readonly IEqualityComparer<KeyValuePair<RegX, HashSet<RegX>>> _concatKeyComparer = Linx.KeyValueEqualityComparer<RegX, HashSet<RegX>>(null, _setComparer);
+        private static readonly IEqualityComparer<KeyValuePair<RegX, HashSet<RegX>>> _concatKeyComparer = KeyValuePair.GetComparer<RegX, HashSet<RegX>>(null, _setComparer);
 
         static RegX()
         {
@@ -296,7 +296,7 @@
                 var transitions = new List<Transition<RegX>>(r.Transitions.Count);
                 minimized = new { Final = new RegX(true, transitions), NonFinal = new RegX(false, transitions) };
                 byTransition.Add(r.Transitions, minimized);
-                distinctTransitions.Add(Linx.KeyValue(r.Transitions, minimized));
+                distinctTransitions.Add(KeyValuePair.Create(r.Transitions, minimized));
                 using (var e = r.Transitions.GetEnumerator())
                 {
                     if (!e.MoveNext() || e.Current.Range != char.MinValue) throw new Exception("Does not start with char.MinValue.");

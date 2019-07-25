@@ -3,6 +3,14 @@
     using System;
     using System.Collections.Generic;
 
+    partial class Linx
+    {
+        /// <summary>
+        /// Wrap the specified value.
+        /// </summary>
+        public static Wrapped<T> Wrapped<T>(this T value) => new Wrapped<T>(value);
+    }
+
     /// <summary>
     /// A value of type <typeparamref name="T"/>, wrapped into a struct.
     /// </summary>
