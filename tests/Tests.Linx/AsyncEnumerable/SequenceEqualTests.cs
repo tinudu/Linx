@@ -65,8 +65,8 @@
         [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Cancel()
         {
-            var i1 = Marble.Parse("-a- b-  c").Dematerialize();
-            var i2 = Marble.Parse(" a--b---c---#").Dematerialize();
+            var i1 = Marble.Parse(" -a-bc").Dematerialize();
+            var i2 = Marble.Parse("a- -b ---c---#").Dematerialize();
 
             using (var vt = new VirtualTime())
             {

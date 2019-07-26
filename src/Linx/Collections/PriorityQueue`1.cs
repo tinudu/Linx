@@ -6,7 +6,7 @@
     /// <summary>
     /// Priority queue implemented as a heap (ascending order).
     /// </summary>
-    public sealed class PriorityQueue<T> : IQueue<T>
+    public sealed class PriorityQueue<T>
     {
         private readonly List<T> _heap;
         private readonly IComparer<T> _comparer;
@@ -35,12 +35,14 @@
                 DownHeap(_heap[i], i);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Returns the number of items in the queue.
+        /// </summary>
         public int Count => _heap.Count;
 
-        bool IQueue<T>.IsFull => false;
-
-        /// <inheritdoc />
+        /// <summary>
+        /// Adds an item to the queue.
+        /// </summary>
         public void Enqueue(T item)
         {
             if (_heap.Count == 0)
@@ -72,10 +74,16 @@
             _heap[index] = item;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Removes and returns the item at the beginning of the queue.
+        /// </summary>
+        /// <exception cref="OperationCanceledException">The queue is empty.</exception>
         public T Peek() => _heap.Count > 0 ? _heap[0] : throw new InvalidOperationException(Strings.QueueIsEmpty);
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Returns the item at the beginning of the queue without removing it.
+        /// </summary>
+        /// <exception cref="OperationCanceledException">The queue is empty.</exception>
         public T Dequeue()
         {
             if (_heap.Count == 0) throw new InvalidOperationException(Strings.QueueIsEmpty);
@@ -96,7 +104,9 @@
         /// <exception cref="NotSupportedException"/>
         public IReadOnlyCollection<T> DequeueAll() => throw new NotSupportedException();
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Removes all items from the queue.
+        /// </summary>
         public void Clear() => _heap.Clear();
 
         private void DownHeap(T item, int index)
