@@ -1,7 +1,7 @@
 ﻿namespace Tests.Linx.AsyncEnumerable
 {
     using System;
-    using global::Linx.AsyncEnumerable;
+    using global::Linx.AsyncEnumerable.Notifications;
     using Xunit;
 
     public sealed class NotificationTests

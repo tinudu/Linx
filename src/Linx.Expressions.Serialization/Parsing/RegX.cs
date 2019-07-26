@@ -241,7 +241,7 @@
                 public TransitionPair(IReadOnlyList<Transition<RegX>> x, IReadOnlyList<Transition<RegX>> y) { _x = x; _y = y; }
 
                 public bool Equals(TransitionPair other) => Equals(_x, other._x) && Equals(_y, other._y) || Equals(_x, other._y) && Equals(_y, other._x);
-                public override bool Equals(object obj) => obj is TransitionPair && Equals((TransitionPair)obj);
+                public override bool Equals(object obj) => obj is TransitionPair pair && Equals(pair);
                 public override int GetHashCode() => _x.GetHashCode() ^ _y.GetHashCode();
             }
 

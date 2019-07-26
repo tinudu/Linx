@@ -3,7 +3,7 @@
     using System;
     using System.Linq;
     using global::Linx;
-    using global::Linx.AsyncEnumerable;
+    using global::Linx.AsyncEnumerable.Notifications;
     using global::Linx.AsyncEnumerable.Testing;
     using Xunit;
 
