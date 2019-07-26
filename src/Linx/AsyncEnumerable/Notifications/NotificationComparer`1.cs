@@ -21,7 +21,7 @@
         /// Gets a <see cref="NotificationComparer{T}"/> using the specified <paramref name="valueComparer"/>.
         /// </summary>
         /// <param name="valueComparer">Optional, defaults to <see cref="EqualityComparer{T}.Default"/>.</param>
-        public static NotificationComparer<T> GetComparer(IEqualityComparer<T> valueComparer) => valueComparer == null || valueComparer == EqualityComparer<T>.Default ? Default : new NotificationComparer<T>(valueComparer);
+        public static NotificationComparer<T> GetComparer(IEqualityComparer<T> valueComparer) => valueComparer == null || ReferenceEquals(valueComparer, EqualityComparer<T>.Default) ? Default : new NotificationComparer<T>(valueComparer);
 
         private readonly IEqualityComparer<T> _valueComparer;
 
@@ -53,7 +53,7 @@
                 case NotificationKind.Next:
                     return n.Value == null ? 0 : _valueComparer.GetHashCode(n.Value);
                 case NotificationKind.Error:
-                    return new HashCode() + n.Error.GetType().GetHashCode() + n.Error.Message.GetHashCode();
+                    return new Hasher().Hash(n.Error.GetType()).Hash(n.Error.Message);
                 default:
                     throw new Exception(n.Kind + "???");
             }

@@ -45,7 +45,7 @@
         public override bool Equals(object obj) => obj is TimeInterval<T> other && Equals(other);
 
         /// <inheritdoc />
-        public override int GetHashCode() => new HashCode() + Interval.GetHashCode() + EqualityComparer<T>.Default.GetHashCode(Value);
+        public override int GetHashCode() => new Hasher().Hash(Interval).Hash(Value);
 
         /// <inheritdoc />
         public override string ToString() => $"{Value}@{Interval}";

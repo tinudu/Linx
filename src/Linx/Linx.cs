@@ -9,7 +9,7 @@
     /// <summary>
     /// Common convenience methods.
     /// </summary>
-    public static partial class Linx
+    public static class Linx
     {
         private static readonly Task _never = new AsyncTaskMethodBuilder().Task;
 

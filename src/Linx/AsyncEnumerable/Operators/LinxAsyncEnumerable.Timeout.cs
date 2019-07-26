@@ -146,7 +146,7 @@
                                         idle.Reset();
                                         _tsWatchdogIdle = idle;
                                         _state = _sInitial;
-                                        await _tsWatchdogIdle.Task.ConfigureAwait(false);
+                                        await idle.Task.ConfigureAwait(false);
                                         break;
 
                                     case _sAccepting:

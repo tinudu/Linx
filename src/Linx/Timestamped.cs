@@ -11,7 +11,7 @@
         /// <summary>
         /// Timestamp the specified value with the specified timestamp.
         /// </summary>
-        public static Timestamped<T> Create<T>(DateTimeOffset timestamp, T value ) => new Timestamped<T>(timestamp, value);
+        public static Timestamped<T> Create<T>(DateTimeOffset timestamp, T value) => new Timestamped<T>(timestamp, value);
     }
 
     /// <summary>
@@ -45,7 +45,7 @@
         public override bool Equals(object obj) => obj is Timestamped<T> other && Equals(other);
 
         /// <inheritdoc />
-        public override int GetHashCode() => new HashCode() + Timestamp.GetHashCode() + EqualityComparer<T>.Default.GetHashCode(Value);
+        public override int GetHashCode() => new Hasher().Hash(Timestamp).Hash(Value);
 
         /// <inheritdoc />
         public override string ToString() => $"{Value}@{Timestamp}";

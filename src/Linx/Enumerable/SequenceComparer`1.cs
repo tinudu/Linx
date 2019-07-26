@@ -4,7 +4,7 @@
     using System.Linq;
 
     /// <summary>
-    /// Comparer for enumerables.
+    /// <see cref="IEqualityComparer{T}"/> for enumerables.
     /// </summary>
     public sealed class SequenceComparer<T> : IEqualityComparer<IEnumerable<T>>
     {
@@ -16,7 +16,7 @@
         /// <summary>
         /// Gets an instance.
         /// </summary>
-        public static SequenceComparer<T> GetComparer(IEqualityComparer<T> elementComparer) => elementComparer == null || elementComparer == EqualityComparer<T>.Default ? Default : new SequenceComparer<T>(elementComparer);
+        public static SequenceComparer<T> GetComparer(IEqualityComparer<T> elementComparer) => elementComparer == null || ReferenceEquals(elementComparer, EqualityComparer<T>.Default) ? Default : new SequenceComparer<T>(elementComparer);
 
         /// <summary>
         /// Gets the element comparer.
@@ -29,7 +29,6 @@
         public bool Equals(IEnumerable<T> x, IEnumerable<T> y) => x == null ? y == null : y != null && x.SequenceEqual(y, ElementComparer);
 
         /// <inheritdoc />
-        // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-        public int GetHashCode(IEnumerable<T> obj) => obj == null ? 0 : obj.Aggregate(new HashCode(), (a, c) => a + ElementComparer.GetHashCode());
+        public int GetHashCode(IEnumerable<T> obj) => new Hasher().HashMany(obj, ElementComparer);
     }
 }
