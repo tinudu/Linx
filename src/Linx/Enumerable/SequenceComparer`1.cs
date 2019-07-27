@@ -29,6 +29,6 @@
         public bool Equals(IEnumerable<T> x, IEnumerable<T> y) => x == null ? y == null : y != null && x.SequenceEqual(y, ElementComparer);
 
         /// <inheritdoc />
-        public int GetHashCode(IEnumerable<T> obj) => new Hasher().HashMany(obj, ElementComparer);
+        public int GetHashCode(IEnumerable<T> obj) => new HashCode().HashMany(obj, ElementComparer);
     }
 }
