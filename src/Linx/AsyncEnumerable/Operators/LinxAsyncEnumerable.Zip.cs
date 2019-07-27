@@ -107,7 +107,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
@@ -377,7 +377,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
@@ -653,7 +653,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
@@ -935,7 +935,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
@@ -1223,7 +1223,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
@@ -1517,7 +1517,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
@@ -1817,7 +1817,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 

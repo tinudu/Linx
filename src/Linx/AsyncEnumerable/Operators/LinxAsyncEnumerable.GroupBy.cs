@@ -114,7 +114,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 
@@ -365,7 +365,7 @@
 
                     ValueTask IAsyncDisposable.DisposeAsync()
                     {
-                        Cancel(ErrorHandler.EnumeratorDisposedException);
+                        Cancel(AsyncEnumeratorDisposedException.Instance);
                         return new ValueTask(Task.CompletedTask);
                     }
 

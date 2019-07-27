@@ -11,11 +11,6 @@
     internal struct ErrorHandler
     {
         /// <summary>
-        /// <see cref="ObjectDisposedException"/> singleton that says a <see cref="System.Collections.Generic.IAsyncEnumerator{T}"/> was disposed.
-        /// </summary>
-        public static ObjectDisposedException EnumeratorDisposedException { get; } = new ObjectDisposedException("IAsyncEnumerator");
-
-        /// <summary>
         /// Use this rather than the default constructor.
         /// </summary>
         public static ErrorHandler Init() => new ErrorHandler(default);
