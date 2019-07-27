@@ -1,29 +1,18 @@
-﻿namespace Linx.AsyncEnumerable
+﻿namespace Linx.Observable
 {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
+    using AsyncEnumerable;
     using TaskSources;
 
-    partial class LinxAsyncEnumerable
+    /// <summary>
+    /// Static Linx.Observable methods.
+    /// </summary>
+    public static class LinxObservable
     {
-        /// <summary>
-        /// Convert a <see cref="IEnumerable{T}"/> to a <see cref="IAsyncEnumerable{T}"/>.
-        /// </summary>
-        public static IAsyncEnumerable<T> Async<T>(this IEnumerable<T> source)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-
-            return Generate<T>(async (yield, token) =>
-            {
-                foreach (var element in source)
-                    if (!await yield(element).ConfigureAwait(false))
-                        return;
-            });
-        }
-
         /// <summary>
         /// Convert a <see cref="IObservable{T}"/> to a <see cref="IAsyncEnumerable{T}"/>.
         /// </summary>
@@ -31,8 +20,7 @@
         /// Subscribed to on the thread pool on first <see cref="IAsyncEnumerator{T}.MoveNextAsync"/>.
         /// Blocks on <see cref="IObserver{T}.OnNext"/> and <see cref="IObserver{T}.OnCompleted"/> if the enumerator is not pulled.
         ///
-        /// <see cref="IAsyncDisposable.DisposeAsync"/> and cancellation occur immediately with best effort disposal
-        /// of the subscription.
+        /// <see cref="IAsyncDisposable.DisposeAsync"/> and cancellation occur immediately with best effort subscription disposal.
         /// </remarks>
         public static IAsyncEnumerable<T> Async<T>(this IObservable<T> source)
         {

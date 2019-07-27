@@ -1,16 +1,16 @@
-﻿namespace Tests.Linx.AsyncEnumerable
+﻿namespace Tests.Linx.Observable
 {
     using System;
     using System.Threading;
-    using global::Linx.AsyncEnumerable;
     using global::Linx.AsyncEnumerable.Testing;
+    using global::Linx.Observable;
     using global::Linx.Timing;
     using Xunit;
 
-    public sealed class AsyncTests
+    public sealed class ObservableTests
     {
         [Fact]
-        public async void TestObservableSuccess()
+        public async void TestAsyncSuccess()
         {
             using (var vt = new VirtualTime())
             {
@@ -47,7 +47,6 @@
                 var disposable = new CancellationDisposable();
                 Generate(observer, disposable.Token);
                 return disposable;
-
             }
 
             private async void Generate(IObserver<int> observer, CancellationToken token)

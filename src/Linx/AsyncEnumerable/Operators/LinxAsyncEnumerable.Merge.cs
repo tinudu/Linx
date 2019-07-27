@@ -6,6 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
+    using Enumerable;
     using TaskSources;
 
     partial class LinxAsyncEnumerable
