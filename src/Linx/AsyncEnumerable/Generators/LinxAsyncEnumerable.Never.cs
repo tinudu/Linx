@@ -67,7 +67,7 @@
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(Task.CompletedTask);
                 }
 
