@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MultiAggregate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.MultiAggregate.tt</DependentUpon>
+    </None>
     <None Include="AsyncEnumerable\Operators\LinxAsyncEnumerable.CombineLatest.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -34,10 +39,10 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxAsyncEnumerable.MinMax.tt</DependentUpon>
     </Compile>
-    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Multi.cs">
+    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MultiAggregate.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>LinxAsyncEnumerable.Multi.tt</DependentUpon>
+      <DependentUpon>LinxAsyncEnumerable.MultiAggregate.tt</DependentUpon>
     </Compile>
     <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Sum.cs">
       <DesignTime>True</DesignTime>
@@ -96,9 +101,9 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxAsyncEnumerable.MinMax.cs</LastGenOutput>
     </None>
-    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Multi.tt">
+    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MultiAggregate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>LinxAsyncEnumerable.Multi.cs</LastGenOutput>
+      <LastGenOutput>LinxAsyncEnumerable.MultiAggregate.cs</LastGenOutput>
     </None>
     <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Sum.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

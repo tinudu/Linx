@@ -5,6 +5,8 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
+    using global::Linx.AsyncEnumerable.Testing;
+    using global::Linx.Timing;
     using Xunit;
 
     public class AggregatorTests
@@ -49,12 +51,14 @@
         }
 
         [Fact]
-        public void TestMultiAggregate()
+        public async Task TestMultiAggregate()
         {
-            var result = Enumerable.Range(1, 3).MultiAggregate((s, t) => s.Sum(t),
+            var result = await LinxAsyncEnumerable.Range(1, 3).MultiAggregate(
+                (s, t) => s.Sum(t),
                 (s, t) => s.First(t),
                 (s, t) => s.ElementAt(1, t),
-                (sum, first, second) => new { sum, first, second });
+                (sum, first, second) => new { sum, first, second },
+                default);
             Assert.Equal(6, result.sum);
             Assert.Equal(1, result.first);
             Assert.Equal(2, result.second);
@@ -74,22 +78,22 @@
         [Fact]
         public async Task TestMultiAggregateCancel()
         {
-            SynchronizationContext.SetSynchronizationContext(null);
-            var cts = new CancellationTokenSource();
-            var src = LinxAsyncEnumerable.Generate<int>(async (yield, token) =>
+            using (var vt = new VirtualTime())
             {
-                if (!await yield(1).ConfigureAwait(false)) return;
-                if (!await yield(2).ConfigureAwait(false)) return;
-                cts.Cancel();
-                await yield(3).ConfigureAwait(false);
-            });
-            var tResult = src.MultiAggregate(
-                (s, t) => s.ToList(t),
-                (s, t) => s.Sum(t),
-                (all, sum) => new { all, sum },
-                cts.Token);
-            var oce = await Assert.ThrowsAsync<OperationCanceledException>(() => tResult);
-            Assert.Equal(cts.Token, oce.CancellationToken);
+                var src = Marble.Parse("01--2|", null, 0, 1, 2).Dematerialize();
+                var cts = new CancellationTokenSource();
+                var tResult = src.MultiAggregate(
+                    (s, t) => s.ToList(t),
+                    (s, t) => s.Sum(t),
+                    (all, sum) => new { all, sum },
+                    cts.Token);
+                // ReSharper disable once MethodSupportsCancellation
+                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(1));
+                vt.Start();
+                await tCancel;
+                var oce = await Assert.ThrowsAsync<OperationCanceledException>(() => tResult);
+                Assert.Equal(cts.Token, oce.CancellationToken);
+            }
         }
 
         [Fact]
