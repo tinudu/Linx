@@ -1,4 +1,4 @@
-﻿namespace Linx.AsyncEnumerable.Notifications
+﻿namespace Linx.Notifications
 {
     using System;
 

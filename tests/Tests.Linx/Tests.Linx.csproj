@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Linx.AsyncEnumerable.Testing\Linx.AsyncEnumerable.Testing.csproj" />
+    <ProjectReference Include="..\..\src\Linx.Testing\Linx.Testing.csproj" />
     <ProjectReference Include="..\..\src\Linx\Linx.csproj" />
   </ItemGroup>
 

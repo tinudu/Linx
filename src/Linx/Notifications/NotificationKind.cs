@@ -1,4 +1,4 @@
-﻿namespace Linx.AsyncEnumerable.Notifications
+﻿namespace Linx.Notifications
 {
     /// <summary>
     /// Kind of a <see cref="Notification{T}"/>.

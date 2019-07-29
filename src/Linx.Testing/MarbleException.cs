@@ -1,4 +1,4 @@
-﻿namespace Linx.AsyncEnumerable.Testing
+﻿namespace Linx.Testing
 {
     using System;
 

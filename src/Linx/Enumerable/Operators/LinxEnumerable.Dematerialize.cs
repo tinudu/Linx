@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
     using AsyncEnumerable;
-    using AsyncEnumerable.Notifications;
+    using Notifications;
     using Observable;
     using Timing;
 

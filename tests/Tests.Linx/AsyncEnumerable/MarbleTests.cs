@@ -3,8 +3,8 @@
     using System;
     using System.Linq;
     using global::Linx;
-    using global::Linx.AsyncEnumerable.Notifications;
-    using global::Linx.AsyncEnumerable.Testing;
+    using global::Linx.Notifications;
+    using global::Linx.Testing;
     using Xunit;
 
     /// <summary>

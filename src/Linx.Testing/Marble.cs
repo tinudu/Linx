@@ -1,9 +1,10 @@
-﻿namespace Linx.AsyncEnumerable.Testing
+﻿namespace Linx.Testing
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using AsyncEnumerable;
     using Enumerable;
     using Notifications;
     using Timing;

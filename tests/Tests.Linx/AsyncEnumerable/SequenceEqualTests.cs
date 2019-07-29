@@ -5,8 +5,8 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
-    using global::Linx.AsyncEnumerable.Testing;
     using global::Linx.Enumerable;
+    using global::Linx.Testing;
     using global::Linx.Timing;
     using Xunit;
 
