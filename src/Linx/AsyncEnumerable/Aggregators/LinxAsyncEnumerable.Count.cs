@@ -28,7 +28,10 @@
         /// <summary>
         /// Returns a number that represents how many elements in the specified sequence satisfy a condition.
         /// </summary>
-        public static async Task<int> Count<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-            => await source.Where(predicate).Count(token).ConfigureAwait(false);
+        public static Task<int> Count<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        {
+            try { return source.Where(predicate).Count(token); }
+            catch (Exception ex) { return Task.FromException<int>(ex); }
+        }
     }
 }

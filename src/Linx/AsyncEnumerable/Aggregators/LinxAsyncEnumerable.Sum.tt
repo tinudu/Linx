@@ -43,17 +43,29 @@ namespace Linx.AsyncEnumerable
         /// <summary>
         /// Computes the sum of a sequence of non-null values.
         /// </summary>
-        public static async Task<<#= t.Type #>> Sum(this IAsyncEnumerable<<#= t.Type #>?> source, CancellationToken token) => await source.Values().Sum(token);
+        public static Task<<#= t.Type #>> Sum(this IAsyncEnumerable<<#= t.Type #>?> source, CancellationToken token)
+        {
+            try { return source.Values().Sum(token); }
+            catch (Exception ex) { return Task.FromException<<#= t.Type #>>(ex); }
+        }
 
         /// <summary>
         /// Computes the sum of the sequence of values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static async Task<<#= t.Type #>> Sum<T>(this IAsyncEnumerable<T> source, Func<T, <#= t.Type #>> selector, CancellationToken token) => await source.Select(selector).Sum(token);
+        public static Task<<#= t.Type #>> Sum<T>(this IAsyncEnumerable<T> source, Func<T, <#= t.Type #>> selector, CancellationToken token)
+        {
+            try { return source.Select(selector).Sum(token); }
+            catch (Exception ex) { return Task.FromException<<#= t.Type #>>(ex); }
+        }
 
         /// <summary>
         /// Computes the sum of the sequence of non-null values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static async Task<<#= t.Type #>> Sum<T>(this IAsyncEnumerable<T> source, Func<T, <#= t.Type #>?> selector, CancellationToken token) => await source.Select(selector).Values().Sum(token);
+        public static Task<<#= t.Type #>> Sum<T>(this IAsyncEnumerable<T> source, Func<T, <#= t.Type #>?> selector, CancellationToken token)
+        {
+            try { return source.Select(selector).Values().Sum(token); }
+            catch (Exception ex) { return Task.FromException<<#= t.Type #>>(ex); }
+        }
 
 <# } #>
     }

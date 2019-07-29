@@ -29,7 +29,10 @@
         /// <summary>
         /// Returns the last element of a sequence that satisfies a condition, if any.
         /// </summary>
-        public static async Task<Maybe<T>> LastOrDefault<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-            => await source.Where(predicate).LastMaybe(token).ConfigureAwait(false);
+        public static Task<Maybe<T>> LastMaybe<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        {
+            try { return source.Where(predicate).LastMaybe(token); }
+            catch (Exception ex) { return Task.FromException<Maybe<T>>(ex); }
+        }
     }
 }

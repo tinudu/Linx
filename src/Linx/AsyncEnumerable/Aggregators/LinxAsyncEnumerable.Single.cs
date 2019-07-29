@@ -32,7 +32,10 @@
         /// Returns the single element of a sequence that satisfies a condition, if any.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no or multiple elements.</exception>
-        public static async Task<T> Single<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-            => await source.Where(predicate).Single(token).ConfigureAwait(false);
+        public static Task<T> Single<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        {
+            try { return source.Where(predicate).Single(token); }
+            catch (Exception ex) { return Task.FromException<T>(ex); }
+        }
     }
 }

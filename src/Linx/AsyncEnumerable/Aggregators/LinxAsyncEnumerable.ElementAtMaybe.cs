@@ -8,9 +8,9 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Returns the element at a specified index in a sequence.
+        /// Returns the element at a specified index in a sequence, if any.
         /// </summary>
-        public static async Task<T> ElementAtOrDefault<T>(this IAsyncEnumerable<T> source, int index, CancellationToken token)
+        public static async Task<Maybe<T>> ElementAtMaybe<T>(this IAsyncEnumerable<T> source, int index, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (index < 0) return default;
@@ -21,8 +21,10 @@
             {
                 var i = 0;
                 while (await ae.MoveNextAsync())
-                    if (i++ == index)
-                        return ae.Current;
+                {
+                    if (i == index) return ae.Current;
+                    i++;
+                }
 
                 return default;
             }

@@ -32,7 +32,10 @@
         /// Returns the last element of a sequence that satisfies a specified condition.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no elements.</exception>
-        public static async Task<T> Last<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-            => await source.Where(predicate).Last(token).ConfigureAwait(false);
+        public static Task<T> Last<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        {
+            try { return source.Where(predicate).Last(token); }
+            catch (Exception ex) { return Task.FromException<T>(ex); }
+        }
     }
 }

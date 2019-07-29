@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    
+
 
     partial class LinxAsyncEnumerable
     {
@@ -26,7 +26,10 @@
         /// Returns the first element in a sequence that satisfies a specified condition.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no elements.</exception>
-        public static async Task<T> First<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-            => await source.Where(predicate).First(token).ConfigureAwait(false);
+        public static Task<T> First<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        {
+            try { return source.Where(predicate).First(token); }
+            catch (Exception ex) { return Task.FromException<T>(ex); }
+        }
     }
 }
