@@ -53,14 +53,14 @@ namespace Linx.AsyncEnumerable
             => await source.Select(selector).<#= mm.Op #>(token, comparer).ConfigureAwait(false);
 
         /// <summary>
-        /// Returns the <#= mm.Op1 #>imum non-null element of a sequence, or a default value if the sequence contains no non-null elements.
+        /// Returns the <#= mm.Op1 #>imum non-null element of a sequence, if any.
         /// </summary>
-        public static async Task<T> <#= mm.Op #>OrDefault<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer)
+        public static async Task<Maybe<T>> <#= mm.Op #>Maybe<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
             token.ThrowIfCancellationRequested();
-            
+
             var ae = source.Where(x => x != null).WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
@@ -79,42 +79,10 @@ namespace Linx.AsyncEnumerable
         }
 
         /// <summary>
-        /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum element, or a default value if the sequence contains no non-null elements.
+        /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum element, if any.
         /// </summary>
-        public static async Task<TResult> <#= mm.Op #>OrDefault<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
-            => await source.Select(selector).<#= mm.Op #>OrDefault(token, comparer).ConfigureAwait(false);
-
-        /// <summary>
-        /// Returns the <#= mm.Op1 #>imum element of a sequence, or null if the sequence contains no elements.
-        /// </summary>
-        public static async Task<T?> <#= mm.Op #>OrNull<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer) where T : struct
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (comparer == null) comparer = Comparer<T>.Default;
-            token.ThrowIfCancellationRequested();
-
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                if (!await ae.MoveNextAsync()) return default;
-                var <#= mm.Op1 #> = ae.Current;
-
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    if (comparer.Compare(current, <#= mm.Op1 #>) <#= mm.Cmp #> 0) <#= mm.Op1 #> = current;
-                }
-
-                return <#= mm.Op1 #>;
-            }
-            finally { await ae.DisposeAsync(); }
-        }
-
-        /// <summary>
-        /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum element, or null if the sequence contains no elements.
-        /// </summary>
-        public static async Task<TResult?> <#= mm.Op #>OrNull<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null) where TResult : struct
-            => await source.Select(selector).<#= mm.Op #>OrNull(token, comparer).ConfigureAwait(false);
+        public static async Task<Maybe<TResult>> <#= mm.Op #>Maybe<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
+            => await source.Select(selector).<#= mm.Op #>Maybe(token, comparer).ConfigureAwait(false);
 
         /// <summary>
         /// Returns the elements in <paramref name="source"/> with the <#= mm.Op1 #>imum key value.
@@ -125,13 +93,13 @@ namespace Linx.AsyncEnumerable
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             if (comparer == null) comparer = Comparer<TKey>.Default;
             token.ThrowIfCancellationRequested();
-            
+
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
                 TKey <#= mm.Op1 #> = default;
                 var result = new List<TSource>();
-                while(await ae.MoveNextAsync())
+                while (await ae.MoveNextAsync())
                 {
                     var current = ae.Current;
                     var key = keySelector(current);

@@ -2,11 +2,12 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     partial class LinxEnumerable
     {
         /// <summary>
-        /// Returns a <see cref="Maybe{T}"/> containing the single element, if any.
+        /// Returns the single element of a sequence, if any.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains multiple elements.</exception>
         public static Maybe<T> SingleMaybe<T>(this IEnumerable<T> source)
@@ -21,5 +22,12 @@
                 throw new InvalidOperationException(Strings.SequenceContainsMultipleElements);
             }
         }
+
+        /// <summary>
+        /// Returns the single element of a sequence that satisfies a condition, if any.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Sequence contains multiple elements.</exception>
+        public static Maybe<T> SingleMaybe<T>(this IEnumerable<T> source, Func<T, bool> predicate)
+            => source.Where(predicate).SingleMaybe();
     }
 }

@@ -2,18 +2,25 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     partial class LinxEnumerable
     {
         /// <summary>
-        /// Returns a <see cref="Maybe{T}"/> containing the first element, if any.
+        /// Returns the first element of a sequence, if any.
         /// </summary>
-        public static Maybe<T> FirstMaybe<T>(IEnumerable<T> source)
+        public static Maybe<T> FirstMaybe<T>(this IEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
             using (var e = source.GetEnumerator())
-                return e.MoveNext() ? new Maybe<T>(e.Current) : default;
+                return e.MoveNext() ? e.Current : default;
         }
+
+        /// <summary>
+        /// Returns the first element of the sequence that satisfies a condition, if any.
+        /// </summary>
+        public static Maybe<T> FirstMaybe<T>(this IEnumerable<T> source, Func<T, bool> predicate)
+            => source.Where(predicate).FirstMaybe();
     }
 }

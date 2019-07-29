@@ -1,0 +1,51 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ output extension=".cs" #>
+<#
+    var minMax=new[]
+    {
+        new { Op = "Min", Op1 = "min", Cmp = "<" },
+        new { Op = "Max", Op1 = "max", Cmp = ">" }
+    };
+#>
+namespace Linx.Enumerable
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+
+    partial class LinxEnumerable
+    {
+<# foreach(var mm in minMax) { #>
+        /// <summary>
+        /// Returns the <#= mm.Op1 #>imum non-null element of a sequence, if any.
+        /// </summary>
+        public static Maybe<T> <#= mm.Op #>Maybe<T>(this IEnumerable<T> source, IComparer<T> comparer = null)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (comparer == null) comparer = Comparer<T>.Default;
+
+            using (var e = source.Where(x => x != null).GetEnumerator())
+            {
+                if (!e.MoveNext()) return default;
+                var <#= mm.Op1 #> = e.Current;
+
+                while (e.MoveNext())
+                {
+                    var current = e.Current;
+                    if (comparer.Compare(current, <#= mm.Op1 #>) <#= mm.Cmp #> 0) <#= mm.Op1 #> = current;
+                }
+
+                return <#= mm.Op1 #>;
+            }
+        }
+
+        /// <summary>
+        /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum element, if any.
+        /// </summary>
+        public static Maybe<TResult> <#= mm.Op #>Maybe<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null)
+            => source.Select(selector).<#= mm.Op #>Maybe(comparer);
+
+<# } #>
+    }
+}

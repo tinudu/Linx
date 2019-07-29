@@ -4,14 +4,13 @@
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    
 
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Returns the first element of a sequence, or a default value if the sequence contains no elements.
+        /// Returns the first element of a sequence, if any.
         /// </summary>
-        public static async Task<T> FirstOrDefault<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<Maybe<T>> FirstMaybe<T>(this IAsyncEnumerable<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
@@ -22,9 +21,9 @@
         }
 
         /// <summary>
-        /// Returns the first element of the sequence that satisfies a condition or a default value if no such element is found.
+        /// Returns the first element of the sequence that satisfies a condition, if any.
         /// </summary>
-        public static async Task<T> FirstOrDefault<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-            => await source.Where(predicate).FirstOrDefault(token).ConfigureAwait(false);
+        public static async Task<Maybe<T>> FirstMaybe<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+            => await source.Where(predicate).FirstMaybe(token).ConfigureAwait(false);
     }
 }

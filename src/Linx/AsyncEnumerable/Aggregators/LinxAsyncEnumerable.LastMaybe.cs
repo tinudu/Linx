@@ -8,9 +8,9 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Returns the last element of a sequence, or a default value if the sequence contains no elements.
+        /// Returns the last element of a sequence, if any.
         /// </summary>
-        public static async Task<T> LastOrDefault<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+        public static async Task<Maybe<T>> LastMaybe<T>(this IAsyncEnumerable<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
@@ -27,9 +27,9 @@
         }
 
         /// <summary>
-        /// Returns the last element of a sequence that satisfies a condition or a default value if no such element is found.
+        /// Returns the last element of a sequence that satisfies a condition, if any.
         /// </summary>
-        public static async Task<T> LastOrDefault<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-            => await source.Where(predicate).LastOrDefault(token).ConfigureAwait(false);
+        public static async Task<Maybe<T>> LastOrDefault<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+            => await source.Where(predicate).LastMaybe(token).ConfigureAwait(false);
     }
 }
