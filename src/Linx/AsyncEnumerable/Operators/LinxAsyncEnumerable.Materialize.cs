@@ -14,7 +14,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Generate<Notification<T>>(async (yield, token) =>
+            return Create<Notification<T>>(async (yield, token) =>
             {
                 Notification<T> completion;
                 try

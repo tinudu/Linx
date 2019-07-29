@@ -17,7 +17,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (dueTime <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(dueTime));
 
-            return Generate<T>(async (yield, token) =>
+            return Create<T>(async (yield, token) =>
             {
                 // ReSharper disable InconsistentNaming
                 const int _sInitial = 0; // MoveNextAsync returned within time

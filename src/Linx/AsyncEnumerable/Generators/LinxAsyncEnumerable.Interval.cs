@@ -15,7 +15,7 @@
         {
             if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
 
-            return Generate<long>(async (yield, token) =>
+            return Create<long>(async (yield, token) =>
             {
                 var time = Time.Current;
                 using (var timer = time.GetTimer(token))

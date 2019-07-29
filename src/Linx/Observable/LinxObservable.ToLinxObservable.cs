@@ -70,7 +70,7 @@
                         else
                         {
                             Debug.Assert(_state == State.Completed);
-                            try { disposable?.Dispose(); } catch {/**/}
+                            try { disposable.Dispose(); } catch {/**/}
                             _state = State.Disposed;
                             if (_error == null) _observer.OnCompleted();
                             else _observer.OnError(_error);

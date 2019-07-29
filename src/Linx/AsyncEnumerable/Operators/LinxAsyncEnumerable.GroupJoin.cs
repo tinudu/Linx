@@ -24,7 +24,7 @@
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
             if (comparer == null) comparer = EqualityComparer<TKey>.Default;
 
-            return Generate<TResult>(async (yield, token) =>
+            return Create<TResult>(async (yield, token) =>
             {
                 var innerItems = inner
                     .Select(i => (key: innerKeySelector(i), value: i))

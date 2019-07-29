@@ -18,6 +18,7 @@
         /// </summary>
         /// <returns>Whether more elements are requested.</returns>
         /// <exception cref="OperationCanceledException">The <see cref="Token"/> requested cancellation.</exception>
+        /// <exception cref="Exception">Any exception thrown while processing the element.</exception>
         bool OnNext(T value);
 
         /// <summary>

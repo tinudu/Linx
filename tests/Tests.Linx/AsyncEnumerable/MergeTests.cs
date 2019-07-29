@@ -3,6 +3,7 @@
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
     using global::Linx.AsyncEnumerable.Testing;
+    using global::Linx.Enumerable;
     using global::Linx.Timing;
     using Xunit;
 
@@ -11,8 +12,8 @@
         [Fact]
         public async Task TestMerge()
         {
-            var s1 = Marble.Parse("-a- -c- -e|").Dematerialize();
-            var s2 = Marble.Parse("- -b- -d- -f|").Dematerialize();
+            var s1 = Marble.Parse("-a- -c- -e|").DematerializeToAsyncEnumerable();
+            var s2 = Marble.Parse("- -b- -d- -f|").DematerializeToAsyncEnumerable();
             using (var vt = new VirtualTime())
             {
                 var tResult = s1.Merge(s2).ToArray(default);

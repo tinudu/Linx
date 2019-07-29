@@ -24,7 +24,10 @@
         /// <summary>
         /// Determines whether any element of a sequence satisfies a condition.
         /// </summary>
-        public static async Task<bool> Any<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-            => await source.Where(predicate).Any(token).ConfigureAwait(false);
+        public static Task<bool> Any<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        {
+            try { return source.Where(predicate).Any(token); }
+            catch (Exception ex) { return Task.FromException<bool>(ex); }
+        }
     }
 }

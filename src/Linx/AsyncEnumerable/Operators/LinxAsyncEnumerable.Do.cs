@@ -21,7 +21,7 @@
                 onNext = value => { try { d(value); } catch { /**/ } };
             }
 
-            return Generate<T>(async (yield, token) =>
+            return Create<T>(async (yield, token) =>
             {
                 try
                 {

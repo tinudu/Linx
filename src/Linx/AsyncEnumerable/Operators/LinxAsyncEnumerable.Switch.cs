@@ -14,7 +14,7 @@
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
 
-            return Generate<T>(async (yield, token) =>
+            return Create<T>(async (yield, token) =>
             {
                 CancellationTokenSource ctsInner = null;
 

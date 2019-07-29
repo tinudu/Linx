@@ -13,27 +13,27 @@
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Generate<T>(GeneratorDelegate<T> generator)
+        public static IAsyncEnumerable<T> Create<T>(GeneratorDelegate<T> generator)
         {
             if (generator == null) throw new ArgumentNullException(nameof(generator));
-            return new GenerateEnumerable<T>(generator);
+            return new GeneratorEnumerable<T>(generator);
         }
 
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Generate<T>(T sample, GeneratorDelegate<T> generator)
+        public static IAsyncEnumerable<T> Create<T>(T sample, GeneratorDelegate<T> generator)
         {
             if (generator == null) throw new ArgumentNullException(nameof(generator));
-            return new GenerateEnumerable<T>(generator);
+            return new GeneratorEnumerable<T>(generator);
         }
 
         [DebuggerNonUserCode]
-        private sealed class GenerateEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class GeneratorEnumerable<T> : IAsyncEnumerable<T>
         {
             private readonly GeneratorDelegate<T> _generator;
 
-            public GenerateEnumerable(GeneratorDelegate<T> generator) => _generator = generator;
+            public GeneratorEnumerable(GeneratorDelegate<T> generator) => _generator = generator;
 
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(_generator, token);
 
@@ -43,7 +43,7 @@
                 private const int _sInitial = 0;
                 private const int _sAccepting = 1; // pending MoveNextAsync()
                 private const int _sEmitting = 2; // pending YieldAsync()
-                private const int _sCompleted = 3; // Generate() completed
+                private const int _sCompleted = 3; // Create() completed
                 private const int _sDisposing = 4; // but not Completed
                 private const int _sDisposed = 5;
 

@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
     using global::Linx.AsyncEnumerable.Testing;
+    using global::Linx.Enumerable;
     using global::Linx.Timing;
     using Xunit;
 
@@ -22,9 +23,9 @@
         [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Completed()
         {
-            var i1 = Marble.Parse("-a- b-  c-|").Dematerialize();
-            var i2 = Marble.Parse(" a--b---c|").Dematerialize();
-            var i3 = Marble.Parse("-a- b-  c-d").Dematerialize();
+            var i1 = Marble.Parse("-a- b-  c-|").DematerializeToAsyncEnumerable();
+            var i2 = Marble.Parse(" a--b---c|").DematerializeToAsyncEnumerable();
+            var i3 = Marble.Parse("-a- b-  c-d").DematerializeToAsyncEnumerable();
             using (var vt = new VirtualTime())
             {
                 var testee = i1.SequenceEqual(i2, default);
@@ -44,9 +45,9 @@
         [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Error()
         {
-            var i1 = Marble.Parse("-a- b-  c-|").Dematerialize();
-            var i2 = Marble.Parse(" a--b---c#").Dematerialize();
-            var i3 = Marble.Parse("-a- b-  c-d#").Dematerialize();
+            var i1 = Marble.Parse("-a- b-  c-|").DematerializeToAsyncEnumerable();
+            var i2 = Marble.Parse(" a--b---c#").DematerializeToAsyncEnumerable();
+            var i3 = Marble.Parse("-a- b-  c-d#").DematerializeToAsyncEnumerable();
             using (var vt = new VirtualTime())
             {
                 var testee = i1.SequenceEqual(i2, default);
@@ -65,8 +66,8 @@
         [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Cancel()
         {
-            var i1 = Marble.Parse(" -a-bc").Dematerialize();
-            var i2 = Marble.Parse("a- -b ---c---#").Dematerialize();
+            var i1 = Marble.Parse(" -a-bc").DematerializeToAsyncEnumerable();
+            var i2 = Marble.Parse("a- -b ---c---#").DematerializeToAsyncEnumerable();
 
             using (var vt = new VirtualTime())
             {

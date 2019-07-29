@@ -12,7 +12,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Generate<TSource>(async (yield, token) =>
+            return Create<TSource>(async (yield, token) =>
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 catch (TException) { /**/ }
@@ -42,7 +42,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (handler == null) throw new ArgumentNullException(nameof(handler));
 
-            return Generate<TSource>(async (yield, token) =>
+            return Create<TSource>(async (yield, token) =>
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 catch (TException ex) { await handler(ex).CopyTo(yield, token).ConfigureAwait(false); }

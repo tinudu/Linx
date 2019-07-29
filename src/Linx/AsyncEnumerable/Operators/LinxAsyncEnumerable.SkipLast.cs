@@ -14,7 +14,7 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (count <= 0) return source;
 
-            return Generate<T>(async (yield, token) =>
+            return Create<T>(async (yield, token) =>
             {
                 var q = new Queue<T>(count);
                 var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();

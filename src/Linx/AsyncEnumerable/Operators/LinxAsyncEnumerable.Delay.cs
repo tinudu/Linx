@@ -19,7 +19,7 @@
             var notifications = delayError ? source.Materialize() : source.Select(Notification.Next).Append(Notification.Completed<T>());
             var timestamped = notifications.Timestamp().Buffer();
 
-            return Generate<T>(async (yield, token) =>
+            return Create<T>(async (yield, token) =>
             {
                 var ae = timestamped.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try

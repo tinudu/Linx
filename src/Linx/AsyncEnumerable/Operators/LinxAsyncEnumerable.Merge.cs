@@ -6,7 +6,6 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Enumerable;
     using TaskSources;
 
     partial class LinxAsyncEnumerable
@@ -25,17 +24,17 @@
         /// Merges multiple sequences into one.
         /// </summary>
         public static IAsyncEnumerable<T> Merge<T>(this IEnumerable<IAsyncEnumerable<T>> sources, int maxConcurrent = int.MaxValue)
-            => sources.Async().Merge(maxConcurrent);
+            => sources.ToAsyncEnumerable().Merge(maxConcurrent);
 
         /// <summary>
         /// Merges multiple sequences into one.
         /// </summary>
-        public static IAsyncEnumerable<T> Merge<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second) => new[] { first, second }.Async().Merge();
+        public static IAsyncEnumerable<T> Merge<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second) => new[] { first, second }.ToAsyncEnumerable().Merge();
 
         /// <summary>
         /// Merges multiple sequences into one.
         /// </summary>
-        public static IAsyncEnumerable<T> Merge<T>(params IAsyncEnumerable<T>[] sources) => sources.Async().Merge();
+        public static IAsyncEnumerable<T> Merge<T>(params IAsyncEnumerable<T>[] sources) => sources.ToAsyncEnumerable().Merge();
 
         private sealed class MergeEnumerable<T> : IAsyncEnumerable<T>
         {
