@@ -177,7 +177,7 @@
                     catch (Exception ex) { Cancel(ex); }
                     // ReSharper restore AccessToModifiedClosure
                 }
-            }, source + ".Timeout");
+            });
         }
     }
 }

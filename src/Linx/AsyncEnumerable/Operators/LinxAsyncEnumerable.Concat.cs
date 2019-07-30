@@ -24,7 +24,7 @@
                             return;
                 }
                 finally { await aeOuter.DisposeAsync(); }
-            }, "Concat");
+            });
         }
 
         /// <summary>
@@ -39,7 +39,7 @@
                 foreach (var source in sources)
                     if (!await source.CopyTo(yield, token).ConfigureAwait(false))
                         return;
-            }, "Concat");
+            });
         }
 
         /// <summary>

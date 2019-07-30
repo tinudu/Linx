@@ -13,7 +13,7 @@
             => Create<T>(async (yield, token) =>
             {
                 await yield(value).ConfigureAwait(false);
-            }, "Return");
+            });
 
         /// <summary>
         /// Gets a <see cref="IAsyncEnumerable{T}"/> that produces the value returned by the specified function.
@@ -22,7 +22,7 @@
             => Create<T>(async (yield, token) =>
             {
                 await yield(getValue()).ConfigureAwait(false);
-            }, "Return");
+            });
 
         /// <summary>
         /// Gets a <see cref="IAsyncEnumerable{T}"/> that produces the value returned by the specified async function.
@@ -31,6 +31,6 @@
             => Create<T>(async (yield, token) =>
             {
                 await yield(await getValue().ConfigureAwait(false)).ConfigureAwait(false);
-            }, "Return");
+            });
     }
 }

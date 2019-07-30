@@ -26,15 +26,15 @@
             return max == 1 ? (IAsyncEnumerable<T>)new LatestOneEnumerable<T>(source) : new LatestManyEnumerable<T>(source, max);
         }
 
-        private sealed class LatestOneEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class LatestOneEnumerable<T> : AsyncEnumerableBase<T>
         {
             private readonly IAsyncEnumerable<T> _source;
 
             public LatestOneEnumerable(IAsyncEnumerable<T> source) => _source = source;
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(_source, token);
+            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(_source, token);
 
-            public override string ToString() => _source + ".Latest";
+            public override string ToString() => "Latest";
 
             private sealed class Enumerator : IAsyncEnumerator<T>
             {
@@ -298,7 +298,7 @@
             }
         }
 
-        private sealed class LatestManyEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class LatestManyEnumerable<T> : AsyncEnumerableBase<T>
         {
             private readonly IAsyncEnumerable<T> _source;
             private readonly int _max;
@@ -311,9 +311,9 @@
                 _max = max;
             }
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            public override string ToString() => _source + ".Latest";
+            public override string ToString() => "Latest";
 
             private sealed class Enumerator : IAsyncEnumerator<T>
             {

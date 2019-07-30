@@ -18,7 +18,7 @@
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
             if (maxConcurrent <= 0) throw new ArgumentOutOfRangeException(nameof(maxConcurrent));
-            return maxConcurrent == 1 ? sources.Concat() : new MergeEnumerable<T>(sources, maxConcurrent, null);
+            return maxConcurrent == 1 ? sources.Concat() : new MergeEnumerable<T>(sources, maxConcurrent);
         }
 
         /// <summary>
@@ -33,41 +33,37 @@
         /// <summary>
         /// Merges multiple sequences into one.
         /// </summary>
-        public static IAsyncEnumerable<T> Merge<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second)
+        public static IAsyncEnumerable<T> Merge<T>(this IAsyncEnumerable<T> source, params IAsyncEnumerable<T>[] sources)
         {
-            if (first == null) throw new ArgumentNullException(nameof(first));
-            if (second == null) throw new ArgumentNullException(nameof(second));
-
-            return new MergeEnumerable<T>(new[] { first, second }.ToAsyncEnumerable(), int.MaxValue, first.ToString());
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (sources == null) throw new ArgumentNullException(nameof(sources));
+            return sources.Prepend(source).ToAsyncEnumerable().Merge();
         }
 
         /// <summary>
         /// Merges multiple sequences into one.
         /// </summary>
-        public static IAsyncEnumerable<T> Merge<T>(this IAsyncEnumerable<T> source, params IAsyncEnumerable<T>[] sources)
+        public static IAsyncEnumerable<T> Merge<T>(this IAsyncEnumerable<T> source, int maxConcurrent, params IAsyncEnumerable<T>[] sources)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-
-            return new MergeEnumerable<T>(sources.Prepend(source).ToAsyncEnumerable(), int.MaxValue, source.ToString());
+            return sources.Prepend(source).ToAsyncEnumerable().Merge(maxConcurrent);
         }
 
-        private sealed class MergeEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class MergeEnumerable<T> : AsyncEnumerableBase<T>
         {
             private readonly IAsyncEnumerable<IAsyncEnumerable<T>> _sources;
             private readonly int _maxConcurrent;
-            private readonly string _name;
 
-            public MergeEnumerable(IAsyncEnumerable<IAsyncEnumerable<T>> sources, int maxConcurrent, string sourceName)
+            public MergeEnumerable(IAsyncEnumerable<IAsyncEnumerable<T>> sources, int maxConcurrent)
             {
                 _sources = sources;
                 _maxConcurrent = maxConcurrent;
-                _name = sourceName != null ? sourceName + ".Merge" : "Merge";
             }
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            public override string ToString() => _name;
+            public override string ToString() => "Merge";
 
             private sealed class Enumerator : IAsyncEnumerator<T>
             {

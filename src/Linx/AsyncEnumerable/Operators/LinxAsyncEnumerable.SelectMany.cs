@@ -27,7 +27,7 @@
                                 return;
                 }
                 finally { await ae.DisposeAsync(); }
-            }, source + ".SelectMany");
+            });
         }
 
         /// <summary>
@@ -52,7 +52,7 @@
                                 return;
                 }
                 finally { await ae.DisposeAsync(); }
-            }, source + ".SelectMany");
+            });
         }
 
         /// <summary>
@@ -81,7 +81,7 @@
                     }
                 }
                 finally { await ae.DisposeAsync(); }
-            }, source + ".SelectMany");
+            });
         }
 
         /// <summary>
@@ -111,7 +111,7 @@
                     }
                 }
                 finally { await ae.DisposeAsync(); }
-            }, source + ".SelectMany");
+            });
         }
 
         /// <summary>

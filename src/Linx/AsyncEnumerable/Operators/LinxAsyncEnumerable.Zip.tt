@@ -59,7 +59,7 @@ namespace Linx.AsyncEnumerable
             Func<#= arg.GenArgList #> resultSelector)
             => new ZipEnumerable<#= arg.GenArgList #>(<#= string.Join(", ", arg.Names.Select(n => n.Source)) #>, resultSelector);
 
-        private sealed class ZipEnumerable<#= arg.GenArgList #> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<#= arg.GenArgList #> : AsyncEnumerableBase<TResult>
         {
 <#
     foreach(var n in arg.Names)
@@ -93,9 +93,9 @@ namespace Linx.AsyncEnumerable
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            public override string ToString() => _<#= arg.Names[0].Source #> + ".Zip";
+            public override string ToString() => "Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {

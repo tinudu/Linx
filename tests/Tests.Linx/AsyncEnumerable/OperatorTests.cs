@@ -26,7 +26,7 @@
                     }
             }
             finally { await ae.DisposeAsync(); }
-        }, source + ".ConsumeSlow");
+        });
     }
 
     public sealed class OperatorTests
@@ -46,7 +46,7 @@
         {
             using (var vt = new VirtualTime())
             {
-                var source = Marble.Parse("-a-b-c-d-|").DematerializeToAsyncEnumerable();
+                var source = Marble.Parse("-a-b-c-d-|").DematerializeAsyncEnumerable();
                 var testee = source.Delay(TimeSpan.FromSeconds(3));
                 var expected = Marble.Parse("----a-b-c-d-|");
                 var eq = testee.AssertEqual(expected);
@@ -127,7 +127,7 @@
         [Fact]
         public async Task TestTimeout()
         {
-            var testee = Marble.Parse("a-b--c----d|").DematerializeToAsyncEnumerable().Timeout(TimeSpan.FromSeconds(3));
+            var testee = Marble.Parse("a-b--c----d|").DematerializeAsyncEnumerable().Timeout(TimeSpan.FromSeconds(3));
             var expect = Marble.Parse("a-b--c---#", new MarbleParserSettings { Error = new TimeoutException() });
 
             using (var vt = new VirtualTime())

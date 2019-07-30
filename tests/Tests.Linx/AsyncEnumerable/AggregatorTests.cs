@@ -82,7 +82,7 @@
         {
             using (var vt = new VirtualTime())
             {
-                var src = Marble.Parse("01--2|", null, 0, 1, 2).DematerializeToAsyncEnumerable();
+                var src = Marble.Parse("01--2|", null, 0, 1, 2).DematerializeAsyncEnumerable();
                 var cts = new CancellationTokenSource();
                 var tResult = src.MultiAggregate(
                     (s, t) => s.ToList(t),

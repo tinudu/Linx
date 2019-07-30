@@ -12,8 +12,8 @@
         [Fact]
         public async Task TestMerge()
         {
-            var s1 = Marble.Parse("-a- -c- -e|").DematerializeToAsyncEnumerable();
-            var s2 = Marble.Parse("- -b- -d- -f|").DematerializeToAsyncEnumerable();
+            var s1 = Marble.Parse("-a- -c- -e|").DematerializeAsyncEnumerable();
+            var s2 = Marble.Parse("- -b- -d- -f|").DematerializeAsyncEnumerable();
             using (var vt = new VirtualTime())
             {
                 var tResult = s1.Merge(s2).ToArray(default);

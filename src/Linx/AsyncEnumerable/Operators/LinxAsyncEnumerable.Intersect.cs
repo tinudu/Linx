@@ -33,7 +33,7 @@
                     }
                 }
                 finally { await ae.DisposeAsync(); }
-            }, first + ".Intersect");
+            });
         }
     }
 }

@@ -36,7 +36,7 @@
                 }
 
                 // ReSharper disable once FunctionNeverReturns
-            }, nameof(Interval));
+            });
         }
     }
 }

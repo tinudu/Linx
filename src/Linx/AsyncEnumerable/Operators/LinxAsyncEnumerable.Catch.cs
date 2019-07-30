@@ -16,7 +16,7 @@
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 catch (TException) { /**/ }
-            }, source + "Catch");
+            });
         }
 
         /// <summary>
@@ -46,7 +46,7 @@
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 catch (TException ex) { await handler(ex).CopyTo(yield, token).ConfigureAwait(false); }
-            }, source + "Catch");
+            });
         }
     }
 }

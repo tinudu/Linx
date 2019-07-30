@@ -17,7 +17,7 @@
         /// </summary>
         public static IAsyncEnumerable<T> Throw<T>(T sample, Exception exception) => new ThrowEnuemrable<T>(exception);
 
-        private sealed class ThrowEnuemrable<T> : IAsyncEnumerable<T>, IAsyncEnumerator<T>
+        private sealed class ThrowEnuemrable<T> : AsyncEnumerableBase<T>, IAsyncEnumerator<T>
         {
             private readonly Task<bool> _failed;
 
@@ -27,7 +27,7 @@
                 _failed = Task.FromException<bool>(exception);
             }
 
-            IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken cancellationToken) => this;
+            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken) => this;
             T IAsyncEnumerator<T>.Current => default;
             ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync() => new ValueTask<bool>(_failed);
             ValueTask IAsyncDisposable.DisposeAsync() => new ValueTask(Task.CompletedTask);

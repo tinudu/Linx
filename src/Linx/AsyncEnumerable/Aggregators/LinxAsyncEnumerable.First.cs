@@ -5,7 +5,6 @@
     using System.Threading;
     using System.Threading.Tasks;
 
-
     partial class LinxAsyncEnumerable
     {
         /// <summary>

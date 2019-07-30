@@ -18,7 +18,7 @@
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 finally { @finally(); }
-            }, source + ".Finally");
+            });
         }
 
         /// <summary>
@@ -33,7 +33,7 @@
             {
                 try { await source.CopyTo(yield, token).ConfigureAwait(false); }
                 finally { await @finally().ConfigureAwait(false); }
-            }, source + ".Finally");
+            });
         }
     }
 }

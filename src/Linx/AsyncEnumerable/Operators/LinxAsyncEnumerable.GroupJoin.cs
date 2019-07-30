@@ -34,7 +34,7 @@
                     .Select(o => resultSelector(o, innerItems[outerKeySelector(o)]))
                     .CopyTo(yield, token)
                     .ConfigureAwait(false);
-            }, outer + ".GroupJoin");
+            });
         }
     }
 }

@@ -29,7 +29,7 @@
                         await yield(@default).ConfigureAwait(false);
                 }
                 finally { await ae.DisposeAsync(); }
-            }, source + ".DefaultIfEmpty");
+            });
         }
     }
 }

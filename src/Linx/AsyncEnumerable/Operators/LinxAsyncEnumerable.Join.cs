@@ -34,7 +34,7 @@
                     .SelectMany(o => innerItems[outerKeySelector(o)], resultSelector)
                     .CopyTo(yield, token)
                     .ConfigureAwait(false);
-            }, outer + ".Join");
+            });
         }
     }
 }

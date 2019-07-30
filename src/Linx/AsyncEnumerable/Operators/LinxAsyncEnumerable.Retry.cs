@@ -23,7 +23,7 @@
                         return;
                     }
                     catch { token.ThrowIfCancellationRequested(); }
-            }, source + ".Retry");
+            });
         }
 
         /// <summary>
@@ -64,7 +64,7 @@
                 }
 
                 throw error;
-            }, source + ".Retry");
+            });
         }
 
         /// <summary>
@@ -95,7 +95,7 @@
                             return;
                         }
                         catch { token.ThrowIfCancellationRequested(); }
-            }, source + ".Retry");
+            });
         }
 
         /// <summary>
@@ -138,7 +138,7 @@
                         }
 
                 throw error;
-            }, source + ".Retry");
+            });
         }
     }
 }

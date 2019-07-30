@@ -16,7 +16,7 @@
             {
                 if (!await source.CopyTo(yield, token).ConfigureAwait(false)) return;
                 await yield(element).ConfigureAwait(false);
-            }, source + "Append");
+            });
         }
     }
 }

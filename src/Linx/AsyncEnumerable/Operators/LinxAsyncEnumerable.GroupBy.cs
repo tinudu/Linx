@@ -27,7 +27,7 @@
             IEqualityComparer<TKey> keyComparer = null)
             => new GroupByEnumerable<TSource, TKey>(source, keySelector, keyComparer, true);
 
-        private sealed class GroupByEnumerable<TSource, TKey> : IAsyncEnumerable<IAsyncGrouping<TKey, TSource>>
+        private sealed class GroupByEnumerable<TSource, TKey> : AsyncEnumerableBase<IAsyncGrouping<TKey, TSource>>
         {
             private readonly IAsyncEnumerable<TSource> _source;
             private readonly Func<TSource, TKey> _keySelector;
@@ -46,9 +46,9 @@
                 _whileObserved = whileObserved;
             }
 
-            IAsyncEnumerator<IAsyncGrouping<TKey, TSource>> IAsyncEnumerable<IAsyncGrouping<TKey, TSource>>.GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<IAsyncGrouping<TKey, TSource>> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            public override string ToString() => _source + ".GroupBy";
+            public override string ToString() => "GroupBy";
 
             private sealed class Enumerator : IAsyncEnumerator<IAsyncGrouping<TKey, TSource>>
             {
@@ -277,7 +277,7 @@
                     Final // final state with or without error
                 }
 
-                private sealed class Group : IAsyncGrouping<TKey, TSource>, IAsyncEnumerator<TSource>
+                private sealed class Group : AsyncEnumerableBase<TSource>, IAsyncGrouping<TKey, TSource>, IAsyncEnumerator<TSource>
                 {
                     private readonly Enumerator _enumerator;
                     public TKey Key { get; }
@@ -295,7 +295,7 @@
                         Key = key;
                     }
 
-                    IAsyncEnumerator<TSource> IAsyncEnumerable<TSource>.GetAsyncEnumerator(CancellationToken token)
+                    public override IAsyncEnumerator<TSource> GetAsyncEnumerator(CancellationToken token)
                     {
                         var state = Atomic.Lock(ref _enumerator._state);
                         // ReSharper disable once SwitchStatementMissingSomeCases

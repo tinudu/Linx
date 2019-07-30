@@ -16,7 +16,7 @@
             using (var vt = new VirtualTime())
             {
                 //                         1   2 345678901   2 345   67 89
-                var testee = Marble.Parse("-abc- ---------def- ---efg- ----|").DematerializeToAsyncEnumerable().Sample(TimeSpan.FromSeconds(2));
+                var testee = Marble.Parse("-abc- ---------def- ---efg- ----|").DematerializeAsyncEnumerable().Sample(TimeSpan.FromSeconds(2));
                 var expect = Marble.Parse("-a  -c---------d  -f---e  -g----|");
                 var eq = testee.Sample(TimeSpan.FromSeconds(2)).AssertEqual(expect);
                 vt.Start();

@@ -21,7 +21,7 @@
                 var resource = resourceFactory();
                 try { await sequenceFactory(resource).CopyTo(yield, token).ConfigureAwait(false); }
                 finally { resource.Dispose(); }
-            }, "Using");
+            });
         }
     }
 }

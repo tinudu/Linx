@@ -21,7 +21,8 @@
         public ColdSubject()
         {
             _enumerators = new List<Enumerator>();
-            Output = new AnonymousAsyncEnumerable<T>(t => new Enumerator(this, t), null);
+            // ReSharper disable once ExplicitCallerInfoArgument
+            Output = new AnonymousAsyncEnumerable<T>(t => new Enumerator(this, t), "Subject");
         }
 
         /// <summary>
@@ -31,7 +32,8 @@
         public ColdSubject(int capacity)
         {
             _enumerators = new List<Enumerator>(capacity);
-            Output = new AnonymousAsyncEnumerable<T>(t => new Enumerator(this, t), null);
+            // ReSharper disable once ExplicitCallerInfoArgument
+            Output = new AnonymousAsyncEnumerable<T>(t => new Enumerator(this, t), "Subject");
         }
 
         /// <inheritdoc />

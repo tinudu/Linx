@@ -17,12 +17,12 @@
         /// </summary>
         public static IAsyncEnumerable<T> Empty<T>(T sample) => EmptyAsyncEnumerable<T>.Singleton;
 
-        private sealed class EmptyAsyncEnumerable<T> : IAsyncEnumerable<T>, IAsyncEnumerator<T>
+        private sealed class EmptyAsyncEnumerable<T> : AsyncEnumerableBase<T>, IAsyncEnumerator<T>
         {
             public static EmptyAsyncEnumerable<T> Singleton { get; } = new EmptyAsyncEnumerable<T>();
             private EmptyAsyncEnumerable() { }
 
-            IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken token) => this;
+            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => this;
 
             public override string ToString() => "Empty";
 

@@ -13,7 +13,9 @@
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Create<T>(GeneratorDelegate<T> generator, string name)
+        /// <param name="generator">A <see cref="GeneratorDelegate{T}"/> that will emit elements.</param>
+        /// <param name="name">A display name for the enumerable.</param>
+        public static IAsyncEnumerable<T> Create<T>(GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
         {
             if (generator == null) throw new ArgumentNullException(nameof(generator));
             return new GeneratorEnumerable<T>(generator, name);
@@ -22,14 +24,17 @@
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Create<T>(T sample, GeneratorDelegate<T> generator, string name)
+        /// <param name="sample">Ignored. Helps with type inference.</param>
+        /// <param name="generator">A <see cref="GeneratorDelegate{T}"/> that will emit elements.</param>
+        /// <param name="name">A display name for the enumerable.</param>
+        public static IAsyncEnumerable<T> Create<T>(T sample, GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
         {
             if (generator == null) throw new ArgumentNullException(nameof(generator));
             return new GeneratorEnumerable<T>(generator, name);
         }
 
         [DebuggerNonUserCode]
-        private sealed class GeneratorEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class GeneratorEnumerable<T> : AsyncEnumerableBase<T>
         {
             private readonly GeneratorDelegate<T> _generator;
             private readonly string _name;
@@ -40,7 +45,7 @@
                 _name = name ?? nameof(GeneratorEnumerable<T>);
             }
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(_generator, token);
+            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(_generator, token);
 
             public override string ToString() => _name;
 

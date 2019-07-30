@@ -19,7 +19,7 @@
             return new LatestOneEnumerable<T>(source);
         }
 
-        private sealed class LatestOneEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class LatestOneEnumerable<T> : IAsyncEnumerable<T>, ILinxObservable<T>
         {
             private readonly ILinxObservable<T> _source;
 
@@ -31,7 +31,9 @@
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
                 => new Enumerator(this, token);
 
-            public override string ToString() => _source + ".Latest";
+            public override string ToString() => "Latest";
+
+            public void Subscribe(ILinxObserver<T> observer) => _source.Subscribe(observer);
 
             private sealed class Enumerator : IAsyncEnumerator<T>
             {

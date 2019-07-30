@@ -25,7 +25,7 @@
                             return;
                 }
                 finally { await ae.DisposeAsync(); }
-            }, source + ".Timestamp");
+            });
         }
     }
 }

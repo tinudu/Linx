@@ -19,7 +19,7 @@
             return maxSize > 0 ? new BufferEnumerable<T>(source, maxSize) : source;
         }
 
-        private sealed class BufferEnumerable<T> : IAsyncEnumerable<T>
+        private sealed class BufferEnumerable<T> : AsyncEnumerableBase<T>
         {
             private readonly IAsyncEnumerable<T> _source;
             private readonly int _maxSize;
@@ -32,9 +32,9 @@
                 _maxSize = maxSize;
             }
 
-            public override string ToString() => _source + ".Buffer";
+            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override string ToString() => "Buffer";
 
             private sealed class Enumerator : IAsyncEnumerator<T>
             {

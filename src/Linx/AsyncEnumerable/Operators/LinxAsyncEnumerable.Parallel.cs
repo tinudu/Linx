@@ -30,7 +30,7 @@
             return maxConcurrent == 1 ? source.Select(selector) : new ParallelEnumerable<TSource, TResult>(source, selector, preserveOrder, maxConcurrent);
         }
 
-        private sealed class ParallelEnumerable<TSource, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ParallelEnumerable<TSource, TResult> : AsyncEnumerableBase<TResult>
         {
             private readonly IAsyncEnumerable<TSource> _source;
             private readonly Func<TSource, CancellationToken, Task<TResult>> _selector;
@@ -45,9 +45,9 @@
                 _maxConcurrent = maxConcurrent;
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
-            public override string ToString() => _source + ".Parallel";
+            public override string ToString() => "Parallel";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {

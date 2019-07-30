@@ -16,7 +16,7 @@
             {
                 if (!await yield(element).ConfigureAwait(false)) return;
                 await source.CopyTo(yield, token).ConfigureAwait(false);
-            }, source + ".Prepend");
+            });
         }
     }
 }
