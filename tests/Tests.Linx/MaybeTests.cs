@@ -26,9 +26,9 @@
         [Fact]
         public void TestCreate()
         {
-            TestMembers(Maybe.AsIs(42), true, 42);
-            TestMembers(Maybe.AsIs<string>(null), true, null);
-            TestMembers(Maybe.AsIs<int?>(default), true, null);
+            TestMembers(Maybe.Create(42), true, 42);
+            TestMembers(Maybe.Create<string>(null), true, null);
+            TestMembers(Maybe.Create<int?>(default), true, null);
         }
 
         [Fact]

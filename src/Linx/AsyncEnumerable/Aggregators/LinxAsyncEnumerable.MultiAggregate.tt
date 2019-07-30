@@ -31,7 +31,7 @@ namespace Linx.AsyncEnumerable
         var genArgs = string.Join(", ", names.Select(x => x.GenArg));
 #>
         /// <summary>
-        /// Multiple aggregators on one enumeration.
+        /// Build multiple aggregates in one enumeration.
         /// </summary>
         public static Task<TResult> MultiAggregate<TSource, <#= genArgs #>, TResult>(this
             IAsyncEnumerable<TSource> source,
@@ -40,7 +40,35 @@ namespace Linx.AsyncEnumerable
 <# } #>
             Func<<#= genArgs #>, TResult> resultSelector,
             CancellationToken token)
-            => MultiAggregator<TSource, <#= genArgs #>, TResult>.Aggregate(source, <#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+<# foreach(var x in names) { #>
+            if (<#= x.Aggregator #> == null) throw new ArgumentNullException(nameof(<#= x.Aggregator #>));
+<# } #>
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, <#= genArgs #>, TResult>.Aggregate(source, <#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
+        }
+
+        /// <summary>
+        /// Build multiple aggregates in one enumeration.
+        /// </summary>
+        public static Task<TResult> MultiAggregate<TSource, <#= genArgs #>, TResult>(this
+            IEnumerable<TSource> source,
+<# foreach(var x in names) { #>
+            AggregatorDelegate<TSource, <#= x.GenArg #>> <#= x.Aggregator #>,
+<# } #>
+            Func<<#= genArgs #>, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+<# foreach(var x in names) { #>
+            if (<#= x.Aggregator #> == null) throw new ArgumentNullException(nameof(<#= x.Aggregator #>));
+<# } #>
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, <#= genArgs #>, TResult>.Aggregate(source.ToAsyncEnumerable(), <#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
+        }
 
         private sealed class MultiAggregator<TSource, <#= genArgs #>, TResult>
         {
@@ -52,12 +80,6 @@ namespace Linx.AsyncEnumerable
                 Func<<#= genArgs #>, TResult> resultSelector,
                 CancellationToken token)
             {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-<# foreach(var x in names) { #>
-                if (<#= x.Aggregator #> == null) throw new ArgumentNullException(nameof(<#= x.Aggregator #>));
-<# } #>
-                if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, <#= genArgs #>, TResult>(token);
 <# foreach(var x in names) { #>

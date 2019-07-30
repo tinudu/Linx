@@ -10,12 +10,7 @@
         /// <summary>
         /// Convert <paramref name="value"/> to a <see cref="Maybe{T}"/> that <see cref="Maybe{T}.HasValue"/>.
         /// </summary>
-        public static Maybe<T> AsIs<T>(T value) => new Maybe<T>(value);
-
-        /// <summary>
-        /// Convert <paramref name="value"/> to a <see cref="Maybe{T}"/> that <see cref="Maybe{T}.HasValue"/> if <paramref name="value"/> is not null.
-        /// </summary>
-        public static Maybe<T> IfNotNull<T>(T value) => value != null ? new Maybe<T>(value) : default;
+        public static Maybe<T> Create<T>(T value) => new Maybe<T>(value);
 
         /// <summary>
         /// Try to parse the specified <see cref="string"/> using the specified <see cref="TryParseDelegate{T}"/> to a <see cref="Maybe{T}"/>.

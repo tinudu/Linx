@@ -112,6 +112,46 @@
         }
 
         /// <summary>
+        /// Returns the elements in <paramref name="source"/> with the minimum key value that matches a condition.
+        /// </summary>
+        public static async Task<IList<TSource>> MinBy<TSource, TKey>(this IAsyncEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TKey, bool> predicate, CancellationToken token, IComparer<TKey> comparer = null)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+            if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+            if (comparer == null) comparer = Comparer<TKey>.Default;
+            token.ThrowIfCancellationRequested();
+
+            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+            try
+            {
+                TKey min = default;
+                var result = new List<TSource>();
+                while (await ae.MoveNextAsync())
+                {
+                    var current = ae.Current;
+                    var key = keySelector(current);
+                    if(!predicate(key)) continue;
+                    if (result.Count == 0)
+                    {
+                        min = key;
+                        result.Add(current);
+                    }
+                    else
+                    {
+                        var cmp = comparer.Compare(key, min);
+                        if (cmp > 0) continue;
+                        min = key;
+                        if (cmp < 0) result.Clear();
+                        result.Add(current);
+                    }
+                }
+                return result;
+            }
+            finally { await ae.DisposeAsync(); }
+        }
+
+        /// <summary>
         /// Returns the maximum non-null element of a sequence.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
@@ -196,6 +236,46 @@
                 {
                     var current = ae.Current;
                     var key = keySelector(current);
+                    if (result.Count == 0)
+                    {
+                        max = key;
+                        result.Add(current);
+                    }
+                    else
+                    {
+                        var cmp = comparer.Compare(key, max);
+                        if (cmp < 0) continue;
+                        max = key;
+                        if (cmp > 0) result.Clear();
+                        result.Add(current);
+                    }
+                }
+                return result;
+            }
+            finally { await ae.DisposeAsync(); }
+        }
+
+        /// <summary>
+        /// Returns the elements in <paramref name="source"/> with the maximum key value that matches a condition.
+        /// </summary>
+        public static async Task<IList<TSource>> MaxBy<TSource, TKey>(this IAsyncEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TKey, bool> predicate, CancellationToken token, IComparer<TKey> comparer = null)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+            if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+            if (comparer == null) comparer = Comparer<TKey>.Default;
+            token.ThrowIfCancellationRequested();
+
+            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+            try
+            {
+                TKey max = default;
+                var result = new List<TSource>();
+                while (await ae.MoveNextAsync())
+                {
+                    var current = ae.Current;
+                    var key = keySelector(current);
+                    if(!predicate(key)) continue;
                     if (result.Count == 0)
                     {
                         max = key;

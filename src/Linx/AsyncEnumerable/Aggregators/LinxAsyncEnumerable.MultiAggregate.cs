@@ -11,7 +11,7 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Multiple aggregators on one enumeration.
+        /// Build multiple aggregates in one enumeration.
         /// </summary>
         public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TResult>(this
             IAsyncEnumerable<TSource> source,
@@ -19,7 +19,32 @@
             AggregatorDelegate<TSource, TAggregate2> aggregator2,
             Func<TAggregate1, TAggregate2, TResult> resultSelector,
             CancellationToken token)
-            => MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>.Aggregate(source, aggregator1, aggregator2, resultSelector, token);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>.Aggregate(source, aggregator1, aggregator2, resultSelector, token);
+        }
+
+        /// <summary>
+        /// Build multiple aggregates in one enumeration.
+        /// </summary>
+        public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TResult>(this
+            IEnumerable<TSource> source,
+            AggregatorDelegate<TSource, TAggregate1> aggregator1,
+            AggregatorDelegate<TSource, TAggregate2> aggregator2,
+            Func<TAggregate1, TAggregate2, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, resultSelector, token);
+        }
 
         private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>
         {
@@ -30,11 +55,6 @@
                 Func<TAggregate1, TAggregate2, TResult> resultSelector,
                 CancellationToken token)
             {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-                if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
-                if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
-                if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>(token);
                 multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
@@ -103,7 +123,7 @@
         }
 
         /// <summary>
-        /// Multiple aggregators on one enumeration.
+        /// Build multiple aggregates in one enumeration.
         /// </summary>
         public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>(this
             IAsyncEnumerable<TSource> source,
@@ -112,7 +132,35 @@
             AggregatorDelegate<TSource, TAggregate3> aggregator3,
             Func<TAggregate1, TAggregate2, TAggregate3, TResult> resultSelector,
             CancellationToken token)
-            => MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, resultSelector, token);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, resultSelector, token);
+        }
+
+        /// <summary>
+        /// Build multiple aggregates in one enumeration.
+        /// </summary>
+        public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>(this
+            IEnumerable<TSource> source,
+            AggregatorDelegate<TSource, TAggregate1> aggregator1,
+            AggregatorDelegate<TSource, TAggregate2> aggregator2,
+            AggregatorDelegate<TSource, TAggregate3> aggregator3,
+            Func<TAggregate1, TAggregate2, TAggregate3, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, resultSelector, token);
+        }
 
         private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>
         {
@@ -124,12 +172,6 @@
                 Func<TAggregate1, TAggregate2, TAggregate3, TResult> resultSelector,
                 CancellationToken token)
             {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-                if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
-                if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
-                if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
-                if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>(token);
                 multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
@@ -200,7 +242,7 @@
         }
 
         /// <summary>
-        /// Multiple aggregators on one enumeration.
+        /// Build multiple aggregates in one enumeration.
         /// </summary>
         public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>(this
             IAsyncEnumerable<TSource> source,
@@ -210,7 +252,38 @@
             AggregatorDelegate<TSource, TAggregate4> aggregator4,
             Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult> resultSelector,
             CancellationToken token)
-            => MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, resultSelector, token);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, resultSelector, token);
+        }
+
+        /// <summary>
+        /// Build multiple aggregates in one enumeration.
+        /// </summary>
+        public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>(this
+            IEnumerable<TSource> source,
+            AggregatorDelegate<TSource, TAggregate1> aggregator1,
+            AggregatorDelegate<TSource, TAggregate2> aggregator2,
+            AggregatorDelegate<TSource, TAggregate3> aggregator3,
+            AggregatorDelegate<TSource, TAggregate4> aggregator4,
+            Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, resultSelector, token);
+        }
 
         private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>
         {
@@ -223,13 +296,6 @@
                 Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult> resultSelector,
                 CancellationToken token)
             {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-                if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
-                if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
-                if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
-                if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
-                if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>(token);
                 multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
@@ -302,7 +368,7 @@
         }
 
         /// <summary>
-        /// Multiple aggregators on one enumeration.
+        /// Build multiple aggregates in one enumeration.
         /// </summary>
         public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>(this
             IAsyncEnumerable<TSource> source,
@@ -313,7 +379,41 @@
             AggregatorDelegate<TSource, TAggregate5> aggregator5,
             Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult> resultSelector,
             CancellationToken token)
-            => MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, resultSelector, token);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, resultSelector, token);
+        }
+
+        /// <summary>
+        /// Build multiple aggregates in one enumeration.
+        /// </summary>
+        public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>(this
+            IEnumerable<TSource> source,
+            AggregatorDelegate<TSource, TAggregate1> aggregator1,
+            AggregatorDelegate<TSource, TAggregate2> aggregator2,
+            AggregatorDelegate<TSource, TAggregate3> aggregator3,
+            AggregatorDelegate<TSource, TAggregate4> aggregator4,
+            AggregatorDelegate<TSource, TAggregate5> aggregator5,
+            Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, resultSelector, token);
+        }
 
         private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>
         {
@@ -327,14 +427,6 @@
                 Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult> resultSelector,
                 CancellationToken token)
             {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-                if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
-                if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
-                if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
-                if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
-                if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
-                if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>(token);
                 multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
@@ -409,7 +501,7 @@
         }
 
         /// <summary>
-        /// Multiple aggregators on one enumeration.
+        /// Build multiple aggregates in one enumeration.
         /// </summary>
         public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>(this
             IAsyncEnumerable<TSource> source,
@@ -421,7 +513,44 @@
             AggregatorDelegate<TSource, TAggregate6> aggregator6,
             Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult> resultSelector,
             CancellationToken token)
-            => MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, resultSelector, token);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
+            if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, resultSelector, token);
+        }
+
+        /// <summary>
+        /// Build multiple aggregates in one enumeration.
+        /// </summary>
+        public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>(this
+            IEnumerable<TSource> source,
+            AggregatorDelegate<TSource, TAggregate1> aggregator1,
+            AggregatorDelegate<TSource, TAggregate2> aggregator2,
+            AggregatorDelegate<TSource, TAggregate3> aggregator3,
+            AggregatorDelegate<TSource, TAggregate4> aggregator4,
+            AggregatorDelegate<TSource, TAggregate5> aggregator5,
+            AggregatorDelegate<TSource, TAggregate6> aggregator6,
+            Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
+            if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, resultSelector, token);
+        }
 
         private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>
         {
@@ -436,15 +565,6 @@
                 Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult> resultSelector,
                 CancellationToken token)
             {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-                if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
-                if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
-                if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
-                if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
-                if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
-                if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
-                if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>(token);
                 multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
@@ -521,7 +641,7 @@
         }
 
         /// <summary>
-        /// Multiple aggregators on one enumeration.
+        /// Build multiple aggregates in one enumeration.
         /// </summary>
         public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>(this
             IAsyncEnumerable<TSource> source,
@@ -534,7 +654,47 @@
             AggregatorDelegate<TSource, TAggregate7> aggregator7,
             Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult> resultSelector,
             CancellationToken token)
-            => MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, resultSelector, token);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
+            if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
+            if (aggregator7 == null) throw new ArgumentNullException(nameof(aggregator7));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, resultSelector, token);
+        }
+
+        /// <summary>
+        /// Build multiple aggregates in one enumeration.
+        /// </summary>
+        public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>(this
+            IEnumerable<TSource> source,
+            AggregatorDelegate<TSource, TAggregate1> aggregator1,
+            AggregatorDelegate<TSource, TAggregate2> aggregator2,
+            AggregatorDelegate<TSource, TAggregate3> aggregator3,
+            AggregatorDelegate<TSource, TAggregate4> aggregator4,
+            AggregatorDelegate<TSource, TAggregate5> aggregator5,
+            AggregatorDelegate<TSource, TAggregate6> aggregator6,
+            AggregatorDelegate<TSource, TAggregate7> aggregator7,
+            Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
+            if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
+            if (aggregator7 == null) throw new ArgumentNullException(nameof(aggregator7));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, resultSelector, token);
+        }
 
         private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>
         {
@@ -550,16 +710,6 @@
                 Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult> resultSelector,
                 CancellationToken token)
             {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-                if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
-                if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
-                if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
-                if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
-                if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
-                if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
-                if (aggregator7 == null) throw new ArgumentNullException(nameof(aggregator7));
-                if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>(token);
                 multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
@@ -638,7 +788,7 @@
         }
 
         /// <summary>
-        /// Multiple aggregators on one enumeration.
+        /// Build multiple aggregates in one enumeration.
         /// </summary>
         public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>(this
             IAsyncEnumerable<TSource> source,
@@ -652,7 +802,50 @@
             AggregatorDelegate<TSource, TAggregate8> aggregator8,
             Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult> resultSelector,
             CancellationToken token)
-            => MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, aggregator8, resultSelector, token);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
+            if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
+            if (aggregator7 == null) throw new ArgumentNullException(nameof(aggregator7));
+            if (aggregator8 == null) throw new ArgumentNullException(nameof(aggregator8));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>.Aggregate(source, aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, aggregator8, resultSelector, token);
+        }
+
+        /// <summary>
+        /// Build multiple aggregates in one enumeration.
+        /// </summary>
+        public static Task<TResult> MultiAggregate<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>(this
+            IEnumerable<TSource> source,
+            AggregatorDelegate<TSource, TAggregate1> aggregator1,
+            AggregatorDelegate<TSource, TAggregate2> aggregator2,
+            AggregatorDelegate<TSource, TAggregate3> aggregator3,
+            AggregatorDelegate<TSource, TAggregate4> aggregator4,
+            AggregatorDelegate<TSource, TAggregate5> aggregator5,
+            AggregatorDelegate<TSource, TAggregate6> aggregator6,
+            AggregatorDelegate<TSource, TAggregate7> aggregator7,
+            AggregatorDelegate<TSource, TAggregate8> aggregator8,
+            Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult> resultSelector,
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
+            if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
+            if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
+            if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
+            if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
+            if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
+            if (aggregator7 == null) throw new ArgumentNullException(nameof(aggregator7));
+            if (aggregator8 == null) throw new ArgumentNullException(nameof(aggregator8));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, aggregator8, resultSelector, token);
+        }
 
         private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>
         {
@@ -669,17 +862,6 @@
                 Func<TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult> resultSelector,
                 CancellationToken token)
             {
-                if (source == null) throw new ArgumentNullException(nameof(source));
-                if (aggregator1 == null) throw new ArgumentNullException(nameof(aggregator1));
-                if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
-                if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
-                if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
-                if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
-                if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
-                if (aggregator7 == null) throw new ArgumentNullException(nameof(aggregator7));
-                if (aggregator8 == null) throw new ArgumentNullException(nameof(aggregator8));
-                if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>(token);
                 multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
