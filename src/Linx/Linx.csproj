@@ -165,8 +165,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Observable\Aggregators\" />
-  </ItemGroup>
-
 </Project>

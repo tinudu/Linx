@@ -12,7 +12,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (sampler == null) throw new ArgumentNullException(nameof(sampler));
-            return source.Latest().Zip(sampler.Latest(), (x, y) => x);
+            return new AnonymousAsyncEnumerable<TSource>(source.Latest().Zip(sampler.Latest(), (x, y) => x).GetAsyncEnumerator);
         }
 
         /// <summary>
@@ -21,7 +21,7 @@
         public static IAsyncEnumerable<T> Sample<T>(this IAsyncEnumerable<T> source, TimeSpan interval)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return source.Latest().Zip(Interval(interval).Latest(), (x, y) => x);
+            return new AnonymousAsyncEnumerable<T>(source.Latest().Zip(Interval(interval).Latest(), (x, y) => x).GetAsyncEnumerator);
         }
     }
 }

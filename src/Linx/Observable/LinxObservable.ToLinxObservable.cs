@@ -3,12 +3,14 @@
     using System;
     using System.Diagnostics;
     using System.Threading;
+    using System.Threading.Tasks;
 
     partial class LinxObservable
     {
         /// <summary>
         /// Convert a <see cref="IObservable{T}"/> to a <see cref="ILinxObservable{T}"/>.
         /// </summary>
+        /// <remarks>Blocking, subscribed on the task pool, best effort disposal.</remarks>
         public static ILinxObservable<T> ToLinxObservable<T>(this IObservable<T> source)
             => new ObservableToLinxObservable<T>(source);
 
@@ -21,8 +23,11 @@
             {
                 if (observer == null) throw new ArgumentNullException(nameof(observer));
 
-                var subscription = new Subscription(observer);
-                subscription.SetDisposable(_source.Subscribe(subscription));
+                Task.Run(() =>
+                {
+                    var subscription = new Subscription(observer);
+                    subscription.SetDisposable(_source.Subscribe(subscription));
+                });
             }
 
             private sealed class Subscription : IObserver<T>
