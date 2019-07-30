@@ -71,6 +71,8 @@
                     return new ValueTask(Task.CompletedTask);
                 }
 
+                public override string ToString() => "Never";
+
                 private void Cancel(Exception error)
                 {
                     var state = Atomic.Lock(ref _state);

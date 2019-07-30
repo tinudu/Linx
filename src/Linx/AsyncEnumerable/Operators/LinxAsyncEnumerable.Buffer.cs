@@ -32,6 +32,8 @@
                 _maxSize = maxSize;
             }
 
+            public override string ToString() => _source + ".Buffer";
+
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
             private sealed class Enumerator : IAsyncEnumerator<T>

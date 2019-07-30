@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -23,7 +24,7 @@
                             return;
                 }
                 finally { await aeOuter.DisposeAsync(); }
-            });
+            }, "Concat");
         }
 
         /// <summary>
@@ -38,7 +39,7 @@
                 foreach (var source in sources)
                     if (!await source.CopyTo(yield, token).ConfigureAwait(false))
                         return;
-            });
+            }, "Concat");
         }
 
         /// <summary>
@@ -54,6 +55,11 @@
         /// <summary>
         /// Concats the elements of the specified sequences.
         /// </summary>
-        public static IAsyncEnumerable<T> Concat<T>(params IAsyncEnumerable<T>[] sources) => sources.Concat();
+        public static IAsyncEnumerable<T> Concat<T>(this IAsyncEnumerable<T> source, params IAsyncEnumerable<T>[] sources)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (sources == null) throw new ArgumentNullException(nameof(sources));
+            return sources.Prepend(source).Concat();
+        }
     }
 }

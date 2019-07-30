@@ -61,6 +61,8 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
+            public override string ToString() => _<#= names[0].Source #>.ToString() + ".CombineLatest";
+
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
                 private const int _sInitial = 0;

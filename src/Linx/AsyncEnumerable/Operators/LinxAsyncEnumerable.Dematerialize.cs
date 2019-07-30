@@ -38,7 +38,7 @@
                 }
                 finally { await ae.DisposeAsync(); }
                 await token.WhenCanceled().ConfigureAwait(false);
-            });
+            }, source + ".Dematerialize");
         }
     }
 }

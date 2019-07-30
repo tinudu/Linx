@@ -39,7 +39,7 @@
                         }
                     }
                 await token.WhenCanceled().ConfigureAwait(false);
-            });
+            }, source + ".DematerializeToAsyncEnumerable");
         }
 
         /// <summary>
@@ -82,7 +82,7 @@
                     if (error == null) observer.OnCompleted();
                     else observer.OnError(error);
                 }
-            });
+            }, source + ".DematerializeToLinxObservable");
         }
     }
 }

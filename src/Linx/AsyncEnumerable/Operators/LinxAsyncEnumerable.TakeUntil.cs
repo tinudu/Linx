@@ -27,7 +27,7 @@
                     }
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, source + ".TakeUntil");
         }
 
         /// <summary>
@@ -52,7 +52,7 @@
                     }
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, nameof(TakeUntil));
         }
     }
 }

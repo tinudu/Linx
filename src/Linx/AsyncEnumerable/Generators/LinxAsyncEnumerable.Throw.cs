@@ -31,6 +31,8 @@
             T IAsyncEnumerator<T>.Current => default;
             ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync() => new ValueTask<bool>(_failed);
             ValueTask IAsyncDisposable.DisposeAsync() => new ValueTask(Task.CompletedTask);
+
+            public override string ToString() => "Throw";
         }
     }
 }

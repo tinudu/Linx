@@ -54,7 +54,7 @@
                     }
                 }
                 finally { await aeOuter.DisposeAsync(); }
-            });
+            }, "Switch");
         }
     }
 }

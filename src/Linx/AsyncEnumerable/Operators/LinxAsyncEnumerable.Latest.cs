@@ -6,6 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
+    using Observable;
     using TaskSources;
 
     partial class LinxAsyncEnumerable
@@ -13,11 +14,7 @@
         /// <summary>
         /// Ignores all but the latest element.
         /// </summary>
-        public static IAsyncEnumerable<T> Latest<T>(this IAsyncEnumerable<T> source)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            return new LatestOneEnumerable<T>(source);
-        }
+        public static IAsyncEnumerable<T> Latest<T>(this IAsyncEnumerable<T> source) => source.ToLinxObservable().Latest();
 
         /// <summary>
         /// Ignores all but the latest <paramref name="max"/> elements.
@@ -36,6 +33,8 @@
             public LatestOneEnumerable(IAsyncEnumerable<T> source) => _source = source;
 
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(_source, token);
+
+            public override string ToString() => _source + ".Latest";
 
             private sealed class Enumerator : IAsyncEnumerator<T>
             {
@@ -313,6 +312,8 @@
             }
 
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source + ".Latest";
 
             private sealed class Enumerator : IAsyncEnumerator<T>
             {

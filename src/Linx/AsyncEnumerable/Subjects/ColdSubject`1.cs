@@ -21,7 +21,7 @@
         public ColdSubject()
         {
             _enumerators = new List<Enumerator>();
-            Output = new AnonymousAsyncEnumerable<T>(t => new Enumerator(this, t));
+            Output = new AnonymousAsyncEnumerable<T>(t => new Enumerator(this, t), null);
         }
 
         /// <summary>
@@ -31,7 +31,7 @@
         public ColdSubject(int capacity)
         {
             _enumerators = new List<Enumerator>(capacity);
-            Output = new AnonymousAsyncEnumerable<T>(t => new Enumerator(this, t));
+            Output = new AnonymousAsyncEnumerable<T>(t => new Enumerator(this, t), null);
         }
 
         /// <inheritdoc />

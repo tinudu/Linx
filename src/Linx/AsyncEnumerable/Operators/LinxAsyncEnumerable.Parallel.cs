@@ -47,6 +47,8 @@
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
+            public override string ToString() => _source + ".Parallel";
+
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
                 private const int _sInitial = 0;

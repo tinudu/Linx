@@ -33,7 +33,7 @@
                 catch (Exception ex) { completion = Notification.Error<T>(ex); }
 
                 await yield(completion).ConfigureAwait(false);
-            });
+            }, source + ".Materialize");
         }
     }
 }

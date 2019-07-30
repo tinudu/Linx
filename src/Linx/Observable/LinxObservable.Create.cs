@@ -7,14 +7,18 @@
         /// <summary>
         /// Create a anonymous <see cref="ILinxObservable{T}"/> from the specified subscribe action.
         /// </summary>
-        /// <param name="subscribe">Implementation of <see cref="ILinxObservable{T}.Subscribe"/>.</param>
-        public static ILinxObservable<T> Create<T>(Action<ILinxObserver<T>> subscribe) => new AnonymousLinxObservable<T>(subscribe);
+        public static ILinxObservable<T> Create<T>(Action<ILinxObserver<T>> subscribe, string name) => new AnonymousLinxObservable<T>(subscribe, name);
 
         private sealed class AnonymousLinxObservable<T> : ILinxObservable<T>
         {
             private readonly Action<ILinxObserver<T>> _subscribe;
+            private readonly string _name;
 
-            public AnonymousLinxObservable(Action<ILinxObserver<T>> subscribe) => _subscribe = subscribe ?? throw new ArgumentNullException(nameof(subscribe));
+            public AnonymousLinxObservable(Action<ILinxObserver<T>> subscribe, string name)
+            {
+                _subscribe = subscribe ?? throw new ArgumentNullException(nameof(subscribe));
+                _name = name ?? nameof(AnonymousLinxObservable<T>);
+            }
 
             public void Subscribe(ILinxObserver<T> observer)
             {
@@ -27,6 +31,8 @@
                 }
                 catch (Exception ex) { observer.OnError(ex); }
             }
+
+            public override string ToString() => _name;
         }
     }
 }

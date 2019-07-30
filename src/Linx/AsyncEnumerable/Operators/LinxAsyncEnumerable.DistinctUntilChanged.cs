@@ -32,7 +32,7 @@
                     }
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, source + ".DistinctUntilChanged");
         }
     }
 }

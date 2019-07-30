@@ -28,7 +28,7 @@
                     }
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, source + ".Distinct");
         }
     }
 }

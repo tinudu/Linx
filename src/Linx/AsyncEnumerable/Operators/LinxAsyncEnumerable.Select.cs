@@ -23,7 +23,7 @@
                     while (await ae.MoveNextAsync() && await yield(selector(ae.Current)).ConfigureAwait(false)) { }
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, source + ".Select");
         }
 
         /// <summary>
@@ -43,7 +43,7 @@
                     while (await ae.MoveNextAsync() && await yield(selector(ae.Current, i++)).ConfigureAwait(false)) { }
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, source + ".Select");
         }
 
         /// <summary>
@@ -62,7 +62,7 @@
                     while (await ae.MoveNextAsync() && await yield(await selector(ae.Current, token).ConfigureAwait(false))) { }
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, source + ".Select");
         }
 
         /// <summary>
@@ -82,7 +82,7 @@
                     while (await ae.MoveNextAsync() && await yield(await selector(ae.Current, i++, token).ConfigureAwait(false)).ConfigureAwait(false)) { }
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, source + ".Select");
         }
     }
 }

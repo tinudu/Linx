@@ -12,7 +12,7 @@
         {
             if (factory == null) throw new ArgumentNullException(nameof(factory));
 
-            return new AnonymousAsyncEnumerable<T>(token => factory().GetAsyncEnumerator(token));
+            return new AnonymousAsyncEnumerable<T>(token => factory().GetAsyncEnumerator(token), "Defer");
         }
     }
 }

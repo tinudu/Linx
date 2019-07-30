@@ -37,6 +37,8 @@
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
+            public override string ToString() => _source1.ToString() + ".CombineLatest";
+
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
                 private const int _sInitial = 0;
@@ -360,6 +362,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1.ToString() + ".CombineLatest";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -690,6 +694,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1.ToString() + ".CombineLatest";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1026,6 +1032,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1.ToString() + ".CombineLatest";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1368,6 +1376,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1.ToString() + ".CombineLatest";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1716,6 +1726,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1.ToString() + ".CombineLatest";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -2070,6 +2082,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1.ToString() + ".CombineLatest";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {

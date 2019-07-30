@@ -38,6 +38,8 @@
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
+            public override string ToString() => _source1 + ".Zip";
+
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
                 private const int _n = 2;
@@ -305,6 +307,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1 + ".Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -579,6 +583,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1 + ".Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -859,6 +865,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1 + ".Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1145,6 +1153,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1 + ".Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1437,6 +1447,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1 + ".Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1735,6 +1747,8 @@
             }
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => _source1 + ".Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {

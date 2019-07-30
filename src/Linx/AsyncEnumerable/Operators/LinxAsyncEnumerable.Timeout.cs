@@ -65,7 +65,7 @@
                                     throw new Exception(state + "???");
                             }
 
-                            if(!await ae.MoveNextAsync()) return;
+                            if (!await ae.MoveNextAsync()) return;
 
                             // set initial
                             state = Atomic.Lock(ref _state);
@@ -84,7 +84,7 @@
                                     throw new Exception(state + "???");
                             }
 
-                            if(!await yield(ae.Current)) return;
+                            if (!await yield(ae.Current)) return;
                         }
                     }
                     finally { await ae.DisposeAsync(); }
@@ -177,7 +177,7 @@
                     catch (Exception ex) { Cancel(ex); }
                     // ReSharper restore AccessToModifiedClosure
                 }
-            });
+            }, source + ".Timeout");
         }
     }
 }

@@ -26,7 +26,7 @@
                     }
             }
             finally { await ae.DisposeAsync(); }
-        });
+        }, source + ".ConsumeSlow");
     }
 
     public sealed class OperatorTests

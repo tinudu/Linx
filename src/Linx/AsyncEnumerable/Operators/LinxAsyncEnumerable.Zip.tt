@@ -95,6 +95,8 @@ namespace Linx.AsyncEnumerable
 
             public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
+            public override string ToString() => _<#= arg.Names[0].Source #> + ".Zip";
+
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
                 private const int _n = <#= arg.N #>;
@@ -176,7 +178,7 @@ namespace Linx.AsyncEnumerable
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(ErrorHandler.EnumeratorDisposedException);
+                    Cancel(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
                 }
 

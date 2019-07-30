@@ -48,6 +48,8 @@
 
             IAsyncEnumerator<IAsyncGrouping<TKey, TSource>> IAsyncEnumerable<IAsyncGrouping<TKey, TSource>>.GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
+            public override string ToString() => _source + ".GroupBy";
+
             private sealed class Enumerator : IAsyncEnumerator<IAsyncGrouping<TKey, TSource>>
             {
                 private const int _sInitial = 0;
@@ -316,6 +318,8 @@
                                 throw new InvalidOperationException("Group can be enumerated at most once.");
                         }
                     }
+
+                    public override string ToString() => _enumerator._enumerable + ".Group";
 
                     ValueTask<bool> IAsyncEnumerator<TSource>.MoveNextAsync()
                     {

@@ -21,11 +21,11 @@
                 try
                 {
                     while (await ae.MoveNextAsync())
-                        if(!await yield(new Timestamped<T>(time.Now, ae.Current)).ConfigureAwait(false))
+                        if (!await yield(new Timestamped<T>(time.Now, ae.Current)).ConfigureAwait(false))
                             return;
                 }
                 finally { await ae.DisposeAsync(); }
-            });
+            }, source + ".Timestamp");
         }
     }
 }
