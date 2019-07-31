@@ -5,7 +5,6 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
-    using global::Linx.Enumerable;
     using global::Linx.Testing;
     using global::Linx.Timing;
     using Xunit;
@@ -73,8 +72,7 @@
             {
                 var cts = new CancellationTokenSource();
                 var t = i1.SequenceEqual(i1, cts.Token);
-                // ReSharper disable once MethodSupportsCancellation
-                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromHours(1));
+                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromHours(1), default);
                 vt.Start();
                 await tCancel;
                 await Assert.ThrowsAsync<OperationCanceledException>(() => t);
@@ -84,8 +82,7 @@
             {
                 var cts = new CancellationTokenSource();
                 var t = i1.SequenceEqual(i2, cts.Token);
-                // ReSharper disable once MethodSupportsCancellation
-                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(7));
+                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(7), default);
                 vt.Start();
                 await tCancel;
                 await Assert.ThrowsAsync<OperationCanceledException>(() => t);

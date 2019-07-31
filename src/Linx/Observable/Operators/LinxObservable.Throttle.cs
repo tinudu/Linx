@@ -9,7 +9,13 @@
     partial class LinxObservable
     {
         /// <summary>
-        /// Ignores values which are followed by another value before <paramref name="interval"/>.
+        /// Ignores values which are followed by another value before the specified interval in milliseconds.
+        /// </summary>
+        public static ILinxObservable<T> Throttle<T>(this ILinxObservable<T> source, int intervalMilliseconds)
+            => source.Throttle(TimeSpan.FromTicks(intervalMilliseconds * TimeSpan.TicksPerMillisecond));
+
+        /// <summary>
+        /// Ignores values which are followed by another value within the specified interval.
         /// </summary>
         public static ILinxObservable<T> Throttle<T>(this ILinxObservable<T> source, TimeSpan interval)
         {
@@ -32,7 +38,11 @@
             {
                 if (observer == null) throw new ArgumentNullException(nameof(observer));
 
-                try { _source.Subscribe(new Observer(_interval, observer)); }
+                try
+                {
+                    observer.Token.ThrowIfCancellationRequested();
+                    _source.Subscribe(new Observer(_interval, observer));
+                }
                 catch (Exception ex) { observer.OnError(ex); }
             }
 
@@ -97,57 +107,68 @@
                     Complete();
                 }
 
-                void ILinxObserver<T>.OnCompleted() => Complete();
+                void ILinxObserver<T>.OnCompleted()
+                {
+                    Cancel(null);
+                    Complete();
+                }
+
 
                 private async void Throttle()
                 {
+                    Exception error = null;
                     try
                     {
                         var idle = new ManualResetValueTaskSource();
-
-                        while (true)
-                        {
-                            var state = Atomic.Lock(ref _state);
-                            switch (state)
+                        using (var timer = _time.GetTimer(_cts.Token))
+                            while (true)
                             {
-                                case _sInitial:
-                                    idle.Reset();
-                                    _tsThrottleIdle = idle;
-                                    _state = _sInitial;
-                                    await idle.Task.ConfigureAwait(false);
-                                    break;
-
-                                case _sNext:
-                                    if (_due <= _time.Now)
-                                    {
-                                        var value = _next;
+                                var state = Atomic.Lock(ref _state);
+                                switch (state)
+                                {
+                                    case _sInitial:
+                                        idle.Reset();
+                                        _tsThrottleIdle = idle;
                                         _state = _sInitial;
-                                        if (!_observer.OnNext(value))
+                                        await idle.Task.ConfigureAwait(false);
+                                        break;
+
+                                    case _sNext:
+                                        if (_due <= _time.Now)
                                         {
-                                            Cancel(null);
-                                            return;
+                                            var value = _next;
+                                            _state = _sInitial;
+                                            if (!_observer.OnNext(value))
+                                            {
+                                                Cancel(null);
+                                                return;
+                                            }
                                         }
-                                    }
-                                    else
-                                    {
-                                        var due = _due;
-                                        _state = _sNext;
-                                        await _time.Delay(due, _cts.Token).ConfigureAwait(false);
-                                    }
-                                    break;
+                                        else
+                                        {
+                                            var due = _due;
+                                            _state = _sNext;
+                                            await timer.Delay(due).ConfigureAwait(false);
+                                        }
 
-                                case _sCanceling:
-                                    _state = state;
-                                    return;
+                                        break;
 
-                                default: // completed???
-                                    _state = state;
-                                    throw new Exception(state + "???");
+                                    case _sCanceling:
+                                        _state = state;
+                                        return;
+
+                                    default: // completed???
+                                        _state = state;
+                                        throw new Exception(state + "???");
+                                }
                             }
-                        }
                     }
-                    catch (Exception ex) { Cancel(ex); }
-                    finally { Complete(); }
+                    catch (Exception ex) { error = ex; }
+                    finally
+                    {
+                        Cancel(error);
+                        Complete();
+                    }
                 }
 
                 private void SetError(Exception errorOpt)

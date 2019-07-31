@@ -49,7 +49,7 @@
                 var source = Marble.Parse("-a-b-c-d-|").DematerializeAsyncEnumerable();
                 var testee = source.Delay(TimeSpan.FromSeconds(3));
                 var expected = Marble.Parse("----a-b-c-d-|");
-                var eq = testee.AssertEqual(expected);
+                var eq = testee.AssertEqual(expected, default);
                 vt.Start();
                 await eq;
             }
@@ -132,7 +132,7 @@
 
             using (var vt = new VirtualTime())
             {
-                var eq = testee.AssertEqual(expect);
+                var eq = testee.AssertEqual(expect, default);
                 vt.Start();
                 await eq;
             }

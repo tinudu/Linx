@@ -1,10 +1,12 @@
 ﻿namespace Linx.Notifications
 {
     using System;
+    using System.Diagnostics;
 
     /// <summary>
     /// <see cref="Notification{T}"/> factory methods.
     /// </summary>
+    [DebuggerNonUserCode]
     public static class Notification
     {
         /// <summary>

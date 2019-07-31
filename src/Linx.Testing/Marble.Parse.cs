@@ -3,12 +3,8 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Threading.Tasks;
-    using AsyncEnumerable;
     using Enumerable;
     using Notifications;
-    using Observable;
-    using Timing;
 
     /// <summary>
     /// Marble diagram parser.
@@ -26,7 +22,7 @@
     /// forever :== '*' interval-next+
     /// </code>
     /// </remarks>
-    public static class Marble
+    public static partial class Marble
     {
         private static readonly ISet<char> _elementChars = new HashSet<char>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
 
@@ -109,50 +105,6 @@
                 }
                 catch (MarbleParseException) { throw; }
                 catch (Exception ex) { throw new MarbleParseException(ex.Message, context.Position); }
-        }
-
-        /// <summary>
-        /// Asserts that <paramref name="testee"/> and <paramref name="expectation"/> are equal both element wise as well as the temporal spacing.
-        /// </summary>
-        /// <exception cref="Exception">Not equal element wise.</exception>
-        public static async Task AssertEqual<T>(this IAsyncEnumerable<T> testee, IEnumerable<TimeInterval<Notification<T>>> expectation)
-        {
-            if (testee == null) throw new ArgumentNullException(nameof(testee));
-            if (expectation == null) throw new ArgumentNullException(nameof(expectation));
-
-            var position = 0;
-            using (var e = expectation.Absolute(Time.Current.Now).GetEnumerator())
-            {
-                var ae = testee.Materialize().Timestamp().Buffer().ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
-                    {
-                        var current = ae.Current;
-                        if (!e.MoveNext())
-                            throw new Exception($"Position {position} - Received {current}, Expected: EOS");
-
-                        var exp = e.Current;
-                        if (!current.Equals(exp))
-                            throw new Exception($"Position {position} - Received {current}, Expected: {exp}");
-
-                        position++;
-                    }
-
-                    if (e.MoveNext())
-                        throw new Exception($"Position {position} - Received EOS, Expected: {e.Current}");
-                }
-                finally { await ae.DisposeAsync(); }
-            }
-        }
-
-        private static IEnumerable<Timestamped<T>> Absolute<T>(this IEnumerable<TimeInterval<T>> source, DateTimeOffset time)
-        {
-            foreach (var ti in source)
-            {
-                time += ti.Interval;
-                yield return new Timestamped<T>(time, ti.Value);
-            }
         }
 
         private static IEnumerable<TimeInterval<Notification<T>>> ParseTimeIntervals<T>(ParseContext<T> ctx)

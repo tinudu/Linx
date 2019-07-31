@@ -241,14 +241,13 @@
                         {
                             case _sNextAccepting:
                                 Debug.Assert(_e._queue == null || _e._queue.Count == 0);
-                                Debug.Assert(_e._error == null);
                                 _e.Current = default;
                                 _e._queue = null;
                                 _e._state = _sFinal;
                                 _e._ctr.Dispose();
                                 try { _e._cts.Cancel(); } catch { /**/ }
                                 _e._atmbDisposed.SetResult();
-                                _e._tsMoveNext.SetResult(false);
+                                _e._tsMoveNext.SetExceptionOrResult(_e._error, false);
                                 break;
 
                             case _sNext:

@@ -18,7 +18,7 @@
                 //                         1   2 345678901   2 345   67 89
                 var testee = Marble.Parse("-abc- ---------def- ---efg- ----|").DematerializeAsyncEnumerable().Sample(TimeSpan.FromSeconds(2));
                 var expect = Marble.Parse("-a  -c---------d  -f---e  -g----|");
-                var eq = testee.Sample(TimeSpan.FromSeconds(2)).AssertEqual(expect);
+                var eq = testee.Sample(TimeSpan.FromSeconds(2)).AssertEqual(expect, default);
                 vt.Start();
                 await eq;
             }

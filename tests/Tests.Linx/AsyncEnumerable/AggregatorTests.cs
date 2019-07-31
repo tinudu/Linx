@@ -89,8 +89,7 @@
                     (s, t) => s.Sum(t),
                     (all, sum) => new { all, sum },
                     cts.Token);
-                // ReSharper disable once MethodSupportsCancellation
-                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(1));
+                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(1), default);
                 vt.Start();
                 await tCancel;
                 var oce = await Assert.ThrowsAsync<OperationCanceledException>(() => tResult);

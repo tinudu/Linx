@@ -36,7 +36,7 @@
             {
                 var tResult = LinxAsyncEnumerable.Return(async () =>
                 {
-                    await Time.Current.Delay(delay).ConfigureAwait(false);
+                    await Time.Current.Delay(delay, default).ConfigureAwait(false);
                     return 42;
                 }).Single(default);
                 vt.Start();

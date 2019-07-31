@@ -1,10 +1,12 @@
 ﻿namespace Linx.Notifications
 {
     using System;
+    using System.Diagnostics;
 
     /// <summary>
     /// A materialized notification.
     /// </summary>
+    [DebuggerNonUserCode]
     public struct Notification<T> : IEquatable<Notification<T>>
     {
         /// <summary>
