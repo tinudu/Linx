@@ -1,0 +1,95 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ output extension=".cs" #>
+namespace Linx.AsyncEnumerable
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+
+    partial class LinxAsyncEnumerable
+    {
+<#
+const int min = 2;
+const int max = 8;
+foreach(var n in Enumerable.Range(min, max - min + 1))
+{
+    var names = Enumerable.Range(1, n)
+        .Select(i => new 
+        {
+            Index = i - 1,
+            GenArg = "T" + i,
+            Source = "source" + i,
+            Value = "_value" + i,
+            OnNext = "OnNext" + i,
+            Seq = "seq" + i
+        })
+        .ToList();
+    var genArgs = $"<{string.Join(", ", names.Select(x => x.GenArg))}, TResult>";
+#>
+        /// <summary>
+        /// Merges differently typed sequences into one.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="startAtFirstElement"/> determines how the start of the sequence is handled.
+        /// If it's false (the default), the operator only produces elements once all sources have produced their first element.
+        /// If it's true, the sequence starts at the first element produced by any source,
+        /// with default values passed to the <paramref name="resultSelector"/> for any source that has not produced a value.
+        /// </remarks>
+        public static IAsyncEnumerable<TResult> Combine<#= genArgs #>(this
+<# foreach(var x in names) { #>
+            IAsyncEnumerable<<#= x.GenArg #>> <#= x.Source #>,
+<# } #>
+            Func<#= genArgs #> resultSelector,
+            bool startAtFirstElement = false)
+        {
+<# foreach(var x in names) { #>
+            if (<#= x.Source #> == null) throw new ArgumentNullException(nameof(<#= x.Source #>));
+<# } #>
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            
+            return new AnonymousAsyncEnumerable<TResult>(token =>
+            {
+                var tuple = new CombineTuple<#= genArgs #>(resultSelector, startAtFirstElement);
+<# foreach(var x in names) { #>
+                var <#= x.Seq #> = <#= x.Source #>.Select(v => tuple.<#= x.OnNext #>(v));
+<# } #>
+                return new[] { <#= string.Join(", ", names.Select(x => x.Seq)) #> }.Merge().SkipUntil(m => m.HasValue).Select(m => m.GetValueOrDefault()).GetAsyncEnumerator(token);
+            });
+        }
+
+        private sealed class CombineTuple<#= genArgs #>
+        {
+            private readonly Func<#= genArgs #> _resultSelector;
+            private int _missing;
+<# foreach(var x in names) { #>
+            private <#= x.GenArg #> <#= x.Value #>;
+<# } #>
+
+            public CombineTuple(Func<#= genArgs #> resultSelector, bool startAtFirstElement = true)
+            {
+                _resultSelector = resultSelector;
+                if (!startAtFirstElement) _missing = (1 << <#= n #>) - 1;
+            }
+
+<# foreach(var x in names) { #>
+            public Maybe<TResult> <#= x.OnNext #>(<#= x.GenArg #> value)
+            {
+                var missing = Atomic.Lock(ref _missing) & ~(1 << <#= x.Index #>);
+                <#= x.Value #> = value;
+                return GetResult(missing);
+            }
+
+<# } #>
+            private Maybe<TResult> GetResult(int missing)
+            {
+                Debug.Assert((_missing & Atomic.LockBit) != 0);
+                if (missing != 0) { _missing = missing; return default; }
+                try { return _resultSelector(<#= string.Join(", ", names.Select(x => x.Value)) #>); }
+                finally { _missing = 0; }
+            }
+        }
+<# } #>
+    }
+}

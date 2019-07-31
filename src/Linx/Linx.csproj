@@ -25,11 +25,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxAsyncEnumerable.MultiAggregate.tt</DependentUpon>
     </None>
-    <None Include="AsyncEnumerable\Operators\LinxAsyncEnumerable.CombineLatest.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxAsyncEnumerable.CombineLatest.tt</DependentUpon>
-    </None>
     <None Include="Enumerable\Aggregators\LinxEnumerable.MinMax.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -73,10 +68,10 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxReactive.Sum.tt</DependentUpon>
     </Compile>
-    <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.CombineLatest.cs">
+    <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>LinxAsyncEnumerable.CombineLatest.tt</DependentUpon>
+      <DependentUpon>LinxAsyncEnumerable.Combine.tt</DependentUpon>
     </Compile>
     <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.cs">
       <DesignTime>True</DesignTime>
@@ -135,9 +130,9 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxReactive.Sum.cs</LastGenOutput>
     </None>
-    <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.CombineLatest.tt">
+    <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>LinxAsyncEnumerable.CombineLatest.cs</LastGenOutput>
+      <LastGenOutput>LinxAsyncEnumerable.Combine.cs</LastGenOutput>
     </None>
     <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
