@@ -12,12 +12,12 @@
         /// </summary>
         /// <remarks>Blocking, subscribed on the task pool, best effort disposal.</remarks>
         public static ILinxObservable<T> ToLinxObservable<T>(this IObservable<T> source)
-            => new ObservableToLinxObservable<T>(source);
+            => new ObservableLinxObservable<T>(source);
 
-        private sealed class ObservableToLinxObservable<T> : ILinxObservable<T>
+        private sealed class ObservableLinxObservable<T> : ILinxObservable<T>
         {
             private readonly IObservable<T> _source;
-            public ObservableToLinxObservable(IObservable<T> source) => _source = source ?? throw new ArgumentNullException(nameof(source));
+            public ObservableLinxObservable(IObservable<T> source) => _source = source ?? throw new ArgumentNullException(nameof(source));
 
             public void Subscribe(ILinxObserver<T> observer)
             {
