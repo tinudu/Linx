@@ -7,6 +7,7 @@
     using AsyncEnumerable;
     using Enumerable;
     using Notifications;
+    using Observable;
     using Timing;
 
     /// <summary>
@@ -122,7 +123,7 @@
             var position = 0;
             using (var e = expectation.Absolute(Time.Current.Now).GetEnumerator())
             {
-                var ae = testee.Materialize().Timestamp().ConfigureAwait(false).GetAsyncEnumerator();
+                var ae = testee.Materialize().Timestamp().Buffer().ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
                     while (await ae.MoveNextAsync())

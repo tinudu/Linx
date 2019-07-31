@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Notifications;
+    using Observable;
     using Timing;
 
     partial class LinxAsyncEnumerable

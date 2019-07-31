@@ -6,6 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
+    using Observable;
     using TaskSources;
 
     partial class LinxAsyncEnumerable
@@ -13,10 +14,18 @@
         /// <summary>
         /// Buffers items in case the consumer is slower than the generator.
         /// </summary>
-        public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source, int maxSize = int.MaxValue)
+        public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source) => source.ToLinxObservable().Buffer();
+
+        /// <summary>
+        /// Buffers items up to a maximum size in case the consumer is slower than the generator.
+        /// </summary>
+        public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source, int maxSize)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return maxSize > 0 ? new BufferEnumerable<T>(source, maxSize) : source;
+            return
+                maxSize <= 0 ? source :
+                maxSize == int.MaxValue ? source.Buffer()
+                : new BufferEnumerable<T>(source, maxSize);
         }
 
         private sealed class BufferEnumerable<T> : AsyncEnumerableBase<T>
