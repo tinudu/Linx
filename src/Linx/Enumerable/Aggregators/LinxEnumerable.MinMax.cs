@@ -30,10 +30,41 @@
         }
 
         /// <summary>
-        /// Invokes a transform function on each element of a sequence and returns the minimum element, if any.
+        /// Returns the minimum non-null element of a projection of a sequence, if any.
         /// </summary>
         public static Maybe<TResult> MinMaybe<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null)
             => source.Select(selector).MinMaybe(comparer);
+
+        /// <summary>
+        /// Returns the elements of a sequence witch have the minimum non-null key.
+        /// </summary>
+        public static IList<TSource> MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, Maybe<TKey>> maybeKeySelector, IComparer<TKey> comparer = null)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (maybeKeySelector == null) throw new ArgumentNullException(nameof(maybeKeySelector));
+            if (comparer == null) comparer = Comparer<TKey>.Default;
+
+            TKey min = default;
+            var result = new List<TSource>();
+            foreach (var element in source)
+            {
+                var maybeKey = maybeKeySelector(element);
+                if (!maybeKey.HasValue) continue;
+                var key = maybeKey.GetValueOrDefault();
+                if (key == null) continue;
+                if (result.Count == 0)
+                    min = key;
+                else
+                {
+                    var cmp = comparer.Compare(key, min);
+                    if (cmp > 0) continue;
+                    min = key;
+                    if (cmp < 0) result.Clear();
+                }
+                result.Add(element);
+            }
+            return result;
+        }
 
         /// <summary>
         /// Returns the maximum non-null element of a sequence, if any.
@@ -59,10 +90,41 @@
         }
 
         /// <summary>
-        /// Invokes a transform function on each element of a sequence and returns the maximum element, if any.
+        /// Returns the maximum non-null element of a projection of a sequence, if any.
         /// </summary>
         public static Maybe<TResult> MaxMaybe<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null)
             => source.Select(selector).MaxMaybe(comparer);
+
+        /// <summary>
+        /// Returns the elements of a sequence witch have the maximum non-null key.
+        /// </summary>
+        public static IList<TSource> MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, Maybe<TKey>> maybeKeySelector, IComparer<TKey> comparer = null)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (maybeKeySelector == null) throw new ArgumentNullException(nameof(maybeKeySelector));
+            if (comparer == null) comparer = Comparer<TKey>.Default;
+
+            TKey max = default;
+            var result = new List<TSource>();
+            foreach (var element in source)
+            {
+                var maybeKey = maybeKeySelector(element);
+                if (!maybeKey.HasValue) continue;
+                var key = maybeKey.GetValueOrDefault();
+                if (key == null) continue;
+                if (result.Count == 0)
+                    max = key;
+                else
+                {
+                    var cmp = comparer.Compare(key, max);
+                    if (cmp < 0) continue;
+                    max = key;
+                    if (cmp > 0) result.Clear();
+                }
+                result.Add(element);
+            }
+            return result;
+        }
 
     }
 }

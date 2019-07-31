@@ -24,29 +24,12 @@ namespace Linx.AsyncEnumerable
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
         public static async Task<T> <#= mm.Op #><T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
         {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (comparer == null) comparer = Comparer<T>.Default;
-            token.ThrowIfCancellationRequested();
-
-            var ae = source.Where(x => x != null).WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                if (!await ae.MoveNextAsync()) throw new InvalidOperationException(Strings.SequenceContainsNoElement);
-                var <#= mm.Op1 #> = ae.Current;
-
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    if (comparer.Compare(current, <#= mm.Op1 #>) <#= mm.Cmp #> 0) <#= mm.Op1 #> = current;
-                }
-
-                return <#= mm.Op1 #>;
-            }
-            finally { await ae.DisposeAsync(); }
+            var maybe = await source.<#= mm.Op #>Maybe(token, comparer);
+            return maybe.HasValue ? maybe.GetValueOrDefault() : throw new InvalidOperationException(Strings.SequenceContainsNoElement);
         }
 
         /// <summary>
-        /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum non-null element.
+        /// Returns the <#= mm.Op1 #>imum non-null element of a projection of a sequence.
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
         public static async Task<TResult> <#= mm.Op #><TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
@@ -79,13 +62,13 @@ namespace Linx.AsyncEnumerable
         }
 
         /// <summary>
-        /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum element, if any.
+        /// Returns the <#= mm.Op1 #>imum non-null element of a projection of a sequence, if any.
         /// </summary>
         public static async Task<Maybe<TResult>> <#= mm.Op #>Maybe<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
             => await source.Select(selector).<#= mm.Op #>Maybe(token, comparer).ConfigureAwait(false);
 
         /// <summary>
-        /// Returns the elements in <paramref name="source"/> with the <#= mm.Op1 #>imum key value.
+        /// Returns the elements of a sequence with the <#= mm.Op1 #>imum non-null key.
         /// </summary>
         public static async Task<IList<TSource>> <#= mm.Op #>By<TSource, TKey>(this IAsyncEnumerable<TSource> source, Func<TSource, TKey> keySelector, CancellationToken token, IComparer<TKey> comparer = null)
         {
@@ -103,6 +86,7 @@ namespace Linx.AsyncEnumerable
                 {
                     var current = ae.Current;
                     var key = keySelector(current);
+                    if (key == null) continue;
                     if (result.Count == 0)
                     {
                         <#= mm.Op1 #> = key;
@@ -123,13 +107,12 @@ namespace Linx.AsyncEnumerable
         }
 
         /// <summary>
-        /// Returns the elements in <paramref name="source"/> with the <#= mm.Op1 #>imum key value that matches a condition.
+        /// Returns the elements of a sequence witch have the <#= mm.Op1 #>imum non-null key.
         /// </summary>
-        public static async Task<IList<TSource>> <#= mm.Op #>By<TSource, TKey>(this IAsyncEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TKey, bool> predicate, CancellationToken token, IComparer<TKey> comparer = null)
+        public static async Task<IList<TSource>> <#= mm.Op #>By<TSource, TKey>(this IAsyncEnumerable<TSource> source, Func<TSource, Maybe<TKey>> maybeKeySelector, CancellationToken token, IComparer<TKey> comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
-            if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+            if (maybeKeySelector == null) throw new ArgumentNullException(nameof(maybeKeySelector));
             if (comparer == null) comparer = Comparer<TKey>.Default;
             token.ThrowIfCancellationRequested();
 
@@ -141,21 +124,20 @@ namespace Linx.AsyncEnumerable
                 while (await ae.MoveNextAsync())
                 {
                     var current = ae.Current;
-                    var key = keySelector(current);
-                    if(!predicate(key)) continue;
+                    var maybeKey = maybeKeySelector(current);
+                    if (!maybeKey.HasValue) continue;
+                    var key = maybeKey.GetValueOrDefault();
+                    if (key == null) continue;
                     if (result.Count == 0)
-                    {
                         <#= mm.Op1 #> = key;
-                        result.Add(current);
-                    }
                     else
                     {
                         var cmp = comparer.Compare(key, <#= mm.Op1 #>);
                         if (cmp <#= mm.InvCmp #> 0) continue;
                         <#= mm.Op1 #> = key;
                         if (cmp <#= mm.Cmp #> 0) result.Clear();
-                        result.Add(current);
                     }
+                    result.Add(current);
                 }
                 return result;
             }

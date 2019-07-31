@@ -4,8 +4,8 @@
 <#
     var minMax=new[]
     {
-        new { Op = "Min", Op1 = "min", Cmp = "<" },
-        new { Op = "Max", Op1 = "max", Cmp = ">" }
+        new { Op = "Min", Op1 = "min", Cmp = "<", InvCmp = ">" },
+        new { Op = "Max", Op1 = "max", Cmp = ">", InvCmp = "<" }
     };
 #>
 namespace Linx.Enumerable
@@ -41,10 +41,41 @@ namespace Linx.Enumerable
         }
 
         /// <summary>
-        /// Invokes a transform function on each element of a sequence and returns the <#= mm.Op1 #>imum element, if any.
+        /// Returns the <#= mm.Op1 #>imum non-null element of a projection of a sequence, if any.
         /// </summary>
         public static Maybe<TResult> <#= mm.Op #>Maybe<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null)
             => source.Select(selector).<#= mm.Op #>Maybe(comparer);
+
+        /// <summary>
+        /// Returns the elements of a sequence witch have the <#= mm.Op1 #>imum non-null key.
+        /// </summary>
+        public static IList<TSource> <#= mm.Op #>By<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, Maybe<TKey>> maybeKeySelector, IComparer<TKey> comparer = null)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (maybeKeySelector == null) throw new ArgumentNullException(nameof(maybeKeySelector));
+            if (comparer == null) comparer = Comparer<TKey>.Default;
+
+            TKey <#= mm.Op1 #> = default;
+            var result = new List<TSource>();
+            foreach (var element in source)
+            {
+                var maybeKey = maybeKeySelector(element);
+                if (!maybeKey.HasValue) continue;
+                var key = maybeKey.GetValueOrDefault();
+                if (key == null) continue;
+                if (result.Count == 0)
+                    <#= mm.Op1 #> = key;
+                else
+                {
+                    var cmp = comparer.Compare(key, <#= mm.Op1 #>);
+                    if (cmp <#= mm.InvCmp #> 0) continue;
+                    <#= mm.Op1 #> = key;
+                    if (cmp <#= mm.Cmp #> 0) result.Clear();
+                }
+                result.Add(element);
+            }
+            return result;
+        }
 
 <# } #>
     }
