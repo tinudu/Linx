@@ -11,9 +11,10 @@
         /// </summary>
         /// <param name="interval"><see cref="TimeSpan"/> between elements.</param>
         /// <param name="delayFirst">Optional. Whether to delay before emitting the first item.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="interval"/> must be at least 100ms.</exception>
         public static IAsyncEnumerable<long> Interval(TimeSpan interval, bool delayFirst = false)
         {
-            if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
+            if (interval.Ticks < 100 * TimeSpan.TicksPerMillisecond) throw new ArgumentOutOfRangeException(nameof(interval), "Must be at least 100ms");
 
             return Create<long>(async (yield, token) =>
             {
@@ -34,8 +35,6 @@
                         await timer.Delay(due).ConfigureAwait(false);
                     } while (true);
                 }
-
-                // ReSharper disable once FunctionNeverReturns
             });
         }
     }
