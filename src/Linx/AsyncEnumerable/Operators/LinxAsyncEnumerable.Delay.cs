@@ -4,7 +4,6 @@
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Notifications;
-    using Observable;
     using Timing;
 
     partial class LinxAsyncEnumerable
@@ -18,7 +17,7 @@
             if (delay <= TimeSpan.Zero) return source;
 
             var notifications = delayError ? source.Materialize() : source.Select(Notification.Next).Append(Notification.Completed<T>());
-            var timestamped = notifications.Timestamp().Buffer();
+            var timestamped = notifications.Timestamp();
 
             return Create<T>(async (yield, token) =>
             {
