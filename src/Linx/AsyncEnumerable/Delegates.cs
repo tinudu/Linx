@@ -5,12 +5,10 @@
     using System.Threading.Tasks;
 
     /// <summary>
-    /// Function to yield sequence elements to a async enumerator.
+    /// Function to yield sequence elements to an <see cref="IAsyncEnumerator{T}"/>
     /// </summary>
-    /// <param name="element">The element.</param>
     /// <returns>true if further elements are requested. false otherwise.</returns>
-    /// <exception cref="System.OperationCanceledException">The enumeration is being canceled.</exception>
-    public delegate ValueTask<bool> YieldAsyncDelegate<in T>(T element);
+    public delegate ValueTask<bool> YieldAsyncDelegate<in T>(T value);
 
     /// <summary>
     /// Coroutine to generate a sequence.
