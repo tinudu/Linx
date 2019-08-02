@@ -44,9 +44,16 @@
 
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
             {
-                if (Interlocked.CompareExchange(ref _state, _sInitial, _sEnumerable) != _sEnumerable)
-                    return new LatestOneEnumerable<T>(_source).GetAsyncEnumerator(token);
+                token.ThrowIfCancellationRequested();
 
+                var state = Atomic.Lock(ref _state);
+                if (state != _sEnumerable)
+                {
+                    _state = state;
+                    return new LatestOneEnumerable<T>(_source).GetAsyncEnumerator(token);
+                }
+
+                _state = _sInitial;
                 Token = token;
                 if (token.CanBeCanceled) _ctr = token.Register(() => Catch(new OperationCanceledException(token)));
                 return this;
@@ -221,10 +228,11 @@
                 return _tsMoveNext.Task;
             }
 
-            ValueTask IAsyncDisposable.DisposeAsync()
+            async ValueTask IAsyncDisposable.DisposeAsync()
             {
                 Catch(AsyncEnumeratorDisposedException.Instance);
-                return new ValueTask(_atmbDisposed.Task);
+                await _atmbDisposed.Task.ConfigureAwait(false);
+                _current = default;
             }
 
             #endregion
