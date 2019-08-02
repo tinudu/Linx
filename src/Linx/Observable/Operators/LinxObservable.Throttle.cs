@@ -20,233 +20,178 @@
         public static ILinxObservable<T> Throttle<T>(this ILinxObservable<T> source, TimeSpan interval)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return interval > TimeSpan.Zero ? new ThrottleObservable<T>(source, interval) : source;
+            if (interval <= TimeSpan.Zero) return source;
+
+            return Create<T>(observer =>
+            {
+                var throttleObserver = new ThrottleObserver<T>(interval, observer);
+                try { source.Subscribe(throttleObserver); }
+                catch (Exception ex) { throttleObserver.OnError(ex); }
+            });
         }
 
-        private sealed class ThrottleObservable<T> : ILinxObservable<T>
+        private sealed class ThrottleObserver<T> : ILinxObserver<T>
         {
-            private readonly ILinxObservable<T> _source;
+            private const int _sInitial = 0;
+            private const int _sNext = 1;
+            private const int _sLast = 2;
+            private const int _sCompleted = 3;
+            private const int _sFinal = 4;
+
+            private readonly ITime _time = Time.Current;
+            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
             private readonly TimeSpan _interval;
+            private readonly ILinxObserver<T> _observer;
+            private CancellationTokenRegistration _ctr;
+            private ManualResetValueTaskSource _tsThrottleIdle;
+            private int _active = 2; // (ILinxObserver<T>)this and Throttle()
+            private int _state;
+            private T _next;
+            private DateTimeOffset _due;
+            private Exception _error;
 
-            public ThrottleObservable(ILinxObservable<T> source, TimeSpan interval)
+            public ThrottleObserver(TimeSpan interval, ILinxObserver<T> observer)
             {
-                _source = source;
                 _interval = interval;
+                _observer = observer;
+                var token = observer.Token;
+                if (token.CanBeCanceled) _ctr = token.Register(() => SetCompleted(new OperationCanceledException(token)));
+                Throttle();
             }
 
-            public void Subscribe(ILinxObserver<T> observer)
+            private void SetCompleted(Exception errorOpt)
             {
-                if (observer == null) throw new ArgumentNullException(nameof(observer));
-
-                try
+                var state = Atomic.Lock(ref _state);
+                switch (state)
                 {
-                    observer.Token.ThrowIfCancellationRequested();
-                    _source.Subscribe(new Observer(_interval, observer));
-                }
-                catch (Exception ex) { observer.OnError(ex); }
-            }
-
-            public override string ToString() => "Throttle";
-
-            private sealed class Observer : ILinxObserver<T>
-            {
-                private const int _sInitial = 0;
-                private const int _sNext = 1;
-                private const int _sCanceling = 2;
-                private const int _sFinal = 3;
-
-                private readonly TimeSpan _interval;
-                private readonly ILinxObserver<T> _observer;
-
-                private readonly ITime _time = Time.Current;
-                private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-                private CancellationTokenRegistration _ctr;
-                private int _active = 2; // this and Throttle()
-                private int _state;
-                private Exception _error;
-                private T _next;
-                private DateTimeOffset _due;
-                private ManualResetValueTaskSource _tsThrottleIdle;
-
-                public Observer(TimeSpan interval, ILinxObserver<T> observer)
-                {
-                    _interval = interval;
-                    _observer = observer;
-                    var token = observer.Token;
-                    if (token.CanBeCanceled) _ctr = token.Register(() => Cancel(new OperationCanceledException(token)));
-                    Throttle();
-                }
-
-                CancellationToken ILinxObserver<T>.Token => _cts.Token;
-
-                bool ILinxObserver<T>.OnNext(T value)
-                {
-                    _cts.Token.ThrowIfCancellationRequested();
-
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                        case _sNext:
-                            _next = value;
-                            _due = _time.Now + _interval;
-                            var idle = Linx.Clear(ref _tsThrottleIdle);
-                            _state = _sNext;
-                            idle?.SetResult();
-                            return true;
-
-                        default:
-                            _state = state;
-                            return false;
-                    }
-                }
-
-                void ILinxObserver<T>.OnError(Exception error)
-                {
-                    Cancel(error ?? new ArgumentNullException(nameof(error)));
-                    Complete();
-                }
-
-                void ILinxObserver<T>.OnCompleted()
-                {
-                    Cancel(null);
-                    Complete();
-                }
-
-
-                private async void Throttle()
-                {
-                    Exception error = null;
-                    try
-                    {
-                        var idle = new ManualResetValueTaskSource();
-                        using (var timer = _time.GetTimer(_cts.Token))
-                            while (true)
-                            {
-                                var state = Atomic.Lock(ref _state);
-                                switch (state)
-                                {
-                                    case _sInitial:
-                                        idle.Reset();
-                                        _tsThrottleIdle = idle;
-                                        _state = _sInitial;
-                                        await idle.Task.ConfigureAwait(false);
-                                        break;
-
-                                    case _sNext:
-                                        if (_due <= _time.Now)
-                                        {
-                                            var value = _next;
-                                            _state = _sInitial;
-                                            if (!_observer.OnNext(value))
-                                            {
-                                                Cancel(null);
-                                                return;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            var due = _due;
-                                            _state = _sNext;
-                                            await timer.Delay(due).ConfigureAwait(false);
-                                        }
-
-                                        break;
-
-                                    case _sCanceling:
-                                        _state = state;
-                                        return;
-
-                                    default: // completed???
-                                        _state = state;
-                                        throw new Exception(state + "???");
-                                }
-                            }
-                    }
-                    catch (Exception ex) { error = ex; }
-                    finally
-                    {
-                        Cancel(error);
-                        Complete();
-                    }
-                }
-
-                private void SetError(Exception errorOpt)
-                {
-                    if (errorOpt != null && (_error == null || _error is OperationCanceledException oce && oce.CancellationToken == _cts.Token))
+                    case _sInitial:
+                    case _sNext:
+                    case _sLast:
+                        Debug.Assert(_active > 0);
                         _error = errorOpt;
-                }
+                        _next = default;
+                        var idle = Linx.Clear(ref _tsThrottleIdle);
+                        _state = _sCompleted;
+                        _ctr.Dispose();
+                        try { _cts.Cancel(); } catch { /**/ }
+                        idle?.SetResult();
+                        break;
 
-                private void Cancel(Exception errorOpt)
-                {
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                        case _sNext:
-                            SetError(errorOpt);
-                            _next = default;
-                            var idle = Linx.Clear(ref _tsThrottleIdle);
-                            _state = _sCanceling;
-                            _ctr.Dispose();
-                            try { _cts.Cancel(); } catch { /**/ }
-                            idle?.SetResult();
-                            break;
-
-                        case _sCanceling:
-                            SetError(errorOpt);
-                            _state = _sCanceling;
-                            break;
-
-                        case _sFinal:
-                            _state = _sFinal;
-                            break;
-
-                        default:
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-                }
-
-                private void Complete()
-                {
-                    var state = Atomic.Lock(ref _state);
-
-                    Debug.Assert(_active > 0);
-                    if (--_active > 0)
-                    {
+                    case _sCompleted:
+                    case _sFinal:
                         _state = state;
-                        return;
-                    }
+                        break;
 
-                    switch (state)
-                    {
-                        case _sInitial:
-                        case _sNext:
-                            _next = default;
-                            var idle = Linx.Clear(ref _tsThrottleIdle);
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            try { _cts.Cancel(); } catch { /**/ }
-                            idle?.SetResult();
-                            break;
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+            }
 
-                        case _sCanceling:
-                            _state = _sFinal;
-                            break;
-
-                        case _sFinal:
-                            _state = _sFinal;
-                            return;
-
-                        default:
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-
+            private void SetFinal()
+            {
+                var state = Atomic.Lock(ref _state);
+                Debug.Assert(_active > 0 && state == _sCompleted);
+                if (--_active > 0)
+                    _state = state;
+                else
+                {
+                    _state = _sFinal;
                     if (_error == null) _observer.OnCompleted();
                     else _observer.OnError(_error);
                 }
+            }
+
+            CancellationToken ILinxObserver<T>.Token => _cts.Token;
+
+            bool ILinxObserver<T>.OnNext(T value)
+            {
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sInitial:
+                    case _sNext:
+                        _next = value;
+                        _due = _time.Now + _interval;
+                        var idle = Linx.Clear(ref _tsThrottleIdle);
+                        _state = _sNext;
+                        idle?.SetResult();
+                        return true;
+
+                    default:
+                        _state = state;
+                        return false;
+                }
+            }
+
+            public void OnError(Exception error)
+            {
+                SetCompleted(error ?? new ArgumentNullException(nameof(error)));
+                SetFinal();
+            }
+
+            void ILinxObserver<T>.OnCompleted()
+            {
+                SetCompleted(null);
+                SetFinal();
+            }
+
+            private async void Throttle()
+            {
+                try
+                {
+                    var idle = new ManualResetValueTaskSource();
+                    using (var timer = _time.GetTimer(_cts.Token))
+                        while (true)
+                        {
+                            var state = Atomic.Lock(ref _state);
+                            switch (state)
+                            {
+                                case _sInitial:
+                                    idle.Reset();
+                                    _tsThrottleIdle = idle;
+                                    _state = _sInitial;
+                                    await idle.Task.ConfigureAwait(false);
+                                    continue;
+
+                                case _sNext:
+                                case _sLast:
+                                    if (_due > _time.Now)
+                                    {
+                                        var due = _due;
+                                        _state = state;
+                                        await timer.Delay(due).ConfigureAwait(false);
+                                        continue;
+                                    }
+
+                                    if (state == _sNext)
+                                    {
+                                        var value = _next;
+                                        _state = _sInitial;
+                                        if (_observer.OnNext(value)) continue;
+                                    }
+                                    else // Last
+                                    {
+                                        var value = _next;
+                                        _state = _sLast; // temporarily
+                                        _observer.OnNext(value);
+                                    }
+                                    SetCompleted(null);
+                                    return;
+
+                                case _sCompleted:
+                                    _state = state;
+                                    return;
+
+                                //case _sFinal:
+                                default:
+                                    _state = state;
+                                    throw new Exception(state + "???");
+                            }
+                        }
+                }
+                catch (Exception ex) { SetCompleted(ex); }
+                finally { SetFinal(); }
             }
         }
     }
