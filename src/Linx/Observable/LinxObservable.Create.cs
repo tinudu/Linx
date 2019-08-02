@@ -6,7 +6,7 @@
     partial class LinxObservable
     {
         /// <summary>
-        /// Create a anonymous <see cref="ILinxObservable{T}"/> from the specified subscribe action.
+        /// Create an anonymous <see cref="ILinxObservable{T}"/> from the specified subscribe action.
         /// </summary>
         public static ILinxObservable<T> Create<T>(
             Action<ILinxObserver<T>> subscribe, 
