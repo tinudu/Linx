@@ -5,7 +5,7 @@
     /// <summary>
     /// Settings for the <see cref="Marble"/>.
     /// </summary>
-    public sealed class MarbleParserSettings
+    public sealed class MarbleSettings
     {
         /// <summary>
         /// One second.

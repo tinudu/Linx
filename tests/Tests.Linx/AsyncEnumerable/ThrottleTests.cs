@@ -16,7 +16,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-- -|").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  --g-|");
-            var testee = source.Throttle(2 * MarbleParserSettings.DefaultFrameSize).Latest();
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
 
             using (var vt = new VirtualTime())
             {
@@ -31,7 +31,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-#").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  -#");
-            var testee = source.Throttle(2 * MarbleParserSettings.DefaultFrameSize).Latest();
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
 
             using (var vt = new VirtualTime())
             {
@@ -46,7 +46,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-- -#").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  --g-#");
-            var testee = source.Throttle(2 * MarbleParserSettings.DefaultFrameSize).Latest();
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
 
             using (var vt = new VirtualTime())
             {
@@ -60,13 +60,13 @@
         public async Task CancelWhileThrottling()
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg").DematerializeAsyncEnumerable();
-            var expect = Marble.Parse("- -  - --d- -  -#", new MarbleParserSettings { Error = new OperationCanceledException() });
-            var testee = source.Throttle(2 * MarbleParserSettings.DefaultFrameSize).Latest();
+            var expect = Marble.Parse("- -  - --d- -  -#", new MarbleSettings { Error = new OperationCanceledException() });
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
 
             using (var vt = new VirtualTime())
             {
                 var cts = new CancellationTokenSource();
-                var cancel = vt.Schedule(() => cts.Cancel(), 8 * MarbleParserSettings.DefaultFrameSize, default);
+                var cancel = vt.Schedule(() => cts.Cancel(), 8 * MarbleSettings.DefaultFrameSize, default);
                 var eq = testee.AssertEqual(expect, cts.Token);
                 vt.Start();
                 await cancel;

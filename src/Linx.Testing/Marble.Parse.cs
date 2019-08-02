@@ -33,7 +33,7 @@
         /// <param name="settings">Optional. Marble parser settings.</param>
         public static IEnumerable<TimeInterval<Notification<char>>> Parse(
             IEnumerable<char> diagram,
-            MarbleParserSettings settings = null)
+            MarbleSettings settings = null)
             => Parse(diagram, (ch, i) => ch, settings);
 
         /// <summary>
@@ -45,7 +45,7 @@
         public static IEnumerable<TimeInterval<Notification<T>>> Parse<T>(
             IEnumerable<char> diagram,
             IEnumerable<T> elements,
-            MarbleParserSettings settings = null)
+            MarbleSettings settings = null)
         {
             var eleList = elements as IReadOnlyList<T> ?? (elements != null ? elements.ToList() : throw new ArgumentNullException(nameof(elements)));
             return Parse(diagram, (ch, i) => eleList[i], settings);
@@ -59,7 +59,7 @@
         /// <param name="elements">Positional element replacements.</param>
         public static IEnumerable<TimeInterval<Notification<T>>> Parse<T>(
             IEnumerable<char> diagram,
-            MarbleParserSettings settings,
+            MarbleSettings settings,
             params T[] elements)
         {
             var eleList = elements as IReadOnlyList<T> ?? (elements != null ? elements.ToList() : throw new ArgumentNullException(nameof(elements)));
@@ -75,11 +75,11 @@
         public static IEnumerable<TimeInterval<Notification<T>>> Parse<T>(
             IEnumerable<char> diagram,
             Func<char, int, T> selector,
-            MarbleParserSettings settings = null)
+            MarbleSettings settings = null)
         {
             if (diagram == null) throw new ArgumentNullException(nameof(diagram));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
-            if (settings == null) settings = new MarbleParserSettings();
+            if (settings == null) settings = new MarbleSettings();
 
             using (var context = new ParseContext<T>(diagram, selector, settings))
                 try
@@ -151,11 +151,11 @@
             public int Index;
             public bool IsCompleted;
 
-            public ParseContext(IEnumerable<char> diagram, Func<char, int, T> selector, MarbleParserSettings settingsOpt)
+            public ParseContext(IEnumerable<char> diagram, Func<char, int, T> selector, MarbleSettings settingsOpt)
             {
                 _input = diagram.Where(ch => ch != ' ').LookAhead();
                 Selector = selector;
-                FrameSize = settingsOpt?.FrameSize ?? MarbleParserSettings.DefaultFrameSize;
+                FrameSize = settingsOpt?.FrameSize ?? MarbleSettings.DefaultFrameSize;
                 Error = settingsOpt?.Error ?? MarbleException.Singleton;
             }
 

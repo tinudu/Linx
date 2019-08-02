@@ -8,20 +8,13 @@
         /// <summary>
         /// Samples <paramref name="source"/> at sampling ticks provided by <paramref name="sampler"/>.
         /// </summary>
-        public static IAsyncEnumerable<TSource> Sample<TSource, TSample>(this IAsyncEnumerable<TSource> source, IAsyncEnumerable<TSample> sampler)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (sampler == null) throw new ArgumentNullException(nameof(sampler));
-            return new AnonymousAsyncEnumerable<TSource>(source.Latest().Zip(sampler.Latest(), (x, y) => x).GetAsyncEnumerator);
-        }
+        public static IAsyncEnumerable<TSource> Sample<TSource, TSample>(this IAsyncEnumerable<TSource> source, IAsyncEnumerable<TSample> sampler) 
+            => source.Latest().Zip(sampler.Latest(), (x, y) => x).WithName();
 
         /// <summary>
         /// Samples <paramref name="source"/> every <paramref name="interval"/>.
         /// </summary>
         public static IAsyncEnumerable<T> Sample<T>(this IAsyncEnumerable<T> source, TimeSpan interval)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            return new AnonymousAsyncEnumerable<T>(source.Latest().Zip(Interval(interval).Latest(), (x, y) => x).GetAsyncEnumerator);
-        }
+            => source.Sample(Interval(interval));
     }
 }

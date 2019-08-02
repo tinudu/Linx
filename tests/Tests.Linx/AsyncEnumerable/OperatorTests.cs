@@ -6,7 +6,6 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
-    using global::Linx.Enumerable;
     using global::Linx.Testing;
     using global::Linx.Timing;
     using Xunit;
@@ -44,12 +43,13 @@
         [Fact]
         public async Task TestDelay()
         {
+            var delay = 3 * MarbleSettings.DefaultFrameSize;
+            var source = Marble.Parse("   -a-bc-d-|").DematerializeAsyncEnumerable();
+            var expect = Marble.Parse("----a-bc-d-|");
+            var testee = source.Delay(delay);
             using (var vt = new VirtualTime())
             {
-                var source = Marble.Parse("-a-b-c-d-|").DematerializeAsyncEnumerable();
-                var testee = source.Delay(TimeSpan.FromSeconds(3));
-                var expected = Marble.Parse("----a-b-c-d-|");
-                var eq = testee.AssertEqual(expected, default);
+                var eq = testee.AssertEqual(expect, default);
                 vt.Start();
                 await eq;
             }
@@ -128,7 +128,7 @@
         public async Task TestTimeout()
         {
             var testee = Marble.Parse("a-b--c----d|").DematerializeAsyncEnumerable().Timeout(TimeSpan.FromSeconds(3));
-            var expect = Marble.Parse("a-b--c---#", new MarbleParserSettings { Error = new TimeoutException() });
+            var expect = Marble.Parse("a-b--c---#", new MarbleSettings { Error = new TimeoutException() });
 
             using (var vt = new VirtualTime())
             {

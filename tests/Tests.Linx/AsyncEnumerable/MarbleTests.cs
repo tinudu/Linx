@@ -103,7 +103,7 @@
         [Fact]
         public void TestSettings()
         {
-            var ms = new MarbleParserSettings { Error = new TimeoutException(), FrameSize = TimeSpan.FromSeconds(2) };
+            var ms = new MarbleSettings { Error = new TimeoutException(), FrameSize = TimeSpan.FromSeconds(2) };
             var m = Marble.Parse("a-b--#", ms).ToList();
             var x = new[]
             {
