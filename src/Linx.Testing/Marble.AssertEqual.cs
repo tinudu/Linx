@@ -18,7 +18,7 @@
             if (testee == null) throw new ArgumentNullException(nameof(testee));
             if (expectation == null) throw new ArgumentNullException(nameof(expectation));
 
-            var position = 0;
+            var position = 1;
             var time = Time.Current;
             using (var e = expectation.Absolute(Time.Current.Now).GetEnumerator())
             {

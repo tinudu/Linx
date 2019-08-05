@@ -20,282 +20,265 @@
             return new BufferAsyncEnumerable<T>(source);
         }
 
-        private sealed class BufferAsyncEnumerable<T> : IAsyncEnumerable<T>, IAsyncEnumerator<T>, ILinxObservable<T>, ILinxObserver<T>
+        private sealed class BufferAsyncEnumerable<T> : IAsyncEnumerable<T>, ILinxObservable<T>
         {
-            private const int _sEnumerator = 0;
-            private const int _sInitial = 1;
-            private const int _sAccepting = 2;
-            private const int _sNext = 3;
-            private const int _sLast = 4;
-
             private readonly ILinxObservable<T> _source;
-            private CancellationTokenRegistration _ctr;
-            private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
-            private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
-            private int _state;
-            private Queue<T> _queue;
-            private Exception _error;
 
             public BufferAsyncEnumerable(ILinxObservable<T> source) => _source = source;
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
-            {
-                var state = Atomic.Lock(ref _state);
-                if (state != _sEnumerator)
-                {
-                    _state = state;
-                    return new BufferAsyncEnumerable<T>(_source).GetAsyncEnumerator(token);
-                }
-
-                _state = _sInitial;
-                Token = token;
-                if (token.CanBeCanceled) _ctr = token.Register(() => Catch(new OperationCanceledException(token)));
-                return this;
-            }
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
             public override string ToString() => "Buffer";
 
             void ILinxObservable<T>.Subscribe(ILinxObserver<T> observer) => _source.Subscribe(observer);
 
-            private void Catch(Exception error)
+            private sealed class Enumerator : IAsyncEnumerator<T>, ILinxObserver<T>
             {
-                Debug.Assert(error != null);
+                private const int _sInitial = 0;
+                private const int _sAccepting = 1; // !Q !E
+                private const int _sEmitting = 2; // Q? !E
+                private const int _sLast = 3; // Q !E
+                private const int _sCompleted = 4; // !Q, E?
+                private const int _sFinal = 5;
 
-                var state = Atomic.Lock(ref _state);
+                private readonly ILinxObservable<T> _source;
+                private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+                private CancellationTokenRegistration _ctr;
+                private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
+                private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+                private int _state;
+                private Queue<T> _queue;
+                private Exception _error;
 
-                if (_error != null)
+                public Enumerator(ILinxObservable<T> sourc, CancellationToken token)
                 {
-                    _state = state;
-                    return;
+                    _source = sourc;
+                    if (token.CanBeCanceled) _ctr = token.Register(() => Catch(new OperationCanceledException(token)));
                 }
 
-                switch (state)
+                private void Catch(Exception error)
                 {
-                    case _sEnumerator:
-                        _state = _sEnumerator;
-                        throw new InvalidOperationException();
+                    Debug.Assert(error != null);
 
-                    case _sInitial:
-                        _error = error;
-                        _state = _sLast;
-                        _ctr.Dispose();
-                        _atmbDisposed.SetResult();
-                        break;
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _error = error;
+                            _state = _sFinal;
+                            _ctr.Dispose();
+                            _atmbDisposed.SetResult();
+                            break;
 
-                    case _sAccepting:
-                        _error = error;
-                        _queue = null;
-                        _state = _sNext;
-                        _ctr.Dispose();
-                        _tsMoveNext.SetException(error);
-                        break;
-
-                    case _sNext:
-                        _error = error;
-                        _queue = null;
-                        _state = _sNext;
-                        _ctr.Dispose();
-                        break;
-
-                    case _sLast:
-                        if (_queue != null)
-                        {
+                        case _sAccepting:
+                            Current = default;
                             _error = error;
                             _queue = null;
+                            _state = _sCompleted;
                             _ctr.Dispose();
-                            _atmbDisposed.SetResult();
-                        }
-                        _state = _sLast;
-                        break;
+                            try { _cts.Cancel(); } catch { /**/ }
+                            _tsMoveNext.SetException(error);
+                            break;
 
-                    default:
-                        _state = state;
-                        throw new Exception(state + "???");
-                }
-            }
-
-            private void Finally()
-            {
-                var state = Atomic.Lock(ref _state);
-                switch (state)
-                {
-                    case _sEnumerator:
-                    case _sInitial:
-                        _state = _sEnumerator;
-                        throw new InvalidOperationException();
-
-                    case _sAccepting:
-                        Debug.Assert(_error == null && (_queue == null || _queue.Count == 0));
-                        Current = default;
-                        _queue = null;
-                        _state = _sLast;
-                        _ctr.Dispose();
-                        _atmbDisposed.SetResult();
-                        _tsMoveNext.SetResult(false);
-                        break;
-
-                    case _sNext:
-                        if (_queue == null || _queue.Count == 0)
-                        {
+                        case _sEmitting:
+                            _error = error;
                             _queue = null;
-                            _state = _sLast;
+                            _state = _sCompleted;
+                            _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
+                            break;
+
+                        case _sLast:
+                            _error = error;
+                            _queue = null;
+                            _state = _sFinal;
                             _ctr.Dispose();
                             _atmbDisposed.SetResult();
-                        }
-                        else
-                            _state = _sLast;
-                        break;
+                            break;
 
-                    case _sLast:
-                        _state = _sLast;
-                        break;
+                        case _sCompleted:
+                        case _sFinal:
+                            _state = _sCompleted;
+                            break;
 
-                    default:
-                        _state = state;
-                        throw new Exception(state + "???");
+                        default:
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
                 }
-            }
 
-            #region IAsyncEnumerator<T> implementation
-
-            public T Current { get; private set; }
-
-            ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync()
-            {
-                _tsMoveNext.Reset();
-
-                var state = Atomic.Lock(ref _state);
-                switch (state)
+                private void Finally()
                 {
-                    case _sEnumerator:
-                        _state = _sEnumerator;
-                        throw new InvalidOperationException();
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _state = _sInitial;
+                            throw new InvalidOperationException();
 
-                    case _sInitial:
-                        _state = _sAccepting;
-                        try { _source.Subscribe(this); }
-                        catch (Exception ex) { ((ILinxObserver<T>)this).OnError(ex); }
-                        break;
-
-                    case _sNext:
-                        if (_error != null)
-                        {
+                        case _sAccepting:
                             Current = default;
-                            _state = _sNext;
-                            _tsMoveNext.SetException(_error);
-                        }
-                        else if (_queue == null || _queue.Count == 0)
-                            _state = _sAccepting;
-                        else
-                        {
-                            Current = _queue.Dequeue();
-                            if (_queue.Count == 0) try { _queue.TrimExcess(); } catch { /**/ }
-                            _state = _sNext;
-                            _tsMoveNext.SetResult(true);
-                        }
-                        break;
+                            _queue = null;
+                            _state = _sFinal;
+                            _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
+                            _atmbDisposed.SetResult();
+                            _tsMoveNext.SetResult(false);
+                            break;
 
-                    case _sLast:
-                        if (_queue == null || _queue.Count == 0)
-                        {
-                            _state = _sLast;
-                            _tsMoveNext.SetExceptionOrResult(_error, false);
-                        }
-                        else
-                        {
-                            Debug.Assert(_error == null);
-                            Current = _queue.Dequeue();
-                            if (_queue.Count == 0)
+                        case _sEmitting:
+                            if (_queue == null || _queue.Count == 0)
                             {
                                 _queue = null;
-                                _state = _sLast;
+                                _state = _sFinal;
                                 _ctr.Dispose();
+                                try { _cts.Cancel(); } catch { /**/ }
                                 _atmbDisposed.SetResult();
                             }
                             else
                                 _state = _sLast;
-                            _tsMoveNext.SetResult(true);
-                        }
-                        break;
+                            break;
 
-                    //case _sAccepting:
-                    default:
-                        _state = state;
-                        throw new Exception(state + "???");
+                        case _sCompleted:
+                            _state = _sFinal;
+                            _atmbDisposed.SetResult();
+                            break;
+
+                        case _sLast:
+                        case _sFinal:
+                            _state = _sLast;
+                            break;
+
+                        default:
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
                 }
 
-                return _tsMoveNext.Task;
-            }
+                #region IAsyncEnumerator<T> implementation
 
-            async ValueTask IAsyncDisposable.DisposeAsync()
-            {
-                Catch(AsyncEnumeratorDisposedException.Instance);
-                await _atmbDisposed.Task.ConfigureAwait(false);
-                Current = default;
-            }
+                public T Current { get; private set; }
 
-            #endregion
-
-            #region ILinxObserver<T> implementation
-
-            public CancellationToken Token { get; private set; }
-
-            bool ILinxObserver<T>.OnNext(T value)
-            {
-                var state = Atomic.Lock(ref _state);
-                switch (state)
+                ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync()
                 {
-                    case _sEnumerator:
-                    case _sInitial:
-                        _state = _sEnumerator;
-                        throw new InvalidOperationException();
+                    _tsMoveNext.Reset();
 
-                    case _sAccepting:
-                        Current = value;
-                        _state = _sNext;
-                        _tsMoveNext.SetResult(true);
-                        return true;
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _state = _sAccepting;
+                            try { _source.Subscribe(this); }
+                            catch (Exception ex) { ((ILinxObserver<T>)this).OnError(ex); }
+                            break;
 
-                    case _sNext:
-                        if (_error != null)
-                        {
-                            _state = _sNext;
-                            return false;
-                        }
+                        case _sEmitting:
+                            if (_queue == null || _queue.Count == 0)
+                                _state = _sAccepting;
+                            else
+                            {
+                                Current = _queue.Dequeue();
+                                if (_queue.Count == 0) try { _queue.TrimExcess(); } catch { /**/ }
+                                _state = _sEmitting;
+                                _tsMoveNext.SetResult(true);
+                            }
+                            break;
 
-                        try
-                        {
-                            if (_queue == null) _queue = new Queue<T>();
-                            _queue.Enqueue(value);
-                        }
-                        catch (Exception ex)
-                        {
-                            _state = _sNext;
-                            Catch(ex);
-                            return false;
-                        }
-                        _state = _sNext;
-                        return true;
+                        case _sLast:
+                            Debug.Assert(_error == null && _queue.Count > 0);
+                            Current = _queue.Dequeue();
+                            if (_queue.Count > 0)
+                                _state = _sLast;
+                            else
+                            {
+                                _queue = null;
+                                _state = _sFinal;
+                                _ctr.Dispose();
+                                _atmbDisposed.SetResult();
+                            }
+                            _tsMoveNext.SetResult(true);
+                            break;
 
-                    case _sLast:
-                        _state = state;
-                        return false;
+                        case _sCompleted:
+                        case _sFinal:
+                            Current = default;
+                            _state = state;
+                            _tsMoveNext.SetExceptionOrResult(_error, false);
+                            break;
 
-                    default:
-                        _state = state;
-                        throw new Exception(state + "???");
+                        //case _sAccepting:
+                        default:
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
+
+                    return _tsMoveNext.Task;
                 }
+
+                ValueTask IAsyncDisposable.DisposeAsync()
+                {
+                    Catch(AsyncEnumeratorDisposedException.Instance);
+                    return new ValueTask(_atmbDisposed.Task);
+                }
+
+                #endregion
+
+                #region ILinxObserver<T> implementation
+
+                CancellationToken ILinxObserver<T>.Token => _cts.Token;
+
+                bool ILinxObserver<T>.OnNext(T value)
+                {
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _state = _sInitial;
+                            throw new InvalidOperationException();
+
+                        case _sAccepting:
+                            Current = value;
+                            _state = _sEmitting;
+                            _tsMoveNext.SetResult(true);
+                            return true;
+
+                        case _sEmitting:
+                            try
+                            {
+                                if (_queue == null) _queue = new Queue<T>();
+                                _queue.Enqueue(value);
+                            }
+                            catch (Exception ex)
+                            {
+                                _state = _sEmitting;
+                                Catch(ex);
+                                return false;
+                            }
+                            _state = _sEmitting;
+                            return true;
+
+                        case _sLast:
+                        case _sCompleted:
+                        case _sFinal:
+                            _state = state;
+                            return false;
+
+                        default:
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
+                }
+
+                void ILinxObserver<T>.OnError(Exception error)
+                {
+                    Catch(error ?? new ArgumentNullException(nameof(error)));
+                    Finally();
+                }
+
+                void ILinxObserver<T>.OnCompleted() => Finally();
+
+                #endregion
             }
-
-            void ILinxObserver<T>.OnError(Exception error)
-            {
-                Catch(error ?? new ArgumentNullException(nameof(error)));
-                Finally();
-            }
-
-            void ILinxObserver<T>.OnCompleted() => Finally();
-
-            #endregion
         }
     }
 }

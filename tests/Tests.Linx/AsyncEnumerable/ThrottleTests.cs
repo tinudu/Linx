@@ -4,6 +4,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
+    using global::Linx.Observable;
     using global::Linx.Testing;
     using global::Linx.Timing;
     using Xunit;
@@ -15,7 +16,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-- -|").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  --g-|");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
 
             using (var vt = new VirtualTime())
             {
@@ -30,7 +31,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-|").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  -|");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
 
             using (var vt = new VirtualTime())
             {
@@ -45,7 +46,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-- -#").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  --g-#");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
 
             using (var vt = new VirtualTime())
             {
@@ -60,7 +61,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-#").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  -#");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
 
             using (var vt = new VirtualTime())
             {
@@ -75,7 +76,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  --g-#", new MarbleSettings { Error = new OperationCanceledException() });
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
 
             using (var vt = new VirtualTime())
             {
@@ -93,7 +94,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg").DematerializeAsyncEnumerable();
             var expect = Marble.Parse("- -  - --d- -  -#", new MarbleSettings { Error = new OperationCanceledException() });
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
 
             using (var vt = new VirtualTime())
             {
