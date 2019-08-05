@@ -141,7 +141,11 @@
                                 _atmbDisposed.SetResult();
                             }
                             else
+                            {
                                 _state = _sLast;
+                                try { _cts.Cancel(); } catch { /**/ }
+                            }
+
                             break;
 
                         case _sCompleted:
@@ -149,11 +153,11 @@
                             _atmbDisposed.SetResult();
                             break;
 
-                        case _sLast:
                         case _sFinal:
                             _state = state;
                             break;
 
+                        //case _sLast:
                         default:
                             _state = state;
                             throw new Exception(state + "???");

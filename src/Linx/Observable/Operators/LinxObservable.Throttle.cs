@@ -39,9 +39,9 @@
             private const int _sFinal = 4;
 
             private readonly ITime _time = Time.Current;
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly TimeSpan _interval;
             private readonly ILinxObserver<T> _observer;
+            private readonly TimeSpan _interval;
+            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
             private CancellationTokenRegistration _ctr;
             private ManualResetValueTaskSource _tsThrottleIdle;
             private int _active = 2; // (ILinxObserver<T>)this and Throttle()
@@ -138,6 +138,7 @@
 
             private async void Throttle()
             {
+                Exception error = null;
                 try
                 {
                     var idle = new ManualResetValueTaskSource();
@@ -176,7 +177,6 @@
                                         _state = _sLast; // temporarily
                                         _observer.OnNext(value);
                                     }
-                                    SetCompleted(null);
                                     return;
 
                                 case _sCompleted:
@@ -190,8 +190,12 @@
                             }
                         }
                 }
-                catch (Exception ex) { SetCompleted(ex); }
-                finally { SetFinal(); }
+                catch (Exception ex) { error = ex; }
+                finally
+                {
+                    SetCompleted(error);
+                    SetFinal();
+                }
             }
         }
     }

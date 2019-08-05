@@ -96,13 +96,13 @@
                     else _observer.OnError(_error);
                 }
             }
-        }
 
-        private sealed class EmptyDisposable : IDisposable
-        {
-            public static EmptyDisposable Default { get; } = new EmptyDisposable();
-            private EmptyDisposable() { }
-            public void Dispose() { }
+            private sealed class EmptyDisposable : IDisposable
+            {
+                public static EmptyDisposable Default { get; } = new EmptyDisposable();
+                private EmptyDisposable() { }
+                void IDisposable.Dispose() { }
+            }
         }
     }
 }

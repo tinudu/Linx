@@ -26,7 +26,7 @@
 
             public LatestOneEnumerable(ILinxObservable<T> source) => _source = source;
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
+            IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken token)
             {
                 token.ThrowIfCancellationRequested();
                 return new Enumerator(this, token);
@@ -48,6 +48,7 @@
                 private const int _sFinal = 7;
 
                 private readonly LatestOneEnumerable<T> _enumerable;
+                private readonly CancellationTokenSource _cts = new CancellationTokenSource();
                 private CancellationTokenRegistration _ctr;
                 private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
@@ -58,7 +59,6 @@
                 public Enumerator(LatestOneEnumerable<T> enumerable, CancellationToken token)
                 {
                     _enumerable = enumerable;
-                    Token = token;
                     if (token.CanBeCanceled) _ctr = token.Register(() => Catch(new OperationCanceledException(token)));
                 }
 
@@ -73,6 +73,7 @@
                             _error = error;
                             _state = _sFinal;
                             _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
                             _atmbDisposed.SetResult();
                             break;
 
@@ -81,6 +82,7 @@
                             _current = _next = default;
                             _state = _sCompleted;
                             _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
                             _tsMoveNext.SetException(error);
                             break;
 
@@ -91,6 +93,7 @@
                             _next = default;
                             _state = _sCompleted;
                             _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
                             break;
 
                         case _sLast:
@@ -125,6 +128,7 @@
                             _current = _next = default;
                             _state = _sFinal;
                             _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
                             _atmbDisposed.SetResult();
                             _tsMoveNext.SetResult(false);
                             break;
@@ -134,11 +138,13 @@
                             _next = default;
                             _state = _sFinal;
                             _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
                             _atmbDisposed.SetResult();
                             break;
 
                         case _sNext:
                             _state = _sLast;
+                            try { _cts.Cancel(); } catch { /**/ }
                             break;
 
                         case _sCompleted:
@@ -146,11 +152,11 @@
                             _atmbDisposed.SetResult();
                             break;
 
-                        case _sLast:
                         case _sFinal:
                             _state = state;
                             break;
 
+                        //case _sLast:
                         default:
                             _state = state;
                             throw new Exception(state + "???");
@@ -164,9 +170,9 @@
                     get
                     {
                         var state = Atomic.Lock(ref _state);
-                        var value = _current;
+                        var current = _current;
                         _state = state == _sCurrentMutable ? _sCurrentReadOnly : state;
-                        return value;
+                        return current;
                     }
                 }
 
@@ -229,7 +235,7 @@
 
                 #region ILinxObserver<T> implementation
 
-                public CancellationToken Token { get; }
+                public CancellationToken Token => _cts.Token;
 
                 bool ILinxObserver<T>.OnNext(T value)
                 {

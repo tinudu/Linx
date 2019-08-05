@@ -12,12 +12,15 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            var time = Time.Current;
-            return Create<Timestamped<T>>(observer => source.Subscribe(
-                value => observer.OnNext(new Timestamped<T>(time.Now, value)),
-                observer.OnError,
-                observer.OnCompleted,
-                observer.Token));
+            return Create<Timestamped<T>>(observer =>
+            {
+                var time = Time.Current;
+                source.Subscribe(
+                    value => observer.OnNext(new Timestamped<T>(time.Now, value)),
+                    observer.OnError,
+                    observer.OnCompleted,
+                    observer.Token);
+            });
         }
     }
 }

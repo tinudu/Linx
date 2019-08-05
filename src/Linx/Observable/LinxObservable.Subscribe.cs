@@ -79,8 +79,13 @@
                 return false;
             }
 
-            public void OnError(Exception error) => SetFinal(error ?? new ArgumentNullException(nameof(error)));
-            public void OnCompleted() => SetFinal(null);
+            public void OnError(Exception error)
+            {
+                SetCompleted(error ?? new ArgumentNullException(nameof(error)));
+                SetFinal();
+            }
+
+            public void OnCompleted() => SetFinal();
 
             private void SetCompleted(Exception errorOpt)
             {
@@ -105,7 +110,7 @@
                 }
             }
 
-            private void SetFinal(Exception errorOpt)
+            private void SetFinal()
             {
                 var state = Atomic.Lock(ref _state);
                 Action<Exception> onError;
@@ -113,7 +118,6 @@
                 switch (state)
                 {
                     case _sSubscribed:
-                        _error = errorOpt;
                         _onNext = null;
                         onError = Linx.Clear(ref _onError);
                         onCompleted = Linx.Clear(ref _onCompleted);
