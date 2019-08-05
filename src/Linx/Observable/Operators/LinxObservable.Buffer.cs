@@ -17,7 +17,7 @@
         public static IAsyncEnumerable<T> Buffer<T>(this ILinxObservable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new BufferAsyncEnumerable<T>(source);
+            return source as BufferAsyncEnumerable<T> ?? new BufferAsyncEnumerable<T>(source);
         }
 
         private sealed class BufferAsyncEnumerable<T> : IAsyncEnumerable<T>, ILinxObservable<T>
@@ -26,11 +26,15 @@
 
             public BufferAsyncEnumerable(ILinxObservable<T> source) => _source = source;
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
-
-            public override string ToString() => "Buffer";
+            IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken token)
+            {
+                token.ThrowIfCancellationRequested();
+                return new Enumerator(this, token);
+            }
 
             void ILinxObservable<T>.Subscribe(ILinxObserver<T> observer) => _source.Subscribe(observer);
+
+            public override string ToString() => "Buffer";
 
             private sealed class Enumerator : IAsyncEnumerator<T>, ILinxObserver<T>
             {
@@ -67,6 +71,7 @@
                             _error = error;
                             _state = _sFinal;
                             _ctr.Dispose();
+                            try { _cts.Cancel(); } catch { /**/ }
                             _atmbDisposed.SetResult();
                             break;
 
@@ -98,7 +103,7 @@
 
                         case _sCompleted:
                         case _sFinal:
-                            _state = _sCompleted;
+                            _state = state;
                             break;
 
                         default:
@@ -146,7 +151,7 @@
 
                         case _sLast:
                         case _sFinal:
-                            _state = _sLast;
+                            _state = state;
                             break;
 
                         default:
