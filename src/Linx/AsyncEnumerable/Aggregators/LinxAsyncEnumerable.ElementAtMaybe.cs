@@ -21,10 +21,8 @@
             {
                 var i = 0;
                 while (await ae.MoveNextAsync())
-                {
-                    if (i == index) return ae.Current;
-                    i++;
-                }
+                    if (i++ == index)
+                        return ae.Current;
 
                 return default;
             }

@@ -20,16 +20,8 @@
             if (onError == null) throw new ArgumentNullException(nameof(onError));
             if (onCompleted == null) throw new ArgumentNullException(nameof(onCompleted));
 
-            AnonymousLinxObserver<T> observer;
-            try
-            {
-                token.ThrowIfCancellationRequested();
-                observer = new AnonymousLinxObserver<T>(onNext, onError, onCompleted, token);
-            }
-            catch (Exception ex) { onError(ex); return; }
-
-            try { source.Subscribe(observer); }
-            catch (Exception ex) { observer.OnError(ex); }
+            token.ThrowIfCancellationRequested();
+            source.Subscribe(new AnonymousLinxObserver<T>(onNext, onError, onCompleted, token));
         }
 
         private sealed class AnonymousLinxObserver<T> : ILinxObserver<T>

@@ -7,35 +7,33 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Returns a sequence that produces a value after each period.
+        /// Returns a sequence that produces the current time immediately, then after every interval.
         /// </summary>
-        /// <param name="interval"><see cref="TimeSpan"/> between elements.</param>
-        /// <param name="delayFirst">Optional. Whether to delay before emitting the first item.</param>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="interval"/> must be at least 100ms.</exception>
-        public static IAsyncEnumerable<long> Interval(TimeSpan interval, bool delayFirst = false)
+        /// <exception cref="ArgumentOutOfRangeException">The interval must positive.</exception>
+        public static IAsyncEnumerable<DateTimeOffset> Interval(TimeSpan interval)
         {
-            if (interval.Ticks < 100 * TimeSpan.TicksPerMillisecond) throw new ArgumentOutOfRangeException(nameof(interval), "Must be at least 100ms");
+            if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval), "Must be postive.");
 
-            return Create<long>(async (yield, token) =>
+            return Create<DateTimeOffset>(async (yield, token) =>
             {
                 var time = Time.Current;
+                var due = time.Now;
+                if (!await yield(due).ConfigureAwait(false)) return;
                 using (var timer = time.GetTimer(token))
-                {
-                    var value = 0L;
-                    var due = time.Now;
-                    if (delayFirst)
+                    while (true)
                     {
                         due += interval;
                         await timer.Delay(due).ConfigureAwait(false);
+                        if (!await yield(due).ConfigureAwait(false)) return;
                     }
-                    do
-                    {
-                        if (!await yield(value++).ConfigureAwait(false)) return;
-                        due += interval;
-                        await timer.Delay(due).ConfigureAwait(false);
-                    } while (true);
-                }
             });
         }
+
+        /// <summary>
+        /// Returns a sequence that produces the current time immediately, then after every interval.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">The interval must positive.</exception>
+        public static IAsyncEnumerable<DateTimeOffset> Interval(int intervalMilliseconds)
+            => Interval(TimeSpan.FromTicks(intervalMilliseconds * TimeSpan.TicksPerMillisecond));
     }
 }

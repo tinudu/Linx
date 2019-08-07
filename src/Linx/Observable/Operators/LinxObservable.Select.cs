@@ -12,11 +12,18 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
-            return Create<TResult>(observer => source.Subscribe(
-                value => observer.OnNext(selector(value)),
-                observer.OnError,
-                observer.OnCompleted,
-                observer.Token));
+            return Create<TResult>(observer =>
+            {
+                try
+                {
+                    source.Subscribe(
+                        value => observer.OnNext(selector(value)),
+                        observer.OnError,
+                        observer.OnCompleted,
+                        observer.Token);
+                }
+                catch (Exception ex) { observer.OnError(ex); }
+            });
         }
 
         /// <summary>
@@ -27,12 +34,19 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
-            var i = 0;
-            return Create<TResult>(observer => source.Subscribe(
-                value => observer.OnNext(selector(value, i++)),
-                observer.OnError,
-                observer.OnCompleted,
-                observer.Token));
+            return Create<TResult>(observer =>
+            {
+                try
+                {
+                    var i = 0;
+                    source.Subscribe(
+                        value => observer.OnNext(selector(value, i++)),
+                        observer.OnError,
+                        observer.OnCompleted,
+                        observer.Token);
+                }
+                catch (Exception ex) { observer.OnError(ex); }
+            });
         }
     }
 }

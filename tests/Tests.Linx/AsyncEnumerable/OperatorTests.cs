@@ -141,14 +141,15 @@
         [Fact]
         public async Task TestZip()
         {
+            var src1 = Marble.Parse("a-  - -bc- -d- -e").DematerializeAsyncEnumerable();
+            var src2 = Marble.Parse(" -fg-h-  -i- -|  ").DematerializeAsyncEnumerable();
+            var expt = Marble.Parse(" -x - -xx- -x-|", default, "af", "bg", "ch", "di");
+            var testee = src1.Zip(src2, (x, y) => $"{x}{y}");
             using (var vt = new VirtualTime())
             {
-                var src1 = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(1));
-                var src2 = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(2)).Take(4);
-                var tResult = src1.Zip(src2, (x, y) => x + y).ToList(default);
+                var eq = testee.AssertEqual(expt, default);
                 vt.Start();
-                var result = await tResult;
-                Assert.True(new[] { 0L, 2L, 4L, 6L }.SequenceEqual(result));
+                await eq;
             }
         }
     }

@@ -14,12 +14,16 @@
 
             return Create<Timestamped<T>>(observer =>
             {
-                var time = Time.Current;
-                source.Subscribe(
-                    value => observer.OnNext(new Timestamped<T>(time.Now, value)),
-                    observer.OnError,
-                    observer.OnCompleted,
-                    observer.Token);
+                try
+                {
+                    var time = Time.Current;
+                    source.Subscribe(
+                        value => observer.OnNext(new Timestamped<T>(time.Now, value)),
+                        observer.OnError,
+                        observer.OnCompleted,
+                        observer.Token);
+                }
+                catch (Exception ex) { observer.OnError(ex); }
             });
         }
     }

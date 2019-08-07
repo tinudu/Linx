@@ -4,6 +4,7 @@
     using System.Linq;
     using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
+    using global::Linx.Testing;
     using global::Linx.Timing;
     using Xunit;
 
@@ -12,12 +13,14 @@
         [Fact]
         public async Task TestInterval()
         {
-            using (var vt = new VirtualTime())
+            var testee = LinxAsyncEnumerable.Interval(MarbleSettings.DefaultFrameSize).Take(5);
+            var t0 = new DateTimeOffset(2019, 8, 6, 0, 0, 0, TimeSpan.FromHours(2));
+            var expect = Marble.Parse("x-x-x-x-x|", (ch, i) => t0 + i * MarbleSettings.DefaultFrameSize);
+            using (var vt = new VirtualTime(t0))
             {
-                var t = LinxAsyncEnumerable.Interval(TimeSpan.FromSeconds(1)).Select(i => (int)i).Take(5).ToList(default);
+                var eq = testee.AssertEqual(expect, default);
                 vt.Start();
-                var result = await t;
-                Assert.True(Enumerable.Range(0, 5).SequenceEqual(result));
+                await eq;
             }
         }
 

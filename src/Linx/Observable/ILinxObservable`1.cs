@@ -5,8 +5,8 @@
     /// </summary>
     /// <remarks>
     /// Other than in the <see cref="System.IObservable{T}"/> world,
-    /// a <see cref="ILinxObservable{T}"/> must notify completion
-    /// if <see cref="ILinxObserver{T}.OnNext"/> returns false.
+    /// a <see cref="ILinxObservable{T}"/> is considered subscribed to
+    /// as long as it hasn't notified completion to the <see cref="ILinxObserver{T}"/>.
     /// </remarks>
     public interface ILinxObservable<out T>
     {

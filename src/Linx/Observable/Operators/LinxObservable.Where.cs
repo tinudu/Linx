@@ -12,11 +12,18 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return Create<T>(observer => source.Subscribe(
-                value => !predicate(value) && observer.OnNext(value),
-                observer.OnError,
-                observer.OnCompleted,
-                observer.Token));
+            return Create<T>(observer =>
+            {
+                try
+                {
+                    source.Subscribe(
+                        value => !predicate(value) && observer.OnNext(value),
+                        observer.OnError,
+                        observer.OnCompleted,
+                        observer.Token);
+                }
+                catch (Exception ex) { observer.OnError(ex); }
+            });
         }
 
         /// <summary>
@@ -27,12 +34,19 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            var i = 0;
-            return Create<T>(observer => source.Subscribe(
-                value => !predicate(value, i++) && observer.OnNext(value),
-                observer.OnError,
-                observer.OnCompleted,
-                observer.Token));
+            return Create<T>(observer =>
+            {
+                try
+                {
+                    var i = 0;
+                    source.Subscribe(
+                        value => !predicate(value, i++) && observer.OnNext(value),
+                        observer.OnError,
+                        observer.OnCompleted,
+                        observer.Token);
+                }
+                catch (Exception ex) { observer.OnError(ex); }
+            });
         }
     }
 }
