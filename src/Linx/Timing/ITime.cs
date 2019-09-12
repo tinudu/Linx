@@ -20,11 +20,6 @@
        ValueTask Delay(TimeSpan due, CancellationToken token);
 
         /// <summary>
-        /// Delay for the specified interval in milliseconds.
-        /// </summary>
-        ValueTask Delay(int dueMillis, CancellationToken token);
-
-        /// <summary>
         /// Delay until the specified time is reached.
         /// </summary>
         ValueTask Delay(DateTimeOffset due, CancellationToken token);

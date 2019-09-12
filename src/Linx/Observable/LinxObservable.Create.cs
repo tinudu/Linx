@@ -27,13 +27,8 @@
             public void Subscribe(ILinxObserver<T> observer)
             {
                 if (observer == null) throw new ArgumentNullException(nameof(observer));
-
-                try
-                {
-                    observer.Token.ThrowIfCancellationRequested();
-                    _subscribe(observer);
-                }
-                catch (Exception ex) { observer.OnError(ex); }
+                observer.Token.ThrowIfCancellationRequested();
+                _subscribe(observer);
             }
 
             public override string ToString() => _name;

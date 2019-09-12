@@ -111,9 +111,6 @@
         public ValueTask Delay(TimeSpan due, CancellationToken token) => GetTimer(token).Delay(due);
 
         /// <inheritdoc />
-        public ValueTask Delay(int dueMillis, CancellationToken token) => GetTimer(token).Delay(dueMillis);
-
-        /// <inheritdoc />
         public ValueTask Delay(DateTimeOffset due, CancellationToken token) => GetTimer(token).Delay(due);
 
         /// <inheritdoc />
@@ -205,8 +202,6 @@
             }
 
             public ValueTask Delay(TimeSpan due) => Delay(_time.Now + due);
-
-            public ValueTask Delay(int dueMillis) => Delay(_time.Now.AddTicks(dueMillis * TimeSpan.TicksPerMillisecond));
 
             public ValueTask Delay(DateTimeOffset due)
             {

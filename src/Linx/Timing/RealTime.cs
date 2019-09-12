@@ -26,9 +26,6 @@
         public ValueTask Delay(TimeSpan due, CancellationToken token) => new ValueTask(due > TimeSpan.Zero ? Task.Delay(due, token) : Task.CompletedTask);
 
         /// <inheritdoc />
-        public ValueTask Delay(int dueMillis, CancellationToken token) => new ValueTask(dueMillis > 0 ? Task.Delay(dueMillis, token) : Task.CompletedTask);
-
-        /// <inheritdoc />
         public ValueTask Delay(DateTimeOffset due, CancellationToken token) => Delay(due - DateTimeOffset.Now, token);
 
         /// <inheritdoc />
@@ -66,50 +63,6 @@
                         {
                             _state = _sWaiting;
                             try { _timer.Change(due, Timeout.InfiniteTimeSpan); }
-                            catch (Exception ex)
-                            {
-                                if (Atomic.CompareExchange(ref _state, _sInitial, _sWaiting) == _sWaiting)
-                                    _ts.SetException(ex);
-                            }
-                        }
-                        else
-                        {
-                            _state = _sInitial;
-                            _ts.SetResult();
-                        }
-
-                        break;
-
-                    case _sCanceled:
-                        _state = _sCanceled;
-                        _ts.SetException(new OperationCanceledException(_token));
-                        break;
-
-                    case _sDisposed:
-                        _state = _sDisposed;
-                        _ts.SetException(new ObjectDisposedException(nameof(ITimer)));
-                        break;
-
-                    default: // _sWaiting???
-                        _state = state;
-                        throw new Exception(state + "???");
-                }
-
-                return _ts.Task;
-            }
-
-            public ValueTask Delay(int dueMillis)
-            {
-                _ts.Reset();
-
-                var state = Atomic.Lock(ref _state);
-                switch (state)
-                {
-                    case _sInitial:
-                        if (dueMillis > 0)
-                        {
-                            _state = _sWaiting;
-                            try { _timer.Change(dueMillis, Timeout.Infinite); }
                             catch (Exception ex)
                             {
                                 if (Atomic.CompareExchange(ref _state, _sInitial, _sWaiting) == _sWaiting)
