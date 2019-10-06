@@ -20,24 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MultiAggregate.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxAsyncEnumerable.MultiAggregate.tt</DependentUpon>
-    </None>
-    <None Include="Enumerable\Aggregators\LinxEnumerable.MinMax.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxEnumerable.MinMax.tt</DependentUpon>
-    </None>
-    <None Include="Expressions\Express.Inject.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Express.Inject.tt</DependentUpon>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MinMax.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -53,21 +35,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxAsyncEnumerable.Sum.tt</DependentUpon>
     </Compile>
-    <Compile Update="AsyncEnumerable\Aggregators\LinxReactive.MinMax.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxReactive.MinMax.tt</DependentUpon>
-    </Compile>
-    <Compile Update="AsyncEnumerable\Aggregators\LinxReactive.Multi.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxReactive.Multi.tt</DependentUpon>
-    </Compile>
-    <Compile Update="AsyncEnumerable\Aggregators\LinxReactive.Sum.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxReactive.Sum.tt</DependentUpon>
-    </Compile>
     <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -77,16 +44,6 @@
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxAsyncEnumerable.Zip.tt</DependentUpon>
-    </Compile>
-    <Compile Update="AsyncEnumerable\Operators\LinxReactive.Zip.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxReactive.Zip.tt</DependentUpon>
-    </Compile>
-    <Compile Update="Enumerable\Aggregators\LinxEnumerable.MinMax.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>LinxEnumerable.MinMax.tt</DependentUpon>
     </Compile>
     <Compile Update="Expressions\Express.Func.cs">
       <DesignTime>True</DesignTime>
@@ -118,18 +75,6 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxAsyncEnumerable.Sum.cs</LastGenOutput>
     </None>
-    <None Update="AsyncEnumerable\Aggregators\LinxReactive.MinMax.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>LinxReactive.MinMax.cs</LastGenOutput>
-    </None>
-    <None Update="AsyncEnumerable\Aggregators\LinxReactive.Multi.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>LinxReactive.Multi.cs</LastGenOutput>
-    </None>
-    <None Update="AsyncEnumerable\Aggregators\LinxReactive.Sum.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>LinxReactive.Sum.cs</LastGenOutput>
-    </None>
     <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxAsyncEnumerable.Combine.cs</LastGenOutput>
@@ -137,14 +82,6 @@
     <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxAsyncEnumerable.Zip.cs</LastGenOutput>
-    </None>
-    <None Update="AsyncEnumerable\Operators\LinxReactive.Zip.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>LinxReactive.Zip.cs</LastGenOutput>
-    </None>
-    <None Update="Enumerable\Aggregators\LinxEnumerable.MinMax.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>LinxEnumerable.MinMax.cs</LastGenOutput>
     </None>
     <None Update="Expressions\Express.Func.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -158,6 +95,12 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Reflect.Generated.cs</LastGenOutput>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="AsyncEnumerable\Aggregators\" />
+    <Folder Include="Enumerable\Aggregators\" />
+    <Folder Include="Expressions\" />
   </ItemGroup>
 
 </Project>

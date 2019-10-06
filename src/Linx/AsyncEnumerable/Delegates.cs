@@ -27,4 +27,9 @@
     /// Delegate to consume a sequence.
     /// </summary>
     public delegate Task ConsumerDelegate<in TSource>(IAsyncEnumerable<TSource> source, CancellationToken token);
+
+    /// <summary>
+    /// Delegate to connect a connectable sequence to its source.
+    /// </summary>
+    public delegate void ConnectDelegate();
 }

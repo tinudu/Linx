@@ -66,7 +66,7 @@
         /// <summary>
         /// Implicit <see cref="Wrapped{T}"/> to <typeparamref name="T"/> conversion.
         /// </summary>
-        public static implicit operator Wrapped<T>(T value) => new Wrapped<T>();
+        public static implicit operator Wrapped<T>(T value) => new Wrapped<T>(value);
 
         /// <summary>
         /// Implicit <typeparamref name="T"/> to <see cref="Wrapped{T}"/> conversion.

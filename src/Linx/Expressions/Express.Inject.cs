@@ -12,7 +12,7 @@
         public static Expression Inject<T1, TResult>(this Expression<Func<T1, TResult>> lambda, Expression x1)
             => new ParameterReplaceVisitor(new[]
             {
-                (lambda.Parameters[0], x1)
+                (lambda.Parameters[0], x1),
             }).Visit(lambda.Body);
 
         /// <summary>
@@ -23,7 +23,7 @@
             => new ParameterReplaceVisitor(new[]
             {
                 (lambda.Parameters[0], x1),
-                (lambda.Parameters[1], x2)
+                (lambda.Parameters[1], x2),
             }).Visit(lambda.Body);
 
         /// <summary>
@@ -35,7 +35,7 @@
             {
                 (lambda.Parameters[0], x1),
                 (lambda.Parameters[1], x2),
-                (lambda.Parameters[2], x3)
+                (lambda.Parameters[2], x3),
             }).Visit(lambda.Body);
 
         /// <summary>
@@ -48,7 +48,7 @@
                 (lambda.Parameters[0], x1),
                 (lambda.Parameters[1], x2),
                 (lambda.Parameters[2], x3),
-                (lambda.Parameters[3], x4)
+                (lambda.Parameters[3], x4),
             }).Visit(lambda.Body);
 
         /// <summary>
@@ -62,7 +62,7 @@
                 (lambda.Parameters[1], x2),
                 (lambda.Parameters[2], x3),
                 (lambda.Parameters[3], x4),
-                (lambda.Parameters[4], x5)
+                (lambda.Parameters[4], x5),
             }).Visit(lambda.Body);
 
         /// <summary>
@@ -77,7 +77,7 @@
                 (lambda.Parameters[2], x3),
                 (lambda.Parameters[3], x4),
                 (lambda.Parameters[4], x5),
-                (lambda.Parameters[5], x6)
+                (lambda.Parameters[5], x6),
             }).Visit(lambda.Body);
 
         /// <summary>
@@ -93,7 +93,7 @@
                 (lambda.Parameters[3], x4),
                 (lambda.Parameters[4], x5),
                 (lambda.Parameters[5], x6),
-                (lambda.Parameters[6], x7)
+                (lambda.Parameters[6], x7),
             }).Visit(lambda.Body);
 
         /// <summary>
@@ -110,7 +110,7 @@
                 (lambda.Parameters[4], x5),
                 (lambda.Parameters[5], x6),
                 (lambda.Parameters[6], x7),
-                (lambda.Parameters[7], x8)
+                (lambda.Parameters[7], x8),
             }).Visit(lambda.Body);
 
     }
