@@ -7,7 +7,6 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Subjects;
 
     partial class LinxAsyncEnumerable
     {
@@ -43,16 +42,17 @@
                         break;
                     default:
                         var multi = new MultiConsumer<T>(collection.Count, token);
+                        var connectable = source.Connectable(out var connect);
                         foreach (var consumer in collection)
-                            multi.Subscribe(consumer);
-                        await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                            // ReSharper disable once PossibleMultipleEnumeration
+                            multi.Subscribe(connectable, consumer);
+                        connect();
                         await multi._atmbWhenAll.Task.ConfigureAwait(false);
                         break;
                 }
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<T> _subject = new ColdSubject<T>();
             private CancellationTokenRegistration _ctr;
             private int _active;
             private Exception _error;
@@ -64,12 +64,12 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe(ConsumerDelegate<T> consumer)
+            private async void Subscribe(IAsyncEnumerable<T> source, ConsumerDelegate<T> consumer)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    await consumer(_subject.Output, _cts.Token).ConfigureAwait(false);
+                    await consumer(source, _cts.Token).ConfigureAwait(false);
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }

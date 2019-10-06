@@ -6,7 +6,6 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Subjects;
 
     partial class LinxAsyncEnumerable
     {
@@ -57,15 +56,17 @@
             {
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>(token);
-                multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
-                multi.Subscribe(aggregator2, (ma, a) => ma._aggregate2 = a);
-                await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                var connectable = source.Connectable(out var connect);
+                // ReSharper disable PossibleMultipleEnumeration
+                multi.Subscribe(connectable, aggregator1, (ma, a) => ma._aggregate1 = a);
+                multi.Subscribe(connectable, aggregator2, (ma, a) => ma._aggregate2 = a);
+                // ReSharper restore PossibleMultipleEnumeration
+                connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
                 return resultSelector(multi._aggregate1, multi._aggregate2);
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<TSource> _subject = new ColdSubject<TSource>();
             private CancellationTokenRegistration _ctr;
             private int _active = 2;
             private Exception _error;
@@ -78,12 +79,12 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe<TAggregate>(AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>, TAggregate> setResult)
+            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>, TAggregate> setResult)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(_subject.Output, _cts.Token).ConfigureAwait(false));
+                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }
@@ -174,16 +175,18 @@
             {
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>(token);
-                multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
-                multi.Subscribe(aggregator2, (ma, a) => ma._aggregate2 = a);
-                multi.Subscribe(aggregator3, (ma, a) => ma._aggregate3 = a);
-                await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                var connectable = source.Connectable(out var connect);
+                // ReSharper disable PossibleMultipleEnumeration
+                multi.Subscribe(connectable, aggregator1, (ma, a) => ma._aggregate1 = a);
+                multi.Subscribe(connectable, aggregator2, (ma, a) => ma._aggregate2 = a);
+                multi.Subscribe(connectable, aggregator3, (ma, a) => ma._aggregate3 = a);
+                // ReSharper restore PossibleMultipleEnumeration
+                connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
                 return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3);
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<TSource> _subject = new ColdSubject<TSource>();
             private CancellationTokenRegistration _ctr;
             private int _active = 3;
             private Exception _error;
@@ -197,12 +200,12 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe<TAggregate>(AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>, TAggregate> setResult)
+            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>, TAggregate> setResult)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(_subject.Output, _cts.Token).ConfigureAwait(false));
+                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }
@@ -298,17 +301,19 @@
             {
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>(token);
-                multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
-                multi.Subscribe(aggregator2, (ma, a) => ma._aggregate2 = a);
-                multi.Subscribe(aggregator3, (ma, a) => ma._aggregate3 = a);
-                multi.Subscribe(aggregator4, (ma, a) => ma._aggregate4 = a);
-                await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                var connectable = source.Connectable(out var connect);
+                // ReSharper disable PossibleMultipleEnumeration
+                multi.Subscribe(connectable, aggregator1, (ma, a) => ma._aggregate1 = a);
+                multi.Subscribe(connectable, aggregator2, (ma, a) => ma._aggregate2 = a);
+                multi.Subscribe(connectable, aggregator3, (ma, a) => ma._aggregate3 = a);
+                multi.Subscribe(connectable, aggregator4, (ma, a) => ma._aggregate4 = a);
+                // ReSharper restore PossibleMultipleEnumeration
+                connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
                 return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4);
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<TSource> _subject = new ColdSubject<TSource>();
             private CancellationTokenRegistration _ctr;
             private int _active = 4;
             private Exception _error;
@@ -323,12 +328,12 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe<TAggregate>(AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>, TAggregate> setResult)
+            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>, TAggregate> setResult)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(_subject.Output, _cts.Token).ConfigureAwait(false));
+                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }
@@ -429,18 +434,20 @@
             {
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>(token);
-                multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
-                multi.Subscribe(aggregator2, (ma, a) => ma._aggregate2 = a);
-                multi.Subscribe(aggregator3, (ma, a) => ma._aggregate3 = a);
-                multi.Subscribe(aggregator4, (ma, a) => ma._aggregate4 = a);
-                multi.Subscribe(aggregator5, (ma, a) => ma._aggregate5 = a);
-                await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                var connectable = source.Connectable(out var connect);
+                // ReSharper disable PossibleMultipleEnumeration
+                multi.Subscribe(connectable, aggregator1, (ma, a) => ma._aggregate1 = a);
+                multi.Subscribe(connectable, aggregator2, (ma, a) => ma._aggregate2 = a);
+                multi.Subscribe(connectable, aggregator3, (ma, a) => ma._aggregate3 = a);
+                multi.Subscribe(connectable, aggregator4, (ma, a) => ma._aggregate4 = a);
+                multi.Subscribe(connectable, aggregator5, (ma, a) => ma._aggregate5 = a);
+                // ReSharper restore PossibleMultipleEnumeration
+                connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
                 return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4, multi._aggregate5);
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<TSource> _subject = new ColdSubject<TSource>();
             private CancellationTokenRegistration _ctr;
             private int _active = 5;
             private Exception _error;
@@ -456,12 +463,12 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe<TAggregate>(AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>, TAggregate> setResult)
+            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>, TAggregate> setResult)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(_subject.Output, _cts.Token).ConfigureAwait(false));
+                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }
@@ -567,19 +574,21 @@
             {
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>(token);
-                multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
-                multi.Subscribe(aggregator2, (ma, a) => ma._aggregate2 = a);
-                multi.Subscribe(aggregator3, (ma, a) => ma._aggregate3 = a);
-                multi.Subscribe(aggregator4, (ma, a) => ma._aggregate4 = a);
-                multi.Subscribe(aggregator5, (ma, a) => ma._aggregate5 = a);
-                multi.Subscribe(aggregator6, (ma, a) => ma._aggregate6 = a);
-                await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                var connectable = source.Connectable(out var connect);
+                // ReSharper disable PossibleMultipleEnumeration
+                multi.Subscribe(connectable, aggregator1, (ma, a) => ma._aggregate1 = a);
+                multi.Subscribe(connectable, aggregator2, (ma, a) => ma._aggregate2 = a);
+                multi.Subscribe(connectable, aggregator3, (ma, a) => ma._aggregate3 = a);
+                multi.Subscribe(connectable, aggregator4, (ma, a) => ma._aggregate4 = a);
+                multi.Subscribe(connectable, aggregator5, (ma, a) => ma._aggregate5 = a);
+                multi.Subscribe(connectable, aggregator6, (ma, a) => ma._aggregate6 = a);
+                // ReSharper restore PossibleMultipleEnumeration
+                connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
                 return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4, multi._aggregate5, multi._aggregate6);
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<TSource> _subject = new ColdSubject<TSource>();
             private CancellationTokenRegistration _ctr;
             private int _active = 6;
             private Exception _error;
@@ -596,12 +605,12 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe<TAggregate>(AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>, TAggregate> setResult)
+            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>, TAggregate> setResult)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(_subject.Output, _cts.Token).ConfigureAwait(false));
+                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }
@@ -712,20 +721,22 @@
             {
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>(token);
-                multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
-                multi.Subscribe(aggregator2, (ma, a) => ma._aggregate2 = a);
-                multi.Subscribe(aggregator3, (ma, a) => ma._aggregate3 = a);
-                multi.Subscribe(aggregator4, (ma, a) => ma._aggregate4 = a);
-                multi.Subscribe(aggregator5, (ma, a) => ma._aggregate5 = a);
-                multi.Subscribe(aggregator6, (ma, a) => ma._aggregate6 = a);
-                multi.Subscribe(aggregator7, (ma, a) => ma._aggregate7 = a);
-                await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                var connectable = source.Connectable(out var connect);
+                // ReSharper disable PossibleMultipleEnumeration
+                multi.Subscribe(connectable, aggregator1, (ma, a) => ma._aggregate1 = a);
+                multi.Subscribe(connectable, aggregator2, (ma, a) => ma._aggregate2 = a);
+                multi.Subscribe(connectable, aggregator3, (ma, a) => ma._aggregate3 = a);
+                multi.Subscribe(connectable, aggregator4, (ma, a) => ma._aggregate4 = a);
+                multi.Subscribe(connectable, aggregator5, (ma, a) => ma._aggregate5 = a);
+                multi.Subscribe(connectable, aggregator6, (ma, a) => ma._aggregate6 = a);
+                multi.Subscribe(connectable, aggregator7, (ma, a) => ma._aggregate7 = a);
+                // ReSharper restore PossibleMultipleEnumeration
+                connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
                 return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4, multi._aggregate5, multi._aggregate6, multi._aggregate7);
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<TSource> _subject = new ColdSubject<TSource>();
             private CancellationTokenRegistration _ctr;
             private int _active = 7;
             private Exception _error;
@@ -743,12 +754,12 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe<TAggregate>(AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>, TAggregate> setResult)
+            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>, TAggregate> setResult)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(_subject.Output, _cts.Token).ConfigureAwait(false));
+                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }
@@ -864,21 +875,23 @@
             {
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>(token);
-                multi.Subscribe(aggregator1, (ma, a) => ma._aggregate1 = a);
-                multi.Subscribe(aggregator2, (ma, a) => ma._aggregate2 = a);
-                multi.Subscribe(aggregator3, (ma, a) => ma._aggregate3 = a);
-                multi.Subscribe(aggregator4, (ma, a) => ma._aggregate4 = a);
-                multi.Subscribe(aggregator5, (ma, a) => ma._aggregate5 = a);
-                multi.Subscribe(aggregator6, (ma, a) => ma._aggregate6 = a);
-                multi.Subscribe(aggregator7, (ma, a) => ma._aggregate7 = a);
-                multi.Subscribe(aggregator8, (ma, a) => ma._aggregate8 = a);
-                await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                var connectable = source.Connectable(out var connect);
+                // ReSharper disable PossibleMultipleEnumeration
+                multi.Subscribe(connectable, aggregator1, (ma, a) => ma._aggregate1 = a);
+                multi.Subscribe(connectable, aggregator2, (ma, a) => ma._aggregate2 = a);
+                multi.Subscribe(connectable, aggregator3, (ma, a) => ma._aggregate3 = a);
+                multi.Subscribe(connectable, aggregator4, (ma, a) => ma._aggregate4 = a);
+                multi.Subscribe(connectable, aggregator5, (ma, a) => ma._aggregate5 = a);
+                multi.Subscribe(connectable, aggregator6, (ma, a) => ma._aggregate6 = a);
+                multi.Subscribe(connectable, aggregator7, (ma, a) => ma._aggregate7 = a);
+                multi.Subscribe(connectable, aggregator8, (ma, a) => ma._aggregate8 = a);
+                // ReSharper restore PossibleMultipleEnumeration
+                connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
                 return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4, multi._aggregate5, multi._aggregate6, multi._aggregate7, multi._aggregate8);
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<TSource> _subject = new ColdSubject<TSource>();
             private CancellationTokenRegistration _ctr;
             private int _active = 8;
             private Exception _error;
@@ -897,12 +910,12 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe<TAggregate>(AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>, TAggregate> setResult)
+            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>, TAggregate> setResult)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(_subject.Output, _cts.Token).ConfigureAwait(false));
+                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }

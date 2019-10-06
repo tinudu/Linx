@@ -41,6 +41,15 @@
             return connectable;
         }
 
+        /// <summary>
+        /// Invoke the specified <paramref name="stack"/> in LIFO order.
+        /// </summary>
+        public static void Connect(this Stack<ConnectDelegate> stack)
+        {
+            while (stack.Count > 0)
+                stack.Pop()();
+        }
+
         private sealed class ConnectableEnumerable<T> : IAsyncEnumerable<T>
         {
             private readonly IAsyncEnumerable<T> _source;

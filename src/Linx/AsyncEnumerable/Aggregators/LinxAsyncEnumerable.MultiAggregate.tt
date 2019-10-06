@@ -14,7 +14,6 @@ namespace Linx.AsyncEnumerable
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Subjects;
 
     partial class LinxAsyncEnumerable
     {
@@ -82,16 +81,18 @@ namespace Linx.AsyncEnumerable
             {
                 token.ThrowIfCancellationRequested();
                 var multi = new MultiAggregator<TSource, <#= genArgs #>, TResult>(token);
+                var connectable = source.Connectable(out var connect);
+                // ReSharper disable PossibleMultipleEnumeration
 <# foreach(var x in names) { #>
-                multi.Subscribe(<#= x.Aggregator #>, (ma, a) => ma._<#= x.Aggregate #> = a);
+                multi.Subscribe(connectable, <#= x.Aggregator #>, (ma, a) => ma._<#= x.Aggregate #> = a);
 <# } #>
-                await multi._subject.SubscribeTo(source).ConfigureAwait(false);
+                // ReSharper restore PossibleMultipleEnumeration
+                connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
                 return resultSelector(<#= string.Join(", ", names.Select(x => $"multi._{x.Aggregate}"))  #>);
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ColdSubject<TSource> _subject = new ColdSubject<TSource>();
             private CancellationTokenRegistration _ctr;
             private int _active = <#= n #>;
             private Exception _error;
@@ -105,12 +106,12 @@ namespace Linx.AsyncEnumerable
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            private async void Subscribe<TAggregate>(AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, <#= genArgs #>, TResult>, TAggregate> setResult)
+            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, <#= genArgs #>, TResult>, TAggregate> setResult)
             {
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(_subject.Output, _cts.Token).ConfigureAwait(false));
+                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
                 }
                 catch (Exception ex) { OnError(ex); }
                 finally { OnCompleted(); }
