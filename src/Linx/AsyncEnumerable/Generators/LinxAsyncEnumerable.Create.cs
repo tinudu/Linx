@@ -33,6 +33,14 @@
             return new GeneratorEnumerable<T>(generator, name);
         }
 
+        /// <summary>
+        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by it's <see cref="IAsyncEnumerable{T}.GetAsyncEnumerator(CancellationToken)"/> implementation.
+        /// </summary>
+        public static IAsyncEnumerable<T> Create<T>(Func<CancellationToken, IAsyncEnumerator<T>> getAsyncEnumerator, [CallerMemberName] string name = null)
+        {
+            return new AnonymousAsyncEnumerable<T>(getAsyncEnumerator, name);
+        }
+
         [DebuggerNonUserCode]
         private sealed class GeneratorEnumerable<T> : AsyncEnumerableBase<T>, IAsyncEnumerator<T>
         {
