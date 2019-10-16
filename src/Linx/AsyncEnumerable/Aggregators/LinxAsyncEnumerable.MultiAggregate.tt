@@ -66,7 +66,7 @@ namespace Linx.AsyncEnumerable
 <# } #>
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return MultiAggregator<TSource, <#= genArgs #>, TResult>.Aggregate(source.ToAsyncEnumerable(), <#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
+            return MultiAggregator<TSource, <#= genArgs #>, TResult>.Aggregate(source.Async(), <#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
         }
 
         private sealed class MultiAggregator<TSource, <#= genArgs #>, TResult>
@@ -93,7 +93,7 @@ namespace Linx.AsyncEnumerable
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active = <#= n #>;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();

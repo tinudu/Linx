@@ -42,7 +42,7 @@
             private readonly ILinxObserver<T> _observer;
             private readonly TimeSpan _interval;
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private ManualResetValueTaskSource _tsThrottleIdle;
             private int _active = 2; // (ILinxObserver<T>)this and Throttle()
             private int _state;

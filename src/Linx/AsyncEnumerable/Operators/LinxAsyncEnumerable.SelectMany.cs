@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -67,21 +68,7 @@
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return Create<TResult>(async (yield, token) =>
-            {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
-                    {
-                        var current = ae.Current;
-                        foreach (var r in collectionSelector(current))
-                            if (!await yield(resultSelector(current, r)).ConfigureAwait(false))
-                                return;
-                    }
-                }
-                finally { await ae.DisposeAsync(); }
-            });
+            return source.SelectMany(s => collectionSelector(s).Select(c => resultSelector(s, c)));
         }
 
         /// <summary>
@@ -96,23 +83,24 @@
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return Create<TResult>(async (yield, token) =>
-            {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    var i = 0;
-                    while (await ae.MoveNextAsync())
-                    {
-                        var current = ae.Current;
-                        foreach (var r in collectionSelector(current, i++))
-                            if (!await yield(resultSelector(current, r)).ConfigureAwait(false))
-                                return;
-                    }
-                }
-                finally { await ae.DisposeAsync(); }
-            });
+            return source.SelectMany((s, i) => collectionSelector(s, i).Select(c => resultSelector(s, c)));
         }
+
+        /// <summary>
+        /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/> and flattens the resulting sequences into one sequence.
+        /// </summary>
+        public static IAsyncEnumerable<TCollection> SelectMany<TSource, TCollection>(
+            this IAsyncEnumerable<TSource> source,
+            Func<TSource, IAsyncEnumerable<TCollection>> collectionSelector)
+            => source.Select(collectionSelector).Merge().WithName();
+
+        /// <summary>
+        /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/> and flattens the resulting sequences into one sequence.
+        /// </summary>
+        public static IAsyncEnumerable<TCollection> SelectMany<TSource, TCollection>(
+            this IAsyncEnumerable<TSource> source,
+            Func<TSource, int, IAsyncEnumerable<TCollection>> collectionSelector)
+            => source.Select(collectionSelector).Merge().WithName();
 
         /// <summary>
         /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/>, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
@@ -121,7 +109,7 @@
             this IAsyncEnumerable<TSource> source,
             Func<TSource, IAsyncEnumerable<TCollection>> collectionSelector,
             Func<TSource, TCollection, TResult> resultSelector)
-            => source.Select(s => collectionSelector(s).Select(c => resultSelector(s, c))).Merge();
+            => source.Select(s => collectionSelector(s).Select(c => resultSelector(s, c))).Merge().WithName();
 
         /// <summary>
         /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/>, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
@@ -130,6 +118,6 @@
             this IAsyncEnumerable<TSource> source,
             Func<TSource, int, IAsyncEnumerable<TCollection>> collectionSelector,
             Func<TSource, TCollection, TResult> resultSelector)
-            => source.Select((s, i) => collectionSelector(s, i).Select(c => resultSelector(s, c))).Merge();
+            => source.Select((s, i) => collectionSelector(s, i).Select(c => resultSelector(s, c))).Merge().WithName();
     }
 }

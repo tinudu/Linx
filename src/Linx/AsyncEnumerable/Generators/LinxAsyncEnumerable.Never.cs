@@ -16,7 +16,7 @@
         /// <summary>
         /// Gets a <see cref="IAsyncEnumerable{T}"/> that completes only when the token is canceled or when it's disposed.
         /// </summary>
-        public static IAsyncEnumerable<T> Never<T>(T sample) => NeverAsyncEnumerable<T>.Singleton;
+        public static IAsyncEnumerable<T> Never<T>(T _) => NeverAsyncEnumerable<T>.Singleton;
 
         private sealed class NeverAsyncEnumerable<T> : AsyncEnumerableBase<T>
         {
@@ -34,7 +34,7 @@
                 private const int _sFinal = 2;
 
                 private readonly ManualResetValueTaskSource<bool> _tp = new ManualResetValueTaskSource<bool>();
-                private CancellationTokenRegistration _ctr;
+                private readonly CancellationTokenRegistration _ctr;
                 private int _state;
                 private Exception _error;
 

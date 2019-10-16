@@ -41,7 +41,7 @@
             private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
             private readonly System.Threading.Timer _timer;
             private readonly CancellationToken _token;
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _state;
 
             public Timer(CancellationToken token)

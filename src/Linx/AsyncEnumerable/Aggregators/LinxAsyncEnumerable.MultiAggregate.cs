@@ -67,7 +67,7 @@
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active = 2;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();
@@ -187,7 +187,7 @@
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active = 3;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();
@@ -314,7 +314,7 @@
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active = 4;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();
@@ -448,7 +448,7 @@
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active = 5;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();
@@ -589,7 +589,7 @@
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active = 6;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();
@@ -737,7 +737,7 @@
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active = 7;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();
@@ -892,7 +892,7 @@
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active = 8;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();

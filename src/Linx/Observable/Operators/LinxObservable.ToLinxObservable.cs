@@ -43,7 +43,7 @@
             {
                 private readonly object _gate = new object();
                 private readonly ILinxObserver<T> _observer;
-                private CancellationTokenRegistration _ctr;
+                private readonly CancellationTokenRegistration _ctr;
                 private IDisposable _disposable;
                 private bool _isCompleted;
                 private Exception _error;

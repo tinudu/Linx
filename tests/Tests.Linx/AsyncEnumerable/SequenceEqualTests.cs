@@ -70,7 +70,9 @@
 
             using (var vt = new VirtualTime())
             {
+#pragma warning disable IDE0067 // Dispose objects before losing scope
                 var cts = new CancellationTokenSource();
+#pragma warning restore IDE0067 // Dispose objects before losing scope
                 var t = i1.SequenceEqual(i1, cts.Token);
                 var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromHours(1), default);
                 vt.Start();
@@ -80,7 +82,9 @@
 
             using (var vt = new VirtualTime())
             {
+#pragma warning disable IDE0067 // Dispose objects before losing scope
                 var cts = new CancellationTokenSource();
+#pragma warning restore IDE0067 // Dispose objects before losing scope
                 var t = i1.SequenceEqual(i2, cts.Token);
                 var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(7), default);
                 vt.Start();

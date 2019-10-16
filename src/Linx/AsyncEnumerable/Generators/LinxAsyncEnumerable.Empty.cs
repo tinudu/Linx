@@ -15,7 +15,7 @@
         /// <summary>
         /// Gets the empty sequence.
         /// </summary>
-        public static IAsyncEnumerable<T> Empty<T>(T sample) => EmptyAsyncEnumerable<T>.Singleton;
+        public static IAsyncEnumerable<T> Empty<T>(T _) => EmptyAsyncEnumerable<T>.Singleton;
 
         private sealed class EmptyAsyncEnumerable<T> : AsyncEnumerableBase<T>, IAsyncEnumerator<T>
         {

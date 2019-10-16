@@ -30,13 +30,23 @@
         protected sealed override TKey GetKeyForItem(TItem item) => _keySelector(item);
 
 #if (NETSTANDARD2_0)
-		/// <summary>
-		/// Try to get an item by key.
-		/// </summary>
+        /// <summary>
+        /// Try to get an item by key.
+        /// </summary>
         public bool TryGetValue(TKey key, out TItem item)
         {
-	        item = default;
-	        return false;
+            if (Dictionary != null) return Dictionary.TryGetValue(key, out item);
+
+            foreach (var i in Items)
+            {
+                if (Comparer.Equals(_keySelector(i), key))
+                {
+                    item = i;
+                    return true;
+                }
+            }
+            item = default;
+            return false;
         }
 #endif
     }

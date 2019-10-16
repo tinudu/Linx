@@ -31,7 +31,7 @@
         ///     .Catch(default(TimeoutException)); // Catch&lt;anonymous, TimeoutException>(...)
         /// </code>
         /// </example>
-        public static IAsyncEnumerable<TSource> Catch<TSource, TException>(this IAsyncEnumerable<TSource> source, TException sample) where TException : Exception
+        public static IAsyncEnumerable<TSource> Catch<TSource, TException>(this IAsyncEnumerable<TSource> source, TException _) where TException : Exception
             => source.Catch<TSource, TException>();
 
         /// <summary>

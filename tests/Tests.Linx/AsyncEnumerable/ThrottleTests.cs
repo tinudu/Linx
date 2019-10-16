@@ -80,7 +80,9 @@
 
             using (var vt = new VirtualTime())
             {
+#pragma warning disable IDE0067 // Dispose objects before losing scope
                 var cts = new CancellationTokenSource();
+#pragma warning restore IDE0067 // Dispose objects before losing scope
                 var cancel = vt.Schedule(() => cts.Cancel(), 10 * MarbleSettings.DefaultFrameSize, default);
                 var eq = testee.AssertEqual(expect, cts.Token);
                 vt.Start();
@@ -98,7 +100,9 @@
 
             using (var vt = new VirtualTime())
             {
+#pragma warning disable IDE0067 // Dispose objects before losing scope
                 var cts = new CancellationTokenSource();
+#pragma warning restore IDE0067 // Dispose objects before losing scope
                 var cancel = vt.Schedule(() => cts.Cancel(), 8 * MarbleSettings.DefaultFrameSize, default);
                 var eq = testee.AssertEqual(expect, cts.Token);
                 vt.Start();

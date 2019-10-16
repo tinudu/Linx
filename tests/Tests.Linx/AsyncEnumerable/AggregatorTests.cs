@@ -81,7 +81,9 @@
             using (var vt = new VirtualTime())
             {
                 var src = Marble.Parse("01--2|", null, 0, 1, 2).DematerializeAsyncEnumerable();
+#pragma warning disable IDE0067 // Dispose objects before losing scope
                 var cts = new CancellationTokenSource();
+#pragma warning restore IDE0067 // Dispose objects before losing scope
                 var tResult = src.MultiAggregate(
                     (s, t) => s.ToList(t),
                     (s, t) => s.Sum(t),

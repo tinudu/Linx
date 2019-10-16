@@ -15,7 +15,7 @@
         /// <summary>
         /// Returns a sequence that terminates with an exception.
         /// </summary>
-        public static IAsyncEnumerable<T> Throw<T>(T sample, Exception exception) => new ThrowEnuemrable<T>(exception);
+        public static IAsyncEnumerable<T> Throw<T>(T _, Exception exception) => new ThrowEnuemrable<T>(exception);
 
         private sealed class ThrowEnuemrable<T> : AsyncEnumerableBase<T>, IAsyncEnumerator<T>
         {

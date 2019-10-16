@@ -47,7 +47,7 @@
 
                 private readonly ILinxObservable<T> _source;
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-                private CancellationTokenRegistration _ctr;
+                private readonly CancellationTokenRegistration _ctr;
                 private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state;

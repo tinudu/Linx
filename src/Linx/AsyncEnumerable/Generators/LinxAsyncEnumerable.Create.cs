@@ -24,10 +24,10 @@
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
         /// </summary>
-        /// <param name="sample">Ignored. Helps with type inference.</param>
+        /// <param name="_">Ignored. Helps with type inference.</param>
         /// <param name="generator">A <see cref="GeneratorDelegate{T}"/> that will emit elements.</param>
         /// <param name="name">A display name for the enumerable.</param>
-        public static IAsyncEnumerable<T> Create<T>(T sample, GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
+        public static IAsyncEnumerable<T> Create<T>(T _, GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
         {
             if (generator == null) throw new ArgumentNullException(nameof(generator));
             return new GeneratorEnumerable<T>(generator, name);

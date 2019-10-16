@@ -108,10 +108,18 @@
 
 
         /// <inheritdoc />
-        public ValueTask Delay(TimeSpan due, CancellationToken token) => GetTimer(token).Delay(due);
+        public async ValueTask Delay(TimeSpan due, CancellationToken token)
+        {
+            using (var timer = new Timer(this, token))
+                await timer.Delay(due).ConfigureAwait(false);
+        }
 
         /// <inheritdoc />
-        public ValueTask Delay(DateTimeOffset due, CancellationToken token) => GetTimer(token).Delay(due);
+        public async ValueTask Delay(DateTimeOffset due, CancellationToken token)
+        {
+            using (var timer = new Timer(this, token))
+                await timer.Delay(due).ConfigureAwait(false);
+        }
 
         /// <inheritdoc />
         public ITimer GetTimer(CancellationToken token) => new Timer(this, token);
@@ -191,7 +199,7 @@
             private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
             private readonly VirtualTime _time;
             private readonly CancellationToken _token;
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _state;
 
             public Timer(VirtualTime time, CancellationToken token)
