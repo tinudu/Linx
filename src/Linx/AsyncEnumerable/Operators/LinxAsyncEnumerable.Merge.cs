@@ -27,7 +27,7 @@
         public static IAsyncEnumerable<T> Merge<T>(this IEnumerable<IAsyncEnumerable<T>> sources, int maxConcurrent = int.MaxValue)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            return sources.ToAsyncEnumerable().Merge(maxConcurrent);
+            return sources.Async().Merge(maxConcurrent);
         }
 
         /// <summary>
@@ -37,7 +37,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            return sources.Prepend(source).ToAsyncEnumerable().Merge();
+            return sources.Prepend(source).Async().Merge();
         }
 
         /// <summary>
@@ -47,7 +47,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            return sources.Prepend(source).ToAsyncEnumerable().Merge(maxConcurrent);
+            return sources.Prepend(source).Async().Merge(maxConcurrent);
         }
 
         private sealed class MergeEnumerable<T> : AsyncEnumerableBase<T>

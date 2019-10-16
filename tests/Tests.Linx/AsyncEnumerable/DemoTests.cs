@@ -25,7 +25,7 @@
         [Fact]
         public async Task Demo()
         {
-            var src = "grrbrggbr".ToAsyncEnumerable()
+            var src = "grrbrggbr".Async()
                 .GroupBy(c => c)
                 .Select(g => g.Select((c, i) => new ColorAndIndex(c, i)))
                 .Merge();
@@ -41,7 +41,7 @@
                 async (yield, token) =>
                 {
                     var stack = new Stack<ConnectDelegate>();
-                    var groups = bla.ToAsyncEnumerable().GroupBy(ci => ci.Color).Connectable(stack);
+                    var groups = bla.Async().GroupBy(ci => ci.Color).Connectable(stack);
                     var red = ColorGroup('r').Prepend(null).Connectable(stack);
                     var enumeration = ColorGroup('g').Merge(ColorGroup('b'), ColorGroup('y'))
                         .Combine(red.Prepend(null), (c, r) => new { RedIndex = r?.Index, c.Color, ColorIndex = c.Index })

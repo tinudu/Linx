@@ -11,7 +11,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests.Linx", "..\tests\Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Linx.Testing", "Linx.Testing\Linx.Testing.csproj", "{CC3F1D2F-1D76-4579-AB13-EF964E5C3F72}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.Linx.Lexn", "..\tests\Tests.Linx.Lexn\Tests.Linx.Lexn.csproj", "{3DCBA886-8FC3-4215-A1DF-81698A0FBC82}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2AA459C2-D8E8-44F2-A782-7F7CBF322E68}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,17 +34,12 @@ Global
 		{CC3F1D2F-1D76-4579-AB13-EF964E5C3F72}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CC3F1D2F-1D76-4579-AB13-EF964E5C3F72}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CC3F1D2F-1D76-4579-AB13-EF964E5C3F72}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3DCBA886-8FC3-4215-A1DF-81698A0FBC82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3DCBA886-8FC3-4215-A1DF-81698A0FBC82}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3DCBA886-8FC3-4215-A1DF-81698A0FBC82}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3DCBA886-8FC3-4215-A1DF-81698A0FBC82}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{7459B6C3-B8D5-4CC2-9D51-499792FE4C45} = {5F0BA86C-88AB-4A1D-9E36-15D82F2F9742}
-		{3DCBA886-8FC3-4215-A1DF-81698A0FBC82} = {5F0BA86C-88AB-4A1D-9E36-15D82F2F9742}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD2E2F7B-C8EF-4E6C-9E3C-8B72260FC92D}
