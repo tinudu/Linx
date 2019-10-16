@@ -45,7 +45,7 @@
         public override bool Equals(object obj) => obj is Timestamped<T> other && Equals(other);
 
         /// <inheritdoc />
-        public override int GetHashCode() => new HashCode().Hash(Timestamp).Hash(Value);
+        public override int GetHashCode() => HashCode.Combine(Timestamp, Value);
 
         /// <inheritdoc />
         public override string ToString() => $"{Value}@{Timestamp}";

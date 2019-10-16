@@ -27,6 +27,17 @@
         public LinxKeyedCollection(Func<TItem, TKey> keySelector, IEqualityComparer<TKey> comparer, int dictionaryCreationThreshold) : base(comparer, dictionaryCreationThreshold) => _keySelector = keySelector ?? throw new ArgumentNullException(nameof(keySelector));
 
         /// <inheritdoc />
-        protected override TKey GetKeyForItem(TItem item) => _keySelector(item);
+        protected sealed override TKey GetKeyForItem(TItem item) => _keySelector(item);
+
+#if (NETSTANDARD2_0)
+		/// <summary>
+		/// Try to get an item by key.
+		/// </summary>
+        public bool TryGetValue(TKey key, out TItem item)
+        {
+	        item = default;
+	        return false;
+        }
+#endif
     }
 }

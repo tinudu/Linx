@@ -53,7 +53,7 @@
                 case NotificationKind.Next:
                     return n.Value == null ? 0 : _valueComparer.GetHashCode(n.Value);
                 case NotificationKind.Error:
-                    return new HashCode().Hash(n.Error.GetType()).Hash(n.Error.Message);
+                    return HashCode.Combine(n.Error.GetType(),n.Error.Message);
                 default:
                     throw new Exception(n.Kind + "???");
             }
