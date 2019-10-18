@@ -49,6 +49,7 @@
 
             public Maybe<TResult> OnNext1(T1 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
                 _value1 = value;
                 return GetResult(missing);
@@ -56,6 +57,7 @@
 
             public Maybe<TResult> OnNext2(T2 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
                 _value2 = value;
                 return GetResult(missing);
@@ -116,6 +118,7 @@
 
             public Maybe<TResult> OnNext1(T1 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
                 _value1 = value;
                 return GetResult(missing);
@@ -123,6 +126,7 @@
 
             public Maybe<TResult> OnNext2(T2 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
                 _value2 = value;
                 return GetResult(missing);
@@ -130,6 +134,7 @@
 
             public Maybe<TResult> OnNext3(T3 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
                 _value3 = value;
                 return GetResult(missing);
@@ -194,6 +199,7 @@
 
             public Maybe<TResult> OnNext1(T1 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
                 _value1 = value;
                 return GetResult(missing);
@@ -201,6 +207,7 @@
 
             public Maybe<TResult> OnNext2(T2 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
                 _value2 = value;
                 return GetResult(missing);
@@ -208,6 +215,7 @@
 
             public Maybe<TResult> OnNext3(T3 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
                 _value3 = value;
                 return GetResult(missing);
@@ -215,6 +223,7 @@
 
             public Maybe<TResult> OnNext4(T4 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
                 _value4 = value;
                 return GetResult(missing);
@@ -283,6 +292,7 @@
 
             public Maybe<TResult> OnNext1(T1 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
                 _value1 = value;
                 return GetResult(missing);
@@ -290,6 +300,7 @@
 
             public Maybe<TResult> OnNext2(T2 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
                 _value2 = value;
                 return GetResult(missing);
@@ -297,6 +308,7 @@
 
             public Maybe<TResult> OnNext3(T3 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
                 _value3 = value;
                 return GetResult(missing);
@@ -304,6 +316,7 @@
 
             public Maybe<TResult> OnNext4(T4 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
                 _value4 = value;
                 return GetResult(missing);
@@ -311,6 +324,7 @@
 
             public Maybe<TResult> OnNext5(T5 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 4);
                 _value5 = value;
                 return GetResult(missing);
@@ -383,6 +397,7 @@
 
             public Maybe<TResult> OnNext1(T1 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
                 _value1 = value;
                 return GetResult(missing);
@@ -390,6 +405,7 @@
 
             public Maybe<TResult> OnNext2(T2 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
                 _value2 = value;
                 return GetResult(missing);
@@ -397,6 +413,7 @@
 
             public Maybe<TResult> OnNext3(T3 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
                 _value3 = value;
                 return GetResult(missing);
@@ -404,6 +421,7 @@
 
             public Maybe<TResult> OnNext4(T4 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
                 _value4 = value;
                 return GetResult(missing);
@@ -411,6 +429,7 @@
 
             public Maybe<TResult> OnNext5(T5 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 4);
                 _value5 = value;
                 return GetResult(missing);
@@ -418,6 +437,7 @@
 
             public Maybe<TResult> OnNext6(T6 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 5);
                 _value6 = value;
                 return GetResult(missing);
@@ -494,6 +514,7 @@
 
             public Maybe<TResult> OnNext1(T1 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
                 _value1 = value;
                 return GetResult(missing);
@@ -501,6 +522,7 @@
 
             public Maybe<TResult> OnNext2(T2 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
                 _value2 = value;
                 return GetResult(missing);
@@ -508,6 +530,7 @@
 
             public Maybe<TResult> OnNext3(T3 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
                 _value3 = value;
                 return GetResult(missing);
@@ -515,6 +538,7 @@
 
             public Maybe<TResult> OnNext4(T4 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
                 _value4 = value;
                 return GetResult(missing);
@@ -522,6 +546,7 @@
 
             public Maybe<TResult> OnNext5(T5 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 4);
                 _value5 = value;
                 return GetResult(missing);
@@ -529,6 +554,7 @@
 
             public Maybe<TResult> OnNext6(T6 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 5);
                 _value6 = value;
                 return GetResult(missing);
@@ -536,6 +562,7 @@
 
             public Maybe<TResult> OnNext7(T7 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 6);
                 _value7 = value;
                 return GetResult(missing);
@@ -616,6 +643,7 @@
 
             public Maybe<TResult> OnNext1(T1 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
                 _value1 = value;
                 return GetResult(missing);
@@ -623,6 +651,7 @@
 
             public Maybe<TResult> OnNext2(T2 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
                 _value2 = value;
                 return GetResult(missing);
@@ -630,6 +659,7 @@
 
             public Maybe<TResult> OnNext3(T3 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
                 _value3 = value;
                 return GetResult(missing);
@@ -637,6 +667,7 @@
 
             public Maybe<TResult> OnNext4(T4 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
                 _value4 = value;
                 return GetResult(missing);
@@ -644,6 +675,7 @@
 
             public Maybe<TResult> OnNext5(T5 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 4);
                 _value5 = value;
                 return GetResult(missing);
@@ -651,6 +683,7 @@
 
             public Maybe<TResult> OnNext6(T6 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 5);
                 _value6 = value;
                 return GetResult(missing);
@@ -658,6 +691,7 @@
 
             public Maybe<TResult> OnNext7(T7 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 6);
                 _value7 = value;
                 return GetResult(missing);
@@ -665,6 +699,7 @@
 
             public Maybe<TResult> OnNext8(T8 value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 7);
                 _value8 = value;
                 return GetResult(missing);

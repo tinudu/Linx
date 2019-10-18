@@ -76,6 +76,7 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
 <# foreach(var x in names) { #>
             public Maybe<TResult> <#= x.OnNext #>(<#= x.GenArg #> value)
             {
+                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << <#= x.Index #>);
                 <#= x.Value #> = value;
                 return GetResult(missing);

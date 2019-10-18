@@ -64,7 +64,7 @@
                 private readonly ManualResetValueTaskSource _tsEmitting = new ManualResetValueTaskSource(); // await MoveNextAsync either on the group enumerator or a group
                 private readonly Dictionary<TKey, Group> _groups;
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource(); // request cancellation when Canceling[Accepting] and _nGroups == 0
-                private readonly CancellationTokenRegistration _ctr;
+                private CancellationTokenRegistration _ctr;
                 private AsyncTaskMethodBuilder _atmbDisposed = default;
                 private int _state;
                 private Exception _error; // while canceling or when final

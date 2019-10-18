@@ -51,7 +51,7 @@
 
             private readonly ILinxObserver<T> _observer;
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly CancellationTokenRegistration _ctr;
+            private CancellationTokenRegistration _ctr;
             private int _state;
             private T _next;
             private Exception _error;

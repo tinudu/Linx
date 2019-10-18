@@ -62,7 +62,7 @@
 
                 private readonly IAsyncEnumerable<T> _source;
                 private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
-                private readonly CancellationTokenRegistration _ctr;
+                private CancellationTokenRegistration _ctr;
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private Context _context = new Context();
                 private int _state;
@@ -341,7 +341,7 @@
 
                 private readonly LatestManyEnumerable<T> _enumerable;
                 private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
-                private readonly CancellationTokenRegistration _ctr;
+                private CancellationTokenRegistration _ctr;
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private Context _context = new Context();
                 private int _state;

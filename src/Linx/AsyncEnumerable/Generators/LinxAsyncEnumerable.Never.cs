@@ -34,7 +34,7 @@
                 private const int _sFinal = 2;
 
                 private readonly ManualResetValueTaskSource<bool> _tp = new ManualResetValueTaskSource<bool>();
-                private readonly CancellationTokenRegistration _ctr;
+                private CancellationTokenRegistration _ctr;
                 private int _state;
                 private Exception _error;
 

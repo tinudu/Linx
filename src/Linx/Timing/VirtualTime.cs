@@ -29,7 +29,9 @@
         /// <summary>
         /// Crete with <see cref="Now"/> being <see cref="DateTimeOffset.MinValue"/>.
         /// </summary>
-        public VirtualTime() : this(DateTimeOffset.MinValue) { }
+        public VirtualTime() : this(DateTimeOffset.MinValue)
+        {
+        }
 
         /// <summary>
         /// Crete with <see cref="Now"/> being <paramref name="now"/>.
@@ -145,6 +147,7 @@
                                 _state = _sIdle;
                                 break;
                             }
+
                             var bucket = _queue.Peek();
                             if (bucket.Timers.Count > 0)
                             {
@@ -153,10 +156,12 @@
                                 _state = _sStarted;
                                 break;
                             }
+
                             _queue.Dequeue();
                             _timersByDue.Remove(bucket.DueUtc);
                             _pool.Push(bucket.Timers);
                         }
+
                         break;
 
                     case _sDisposed:
@@ -199,7 +204,7 @@
             private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
             private readonly VirtualTime _time;
             private readonly CancellationToken _token;
-            private readonly CancellationTokenRegistration _ctr;
+            private CancellationTokenRegistration _ctr;
             private int _state;
 
             public Timer(VirtualTime time, CancellationToken token)
@@ -251,6 +256,7 @@
                                     _time._state = timeState;
                                     _ts.SetException(ex);
                                 }
+
                                 break;
 
                             case _sDisposed:
@@ -264,6 +270,7 @@
                                 _state = _tInitial;
                                 throw new Exception(timeState + "???");
                         }
+
                         break;
 
                     case _tCanceled:
@@ -332,4 +339,3 @@
         }
     }
 }
-

@@ -164,7 +164,7 @@
                 private readonly ConnectableEnumerable<T> _e;
                 public readonly ManualResetValueTaskSource<bool> TsAccepting = new ManualResetValueTaskSource<bool>();
                 public readonly ManualResetValueTaskSource<bool> TsEmitting = new ManualResetValueTaskSource<bool>();
-                private readonly CancellationTokenRegistration _ctr;
+                private CancellationTokenRegistration _ctr;
                 public EnumeratorState State;
                 private Exception _error;
                 private Task _tDisposed;

@@ -49,7 +49,7 @@
 
                 private readonly LatestOneEnumerable<T> _enumerable;
                 private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-                private readonly CancellationTokenRegistration _ctr;
+                private CancellationTokenRegistration _ctr;
                 private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state;

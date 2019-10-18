@@ -9,7 +9,7 @@
     internal sealed class Enumerator<T> : IAsyncEnumerator<T>
     {
         private readonly ISubject<T> _subject;
-        private readonly CancellationTokenRegistration _ctr;
+        private CancellationTokenRegistration _ctr;
 
         public ManualResetValueTaskSource<bool> TsAccepting = new ManualResetValueTaskSource<bool>();
         public ManualResetValueTaskSource<bool> TsEmitting = new ManualResetValueTaskSource<bool>();
