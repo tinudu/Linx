@@ -57,7 +57,7 @@
             {
                 case _sStopped:
                     _state = _sStarted;
-                    Task.Run(() => Advance());
+                    Task.Run(Advance);
                     break;
 
                 case _sStarted:
@@ -112,15 +112,15 @@
         /// <inheritdoc />
         public async ValueTask Delay(TimeSpan due, CancellationToken token)
         {
-            using (var timer = new Timer(this, token))
-                await timer.Delay(due).ConfigureAwait(false);
+            using var timer = new Timer(this, token);
+            await timer.Delay(due).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async ValueTask Delay(DateTimeOffset due, CancellationToken token)
         {
-            using (var timer = new Timer(this, token))
-                await timer.Delay(due).ConfigureAwait(false);
+            using var timer = new Timer(this, token);
+            await timer.Delay(due).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

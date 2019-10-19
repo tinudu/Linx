@@ -20,13 +20,13 @@
                     var time = Time.Current;
                     var due = time.Now;
                     if (!observer.OnNext(due)) return;
-                    using (var timer = time.GetTimer(observer.Token))
-                        while (true)
-                        {
-                            due += interval;
-                            await timer.Delay(due).ConfigureAwait(false);
-                            if (!observer.OnNext(due)) return;
-                        }
+                    using var timer = time.GetTimer(observer.Token);
+                    while (true)
+                    {
+                        due += interval;
+                        await timer.Delay(due).ConfigureAwait(false);
+                        if (!observer.OnNext(due)) return;
+                    }
                 }
                 catch (Exception ex) { observer.OnError(ex); }
             });

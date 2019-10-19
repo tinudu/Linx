@@ -25,19 +25,16 @@ namespace Linx.Enumerable
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
 
-            using (var e = source.Where(x => x != null).GetEnumerator())
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = source.Where(x => x != null).GetEnumerator();
+            if (!e.MoveNext()) return default;
+            var <#= mm.Op1 #> = e.Current;
+            while (e.MoveNext())
             {
-                if (!e.MoveNext()) return default;
-                var <#= mm.Op1 #> = e.Current;
-
-                while (e.MoveNext())
-                {
-                    var current = e.Current;
-                    if (comparer.Compare(current, <#= mm.Op1 #>) <#= mm.Cmp #> 0) <#= mm.Op1 #> = current;
-                }
-
-                return <#= mm.Op1 #>;
+                var current = e.Current;
+                if (comparer.Compare(current, <#= mm.Op1 #>) <#= mm.Cmp #> 0) <#= mm.Op1 #> = current;
             }
+            return <#= mm.Op1 #>;
         }
 
         /// <summary>

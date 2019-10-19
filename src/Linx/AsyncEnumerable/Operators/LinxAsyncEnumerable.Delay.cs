@@ -24,24 +24,24 @@
                 var ae = timestamped.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 try
                 {
-                    using (var timer = Time.Current.GetTimer(token))
-                        while (await ae.MoveNextAsync())
+                    using var timer = Time.Current.GetTimer(token);
+                    while (await ae.MoveNextAsync())
+                    {
+                        var current = ae.Current;
+                        await timer.Delay(current.Timestamp + delay).ConfigureAwait(false);
+                        switch (current.Value.Kind)
                         {
-                            var current = ae.Current;
-                            await timer.Delay(current.Timestamp + delay).ConfigureAwait(false);
-                            switch (current.Value.Kind)
-                            {
-                                case NotificationKind.Next:
-                                    if (!await yield(current.Value.Value).ConfigureAwait(false)) return;
-                                    break;
-                                case NotificationKind.Completed:
-                                    return;
-                                case NotificationKind.Error:
-                                    throw current.Value.Error;
-                                default:
-                                    throw new Exception(current.Value.Kind + "???");
-                            }
+                            case NotificationKind.Next:
+                                if (!await yield(current.Value.Value).ConfigureAwait(false)) return;
+                                break;
+                            case NotificationKind.Completed:
+                                return;
+                            case NotificationKind.Error:
+                                throw current.Value.Error;
+                            default:
+                                throw new Exception(current.Value.Kind + "???");
                         }
+                    }
                 }
                 finally { await ae.DisposeAsync(); }
             });

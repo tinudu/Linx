@@ -55,17 +55,13 @@
         /// <inheritdoc />
         public override string ToString()
         {
-            switch (Kind)
+            return Kind switch
             {
-                case NotificationKind.Next:
-                    return Value?.ToString() ?? string.Empty;
-                case NotificationKind.Completed:
-                    return "Completed";
-                case NotificationKind.Error:
-                    return $"{Error.GetType().Name}({Error.Message})";
-                default:
-                    throw new Exception(Kind + "???");
-            }
+                NotificationKind.Next => (Value?.ToString() ?? string.Empty),
+                NotificationKind.Completed => "Completed",
+                NotificationKind.Error => $"{Error.GetType().Name}({Error.Message})",
+                _ => throw new Exception(Kind + "???")
+            };
         }
     }
 }

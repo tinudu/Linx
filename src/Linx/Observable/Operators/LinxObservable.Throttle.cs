@@ -142,53 +142,53 @@
                 try
                 {
                     var idle = new ManualResetValueTaskSource();
-                    using (var timer = _time.GetTimer(_cts.Token))
-                        while (true)
+                    using var timer = _time.GetTimer(_cts.Token);
+                    while (true)
+                    {
+                        var state = Atomic.Lock(ref _state);
+                        switch (state)
                         {
-                            var state = Atomic.Lock(ref _state);
-                            switch (state)
-                            {
-                                case _sInitial:
-                                    idle.Reset();
-                                    _tsThrottleIdle = idle;
-                                    _state = _sInitial;
-                                    await idle.Task.ConfigureAwait(false);
+                            case _sInitial:
+                                idle.Reset();
+                                _tsThrottleIdle = idle;
+                                _state = _sInitial;
+                                await idle.Task.ConfigureAwait(false);
+                                continue;
+
+                            case _sNext:
+                            case _sLast:
+                                if (_due > _time.Now)
+                                {
+                                    var due = _due;
+                                    _state = state;
+                                    await timer.Delay(due).ConfigureAwait(false);
                                     continue;
+                                }
 
-                                case _sNext:
-                                case _sLast:
-                                    if (_due > _time.Now)
-                                    {
-                                        var due = _due;
-                                        _state = state;
-                                        await timer.Delay(due).ConfigureAwait(false);
-                                        continue;
-                                    }
+                                if (state == _sNext)
+                                {
+                                    var value = _next;
+                                    _state = _sInitial;
+                                    if (_observer.OnNext(value)) continue;
+                                }
+                                else // Last
+                                {
+                                    var value = _next;
+                                    _state = _sLast; // temporarily
+                                    _observer.OnNext(value);
+                                }
+                                return;
 
-                                    if (state == _sNext)
-                                    {
-                                        var value = _next;
-                                        _state = _sInitial;
-                                        if (_observer.OnNext(value)) continue;
-                                    }
-                                    else // Last
-                                    {
-                                        var value = _next;
-                                        _state = _sLast; // temporarily
-                                        _observer.OnNext(value);
-                                    }
-                                    return;
+                            case _sCompleted:
+                                _state = state;
+                                return;
 
-                                case _sCompleted:
-                                    _state = state;
-                                    return;
-
-                                //case _sFinal:
-                                default:
-                                    _state = state;
-                                    throw new Exception(state + "???");
-                            }
+                            //case _sFinal:
+                            default:
+                                _state = state;
+                                throw new Exception(state + "???");
                         }
+                    }
                 }
                 catch (Exception ex) { error = ex; }
                 finally

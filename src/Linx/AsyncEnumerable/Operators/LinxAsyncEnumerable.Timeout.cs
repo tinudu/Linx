@@ -136,43 +136,43 @@
                     {
                         var idle = new ManualResetValueTaskSource();
 
-                        using (var timer = _time.GetTimer(_cts.Token))
-                            while (true)
+                        using var timer = _time.GetTimer(_cts.Token);
+                        while (true)
+                        {
+                            var state = Atomic.Lock(ref _state);
+                            switch (state)
                             {
-                                var state = Atomic.Lock(ref _state);
-                                switch (state)
-                                {
-                                    case _sInitial: // no time to wait for
-                                        idle.Reset();
-                                        _tsWatchdogIdle = idle;
-                                        _state = _sInitial;
-                                        await idle.Task.ConfigureAwait(false);
-                                        break;
+                                case _sInitial: // no time to wait for
+                                    idle.Reset();
+                                    _tsWatchdogIdle = idle;
+                                    _state = _sInitial;
+                                    await idle.Task.ConfigureAwait(false);
+                                    break;
 
-                                    case _sAccepting:
-                                        if (_time.Now < _due)
-                                        {
-                                            var due = _due;
-                                            _state = _sAccepting;
-                                            await timer.Delay(due).ConfigureAwait(false);
-                                        }
-                                        else
-                                        {
-                                            _state = _sAccepting;
-                                            throw new TimeoutException();
-                                        }
+                                case _sAccepting:
+                                    if (_time.Now < _due)
+                                    {
+                                        var due = _due;
+                                        _state = _sAccepting;
+                                        await timer.Delay(due).ConfigureAwait(false);
+                                    }
+                                    else
+                                    {
+                                        _state = _sAccepting;
+                                        throw new TimeoutException();
+                                    }
 
-                                        break;
+                                    break;
 
-                                    case _sCanceling:
-                                        _state = _sCanceling;
-                                        return;
+                                case _sCanceling:
+                                    _state = _sCanceling;
+                                    return;
 
-                                    default:
-                                        _state = state;
-                                        throw new Exception(state + "???");
-                                }
+                                default:
+                                    _state = state;
+                                    throw new Exception(state + "???");
                             }
+                        }
                     }
                     catch (Exception ex) { Cancel(ex); }
                     // ReSharper restore AccessToModifiedClosure

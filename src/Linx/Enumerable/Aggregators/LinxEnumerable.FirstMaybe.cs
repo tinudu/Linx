@@ -13,8 +13,9 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            using (var e = source.GetEnumerator())
-                return e.MoveNext() ? e.Current : default;
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = source.GetEnumerator();
+            return e.MoveNext() ? e.Current : default;
         }
 
         /// <summary>

@@ -14,13 +14,12 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            using (var e = source.GetEnumerator())
-            {
-                if (!e.MoveNext()) return new Maybe<T>();
-                var result = new Maybe<T>(e.Current);
-                if (!e.MoveNext()) return result;
-                throw new InvalidOperationException(Strings.SequenceContainsMultipleElements);
-            }
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = source.GetEnumerator();
+            if (!e.MoveNext()) return new Maybe<T>();
+            var single = e.Current;
+            if (!e.MoveNext()) return new Maybe<T>(single);
+            throw new InvalidOperationException(Strings.SequenceContainsMultipleElements);
         }
 
         /// <summary>

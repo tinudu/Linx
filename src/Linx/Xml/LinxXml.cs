@@ -38,13 +38,12 @@
         /// <remarks>Preferable over <see cref="XContainer.Element(XName)"/> since it makes sure there is only one.</remarks>
         public static XElement SingleOrDefault(this XElement element, XName name)
         {
-            using (var e = element.Elements(name).GetEnumerator())
-            {
-                if (!e.MoveNext()) return null;
-                var single = e.Current;
-                if (e.MoveNext()) throw new Exception($"Multiple elements '{name}' on element '{element.Name}'.");
-                return single;
-            }
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = element.Elements(name).GetEnumerator();
+            if (!e.MoveNext()) return null;
+            var single = e.Current;
+            if (e.MoveNext()) throw new Exception($"Multiple elements '{name}' on element '{element.Name}'.");
+            return single;
         }
 
         /// <summary>

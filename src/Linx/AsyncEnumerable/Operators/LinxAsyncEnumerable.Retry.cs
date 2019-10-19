@@ -85,16 +85,16 @@
                 }
                 catch { token.ThrowIfCancellationRequested(); }
 
-                using (var timer = time.GetTimer(token))
-                    while (true)
-                        try
-                        {
-                            await timer.Delay(waitTime).ConfigureAwait(false);
-                            // ReSharper disable once PossibleMultipleEnumeration
-                            await source.CopyTo(yield, token).ConfigureAwait(false);
-                            return;
-                        }
-                        catch { token.ThrowIfCancellationRequested(); }
+                using var timer = time.GetTimer(token);
+                while (true)
+                    try
+                    {
+                        await timer.Delay(waitTime).ConfigureAwait(false);
+                        // ReSharper disable once PossibleMultipleEnumeration
+                        await source.CopyTo(yield, token).ConfigureAwait(false);
+                        return;
+                    }
+                    catch { token.ThrowIfCancellationRequested(); }
             });
         }
 

@@ -63,13 +63,13 @@
                 var time = Time.Current;
                 var due = TimeZoneInfo.ConvertTime(time.Now, timeZone);
                 due = ValidClockTime(new DateTimeOffset(due.Ticks / resolution.Ticks * resolution.Ticks, due.Offset));
-                using (var timer = time.GetTimer(token))
-                    while (true)
-                    {
-                        await timer.Delay(due).ConfigureAwait(false);
-                        if (!await yield(due).ConfigureAwait(false)) return;
-                        due = ValidClockTime(new DateTimeOffset(due.DateTime + resolution, due.Offset));
-                    }
+                using var timer = time.GetTimer(token);
+                while (true)
+                {
+                    await timer.Delay(due).ConfigureAwait(false);
+                    if (!await yield(due).ConfigureAwait(false)) return;
+                    due = ValidClockTime(new DateTimeOffset(due.DateTime + resolution, due.Offset));
+                }
             });
         }
     }

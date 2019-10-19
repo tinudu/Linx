@@ -19,13 +19,13 @@
                 var time = Time.Current;
                 var due = time.Now;
                 if (!await yield(due).ConfigureAwait(false)) return;
-                using (var timer = time.GetTimer(token))
-                    while (true)
-                    {
-                        due += interval;
-                        await timer.Delay(due).ConfigureAwait(false);
-                        if (!await yield(due).ConfigureAwait(false)) return;
-                    }
+                using var timer = time.GetTimer(token);
+                while (true)
+                {
+                    due += interval;
+                    await timer.Delay(due).ConfigureAwait(false);
+                    if (!await yield(due).ConfigureAwait(false)) return;
+                }
             });
         }
 

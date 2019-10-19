@@ -22,15 +22,12 @@
                     var mx = (MemberExpression)x;
                     var target = mx.Expression?.Eval();
                     // ReSharper disable once SwitchStatementMissingSomeCases
-                    switch (mx.Member.MemberType)
+                    return mx.Member.MemberType switch
                     {
-                        case MemberTypes.Field:
-                            return ((FieldInfo)mx.Member).GetValue(target);
-                        case MemberTypes.Property:
-                            return ((PropertyInfo)mx.Member).GetValue(target);
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(mx.Member.MemberType));
-                    }
+                        MemberTypes.Field => ((FieldInfo) mx.Member).GetValue(target),
+                        MemberTypes.Property => ((PropertyInfo) mx.Member).GetValue(target),
+                        _ => throw new ArgumentOutOfRangeException(nameof(mx.Member.MemberType))
+                    };
                 }
                 case ExpressionType.Lambda:
                     return ((LambdaExpression)x).Compile();

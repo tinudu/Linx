@@ -15,14 +15,13 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));
 
-            using (var e = source.GetEnumerator())
-            {
-                if (!e.MoveNext()) return default;
-                var seed = e.Current;
-                while (e.MoveNext())
-                    seed = accumulator(seed, e.Current);
-                return seed;
-            }
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = source.GetEnumerator();
+            if (!e.MoveNext()) return default;
+            var seed = e.Current;
+            while (e.MoveNext())
+                seed = accumulator(seed, e.Current);
+            return seed;
         }
     }
 }

@@ -14,19 +14,16 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
 
-            using (var e = source.Where(x => x != null).GetEnumerator())
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = source.Where(x => x != null).GetEnumerator();
+            if (!e.MoveNext()) return default;
+            var min = e.Current;
+            while (e.MoveNext())
             {
-                if (!e.MoveNext()) return default;
-                var min = e.Current;
-
-                while (e.MoveNext())
-                {
-                    var current = e.Current;
-                    if (comparer.Compare(current, min) < 0) min = current;
-                }
-
-                return min;
+                var current = e.Current;
+                if (comparer.Compare(current, min) < 0) min = current;
             }
+            return min;
         }
 
         /// <summary>
@@ -74,19 +71,16 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
 
-            using (var e = source.Where(x => x != null).GetEnumerator())
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = source.Where(x => x != null).GetEnumerator();
+            if (!e.MoveNext()) return default;
+            var max = e.Current;
+            while (e.MoveNext())
             {
-                if (!e.MoveNext()) return default;
-                var max = e.Current;
-
-                while (e.MoveNext())
-                {
-                    var current = e.Current;
-                    if (comparer.Compare(current, max) > 0) max = current;
-                }
-
-                return max;
+                var current = e.Current;
+                if (comparer.Compare(current, max) > 0) max = current;
             }
+            return max;
         }
 
         /// <summary>

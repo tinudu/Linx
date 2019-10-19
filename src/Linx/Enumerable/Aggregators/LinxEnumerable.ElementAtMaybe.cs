@@ -13,17 +13,16 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (index < 0) return default;
 
-            using (var e = source.GetEnumerator())
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = source.GetEnumerator();
+            var i = 0;
+            while (e.MoveNext())
             {
-                var i = 0;
-                while (e.MoveNext())
-                {
-                    if (i == index) return e.Current;
-                    i++;
-                }
-
-                return default;
+                if (i == index) return e.Current;
+                i++;
             }
+
+            return default;
         }
     }
 }

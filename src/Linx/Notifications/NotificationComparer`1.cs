@@ -30,33 +30,25 @@
         /// <inheritdoc />
         public bool Equals(Notification<T> x, Notification<T> y)
         {
-            switch (x.Kind)
+            return x.Kind switch
             {
-                case NotificationKind.Completed:
-                    return y.Kind == NotificationKind.Completed;
-                case NotificationKind.Next:
-                    return y.Kind == NotificationKind.Next && (x.Value == null ? y.Value == null : y.Value != null && _valueComparer.Equals(x.Value, y.Value));
-                case NotificationKind.Error:
-                    return x.Kind == NotificationKind.Error && x.Error.GetType() == y.Error.GetType() && x.Error.Message == y.Error.Message;
-                default:
-                    throw new Exception(x.Kind + "???");
-            }
+                NotificationKind.Completed => (y.Kind == NotificationKind.Completed),
+                NotificationKind.Next => (y.Kind == NotificationKind.Next && (x.Value == null ? y.Value == null : y.Value != null && _valueComparer.Equals(x.Value, y.Value))),
+                NotificationKind.Error => (x.Kind == NotificationKind.Error && x.Error.GetType() == y.Error.GetType() && x.Error.Message == y.Error.Message),
+                _ => throw new Exception(x.Kind + "???")
+            };
         }
 
         /// <inheritdoc />
         public int GetHashCode(Notification<T> n)
         {
-            switch (n.Kind)
+            return n.Kind switch
             {
-                case NotificationKind.Completed:
-                    return 0;
-                case NotificationKind.Next:
-                    return n.Value == null ? 0 : _valueComparer.GetHashCode(n.Value);
-                case NotificationKind.Error:
-                    return HashCode.Combine(n.Error.GetType(),n.Error.Message);
-                default:
-                    throw new Exception(n.Kind + "???");
-            }
+                NotificationKind.Completed => 0,
+                NotificationKind.Next => (n.Value == null ? 0 : _valueComparer.GetHashCode(n.Value)),
+                NotificationKind.Error => HashCode.Combine(n.Error.GetType(), n.Error.Message),
+                _ => throw new Exception(n.Kind + "???")
+            };
         }
     }
 }
