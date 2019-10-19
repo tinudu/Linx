@@ -1,4 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<!--EXTERNAL_PROPERTIES: TargetFramework-->
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
@@ -7,18 +8,18 @@
         <LangVersion>7.3</LangVersion>
     </PropertyGroup>
 
+    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.0.0" />
+        <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.0.0" />
+        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.3" />
+    </ItemGroup>
+
     <ItemGroup>
         <None Remove="Linx.csproj.DotSettings" />
     </ItemGroup>
 
     <ItemGroup>
         <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-        <PackageReference Include="ElasticBytes.AsyncEnumerable" Version="1.1.0" />
-        <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.0.0" />
-        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.3" />
     </ItemGroup>
 
     <ItemGroup>
