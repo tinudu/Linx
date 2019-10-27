@@ -54,6 +54,14 @@
         public static TResult Invoke<TArgument, TResult>(this TArgument argument, Func<TArgument, TResult> function) => function(argument);
 
         /// <summary>
+        /// <see cref="CancellationTokenSource.Cancel()"/> catching exception.
+        /// </summary>
+        public static void TryCancel(this CancellationTokenSource cts)
+        {
+            try { cts.Cancel(); } catch {/**/}
+        }
+
+        /// <summary>
         /// Gets a task that completes as <see cref="TaskStatus.Canceled"/> when the specified <paramref name="token"/> requests cancellation.
         /// </summary>
         public static Task WhenCanceled(this CancellationToken token)

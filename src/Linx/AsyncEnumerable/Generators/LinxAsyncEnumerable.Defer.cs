@@ -12,7 +12,18 @@
         {
             if (factory == null) throw new ArgumentNullException(nameof(factory));
 
-            return new AnonymousAsyncEnumerable<T>(token => factory().GetAsyncEnumerator(token));
+            return Create(token =>
+            {
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    return factory().GetAsyncEnumerator(token);
+                }
+                catch (Exception ex)
+                {
+                    return new ThrowIterator<T>(ex);
+                }
+            });
         }
     }
 }

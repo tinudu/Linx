@@ -1,9 +1,9 @@
 ﻿namespace Linx.AsyncEnumerable
 {
+    using Notifications;
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Notifications;
 
     partial class LinxAsyncEnumerable
     {
@@ -19,15 +19,9 @@
                 Notification<T> completion;
                 try
                 {
-                    var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                    try
-                    {
-                        while (await ae.MoveNextAsync())
-                            if (!await yield(Notification.Next(ae.Current)).ConfigureAwait(false))
-                                return;
-                    }
-                    finally { await ae.DisposeAsync(); }
-
+                    await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                        if (!await yield(Notification.Next(item)).ConfigureAwait(false))
+                            return;
                     completion = Notification.Completed<T>();
                 }
                 catch (Exception ex) { completion = Notification.Error<T>(ex); }

@@ -48,9 +48,10 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
             if (<#= x.Source #> == null) throw new ArgumentNullException(nameof(<#= x.Source #>));
 <# } #>
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            
-            return new AnonymousAsyncEnumerable<TResult>(token =>
+
+            return Create(token =>
             {
+                token.ThrowIfCancellationRequested();
                 var tuple = new CombineTuple<#= genArgs #>(resultSelector, startAtFirstElement);
 <# foreach(var x in names) { #>
                 var <#= x.Seq #> = <#= x.Source #>.Select(v => tuple.<#= x.OnNext #>(v));

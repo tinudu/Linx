@@ -2,32 +2,26 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Runtime.CompilerServices;
+    using System.Diagnostics;
     using System.Threading;
 
-    /// <summary>
-    /// Anonymous <see cref="IAsyncEnumerable{T}"/> implementation.
-    /// </summary>
-    public sealed class AnonymousAsyncEnumerable<T> : AsyncEnumerableBase<T>
+    internal sealed class AnonymousAsyncEnumerable<T> : AsyncEnumerableBase<T>
     {
         private readonly Func<CancellationToken, IAsyncEnumerator<T>> _getEnumerator;
         private readonly string _name;
 
-        /// <summary>
-        /// Initialize with a <see cref="IAsyncEnumerable{T}.GetAsyncEnumerator(CancellationToken)"/> implementation.
-        /// </summary>
-        public AnonymousAsyncEnumerable(
-            Func<CancellationToken, IAsyncEnumerator<T>> getEnumerator,
-            [CallerMemberName] string name = default)
+        public AnonymousAsyncEnumerable(Func<CancellationToken, IAsyncEnumerator<T>> getEnumerator, string name)
         {
-            _getEnumerator = getEnumerator ?? throw new ArgumentNullException(nameof(getEnumerator));
-            _name = name;
+            Debug.Assert(getEnumerator != null);
+            _getEnumerator = getEnumerator;
+            _name = name ?? typeof(AnonymousAsyncEnumerable<T>).Name;
         }
 
-        /// <inheritdoc />
         public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => _getEnumerator(token);
 
-        /// <inheritdoc />
-        public override string ToString() => _name ?? nameof(AnonymousAsyncEnumerable<T>);
+        public override string ToString() => _name;
+
+        public AnonymousAsyncEnumerable<T> WithName(string name) => name == _name ? this : new AnonymousAsyncEnumerable<T>(_getEnumerator, name);
     }
+
 }

@@ -11,110 +11,76 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
-        /// </summary>
-        /// <param name="generator">A <see cref="GeneratorDelegate{T}"/> that will emit elements.</param>
-        /// <param name="name">A display name for the enumerable.</param>
-        public static IAsyncEnumerable<T> Create<T>(GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
-        {
-            if (generator == null) throw new ArgumentNullException(nameof(generator));
-            return new GeneratorEnumerable<T>(generator, name);
-        }
-
-        /// <summary>
-        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
-        /// </summary>
-        /// <param name="_">Ignored. Helps with type inference.</param>
-        /// <param name="generator">A <see cref="GeneratorDelegate{T}"/> that will emit elements.</param>
-        /// <param name="name">A display name for the enumerable.</param>
-        public static IAsyncEnumerable<T> Create<T>(T _, GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
-        {
-            if (generator == null) throw new ArgumentNullException(nameof(generator));
-            return new GeneratorEnumerable<T>(generator, name);
-        }
-
-        /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by it's <see cref="IAsyncEnumerable{T}.GetAsyncEnumerator(CancellationToken)"/> implementation.
         /// </summary>
         public static IAsyncEnumerable<T> Create<T>(Func<CancellationToken, IAsyncEnumerator<T>> getAsyncEnumerator, [CallerMemberName] string name = null)
         {
+            if (getAsyncEnumerator == null) throw new ArgumentNullException(nameof(getAsyncEnumerator));
             return new AnonymousAsyncEnumerable<T>(getAsyncEnumerator, name);
         }
 
-        [DebuggerNonUserCode]
-        private sealed class GeneratorEnumerable<T> : AsyncEnumerableBase<T>, IAsyncEnumerator<T>
+        /// <summary>
+        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
+        /// </summary>
+        public static IAsyncEnumerable<T> Create<T>(GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
         {
-            private const int _sEnumerable = 0;
-            private const int _sInitial = 1;
-            private const int _sAccepting = 2;
-            private const int _sEmitting = 3;
-            private const int _sCompleted = 4;
-            private const int _sFinal = 5;
+            if (generator == null) throw new ArgumentNullException(nameof(generator));
+            return new AnonymousAsyncEnumerable<T>(token => new GeneratorEnumerator<T>(generator, token), name);
+        }
+
+        /// <summary>
+        /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
+        /// </summary>
+        public static IAsyncEnumerable<T> Create<T>(T _, GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
+            => Create(generator, name);
+
+        private sealed class GeneratorEnumerator<T> : IAsyncEnumerator<T>
+        {
+            private const int _sInitial = 0;
+            private const int _sAccepting = 1;
+            private const int _sEmitting = 2;
+            private const int _sCompleted = 3;
+            private const int _sFinal = 4;
 
             private readonly GeneratorDelegate<T> _generator;
-            private readonly string _name;
+            private readonly CancellationToken _token;
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
+            private readonly ManualResetValueTaskSource<bool> _tsEmitting = new ManualResetValueTaskSource<bool>();
+            private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
             private int _state;
-            private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
-            private readonly ManualResetValueTaskSource<bool> _tsYield = new ManualResetValueTaskSource<bool>();
-            private CancellationToken _token;
-            private CancellationTokenRegistration _ctr;
-            private AsyncTaskMethodBuilder _atmbDisposed = default;
             private Exception _error;
 
-            public GeneratorEnumerable(GeneratorDelegate<T> generator, string name)
+            public GeneratorEnumerator(GeneratorDelegate<T> generator, CancellationToken token)
             {
+                Debug.Assert(generator != null);
                 _generator = generator;
-                _name = name ?? nameof(GeneratorEnumerable<T>);
-            }
-
-            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
-            {
-                token.ThrowIfCancellationRequested();
-
-                var state = Atomic.Lock(ref _state);
-                if (state != _sEnumerable)
-                {
-                    _state = state;
-                    return new GeneratorEnumerable<T>(_generator, _name).GetAsyncEnumerator(token);
-                }
-
-                _state = _sInitial;
                 _token = token;
-                if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
-                return this;
             }
-
-            public override string ToString() => _name;
 
             public T Current { get; private set; }
 
             public ValueTask<bool> MoveNextAsync()
             {
-                _tsMoveNext.Reset();
+                _tsAccepting.Reset();
 
                 var state = Atomic.Lock(ref _state);
                 switch (state)
                 {
-                    case _sEnumerable:
-                        _state = _sEnumerable;
-                        _tsMoveNext.SetException(new InvalidOperationException());
-                        break;
-
                     case _sInitial:
                         _state = _sAccepting;
-                        Generate();
+                        Produce();
                         break;
 
                     case _sEmitting:
                         _state = _sAccepting;
-                        _tsYield.SetResult(true);
+                        _tsEmitting.SetResult(true);
                         break;
 
                     case _sCompleted:
                     case _sFinal:
                         Current = default;
                         _state = state;
-                        _tsMoveNext.SetExceptionOrResult(_error, false);
+                        _tsAccepting.SetExceptionOrResult(_error, false);
                         break;
 
                     default: // Accepting???
@@ -122,73 +88,35 @@
                         throw new Exception(state + "???");
                 }
 
-                return _tsMoveNext.Task;
+                return _tsAccepting.Task;
             }
 
-            public async ValueTask DisposeAsync()
+            public ValueTask DisposeAsync()
             {
-                OnError(AsyncEnumeratorDisposedException.Instance);
-                await _atmbDisposed.Task.ConfigureAwait(false);
-                Current = default;
-            }
-
-            private void OnError(Exception error)
-            {
-                Debug.Assert(error != null);
-
                 var state = Atomic.Lock(ref _state);
                 switch (state)
                 {
-                    case _sEnumerable:
-                        _state = _sEnumerable;
-                        throw new InvalidOperationException();
-
                     case _sInitial:
-                        _error = error;
+                        _error = AsyncEnumeratorDisposedException.Instance;
                         _state = _sFinal;
-                        _ctr.Dispose();
                         _atmbDisposed.SetResult();
                         break;
 
                     case _sAccepting:
-                        _error = error;
-                        Current = default;
+                        _error = AsyncEnumeratorDisposedException.Instance;
                         _state = _sCompleted;
-                        _ctr.Dispose();
-                        _tsMoveNext.SetException(error);
+                        _tsAccepting.SetException(_error);
                         break;
 
                     case _sEmitting:
-                        _error = error;
+                        _error = AsyncEnumeratorDisposedException.Instance;
                         _state = _sCompleted;
-                        _ctr.Dispose();
-                        _tsYield.SetResult(false);
+                        _tsEmitting.SetResult(false);
                         break;
 
                     case _sCompleted:
                     case _sFinal:
                         _state = state;
-                        break;
-                }
-            }
-
-            private ValueTask<bool> YieldAsync(T element)
-            {
-                _tsYield.Reset();
-
-                var state = Atomic.Lock(ref _state);
-                switch (state)
-                {
-                    case _sAccepting:
-                        Current = element;
-                        _state = _sEmitting;
-                        _tsMoveNext.SetResult(true);
-                        break;
-
-                    case _sCompleted:
-                    case _sFinal:
-                        _state = state;
-                        _tsYield.SetResult(false);
                         break;
 
                     default:
@@ -196,30 +124,62 @@
                         throw new Exception(state + "???");
                 }
 
-                return _tsYield.Task;
+                return new ValueTask(_atmbDisposed.Task);
             }
 
-            private async void Generate()
+            private ValueTask<bool> Yield(T value)
             {
-                try { await _generator(YieldAsync, _token).ConfigureAwait(false); }
-                catch (Exception ex) { OnError(ex); }
+                _tsEmitting.Reset();
 
                 var state = Atomic.Lock(ref _state);
                 switch (state)
                 {
                     case _sAccepting:
+                        Current = value;
+                        _state = _sEmitting;
+                        _tsAccepting.SetResult(true);
+                        break;
+
+                    case _sCompleted:
+                    case _sFinal:
+                        _state = state;
+                        _tsEmitting.SetResult(false);
+                        break;
+
+                    default: // initial, emitting???
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+
+                return _tsEmitting.Task;
+            }
+
+            private async void Produce()
+            {
+                Exception error = null;
+                try
+                {
+                    _token.ThrowIfCancellationRequested();
+                    await _generator(Yield, _token);
+                }
+                catch (Exception ex) { error = ex; }
+
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sAccepting:
+                        _error = error;
                         Current = default;
                         _state = _sFinal;
-                        _ctr.Dispose();
+                        _tsAccepting.SetExceptionOrResult(error, false);
                         _atmbDisposed.SetResult();
-                        _tsMoveNext.SetExceptionOrResult(_error, false);
                         break;
 
                     case _sEmitting:
+                        _error = error;
                         _state = _sFinal;
-                        _ctr.Dispose();
+                        _tsEmitting.SetResult(false);
                         _atmbDisposed.SetResult();
-                        _tsYield.SetResult(false);
                         break;
 
                     case _sCompleted:
@@ -227,7 +187,7 @@
                         _atmbDisposed.SetResult();
                         break;
 
-                    default:
+                    default: // Initial, Final???
                         _state = state;
                         throw new Exception(state + "???");
                 }

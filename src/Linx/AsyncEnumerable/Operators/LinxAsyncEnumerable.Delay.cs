@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using Notifications;
     using Timing;
@@ -11,40 +12,35 @@
         /// <summary>
         /// Indicates the sequence by <paramref name="delay"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Delay<T>(this IAsyncEnumerable<T> source, TimeSpan delay, bool delayError = false)
+        public static IAsyncEnumerable<T> Delay<T>(this IAsyncEnumerable<T> source, TimeSpan delay)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (delay <= TimeSpan.Zero) return source;
 
-            var notifications = delayError ? source.Materialize() : source.Select(Notification.Next).Append(Notification.Completed<T>());
-            var timestamped = notifications.Timestamp().Buffer();
+            var notifications = source.Materialize().Timestamp().Buffer();
+            return Create(GetEnumerator);
 
-            return Create<T>(async (yield, token) =>
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                var ae = timestamped.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
+                using var timer = Time.Current.GetTimer(token);
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach (var item in notifications.WithCancellation(token).ConfigureAwait(false))
                 {
-                    using var timer = Time.Current.GetTimer(token);
-                    while (await ae.MoveNextAsync())
+                    await timer.Delay(item.Timestamp + delay).ConfigureAwait(false);
+                    switch (item.Value.Kind)
                     {
-                        var current = ae.Current;
-                        await timer.Delay(current.Timestamp + delay).ConfigureAwait(false);
-                        switch (current.Value.Kind)
-                        {
-                            case NotificationKind.Next:
-                                if (!await yield(current.Value.Value).ConfigureAwait(false)) return;
-                                break;
-                            case NotificationKind.Completed:
-                                return;
-                            case NotificationKind.Error:
-                                throw current.Value.Error;
-                            default:
-                                throw new Exception(current.Value.Kind + "???");
-                        }
+                        case NotificationKind.Next:
+                            yield return item.Value.Value;
+                            break;
+                        case NotificationKind.Error:
+                            throw item.Value.Error;
+                        case NotificationKind.Completed:
+                            yield break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
                 }
-                finally { await ae.DisposeAsync(); }
-            });
+            }
         }
     }
 }

@@ -24,9 +24,10 @@
             if (source1 == null) throw new ArgumentNullException(nameof(source1));
             if (source2 == null) throw new ArgumentNullException(nameof(source2));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            
-            return new AnonymousAsyncEnumerable<TResult>(token =>
+
+            return Create(token =>
             {
+                token.ThrowIfCancellationRequested();
                 var tuple = new CombineTuple<T1, T2, TResult>(resultSelector, startAtFirstElement);
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
@@ -91,9 +92,10 @@
             if (source2 == null) throw new ArgumentNullException(nameof(source2));
             if (source3 == null) throw new ArgumentNullException(nameof(source3));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            
-            return new AnonymousAsyncEnumerable<TResult>(token =>
+
+            return Create(token =>
             {
+                token.ThrowIfCancellationRequested();
                 var tuple = new CombineTuple<T1, T2, T3, TResult>(resultSelector, startAtFirstElement);
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
@@ -170,9 +172,10 @@
             if (source3 == null) throw new ArgumentNullException(nameof(source3));
             if (source4 == null) throw new ArgumentNullException(nameof(source4));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            
-            return new AnonymousAsyncEnumerable<TResult>(token =>
+
+            return Create(token =>
             {
+                token.ThrowIfCancellationRequested();
                 var tuple = new CombineTuple<T1, T2, T3, T4, TResult>(resultSelector, startAtFirstElement);
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
@@ -261,9 +264,10 @@
             if (source4 == null) throw new ArgumentNullException(nameof(source4));
             if (source5 == null) throw new ArgumentNullException(nameof(source5));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            
-            return new AnonymousAsyncEnumerable<TResult>(token =>
+
+            return Create(token =>
             {
+                token.ThrowIfCancellationRequested();
                 var tuple = new CombineTuple<T1, T2, T3, T4, T5, TResult>(resultSelector, startAtFirstElement);
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
@@ -364,9 +368,10 @@
             if (source5 == null) throw new ArgumentNullException(nameof(source5));
             if (source6 == null) throw new ArgumentNullException(nameof(source6));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            
-            return new AnonymousAsyncEnumerable<TResult>(token =>
+
+            return Create(token =>
             {
+                token.ThrowIfCancellationRequested();
                 var tuple = new CombineTuple<T1, T2, T3, T4, T5, T6, TResult>(resultSelector, startAtFirstElement);
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
@@ -479,9 +484,10 @@
             if (source6 == null) throw new ArgumentNullException(nameof(source6));
             if (source7 == null) throw new ArgumentNullException(nameof(source7));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            
-            return new AnonymousAsyncEnumerable<TResult>(token =>
+
+            return Create(token =>
             {
+                token.ThrowIfCancellationRequested();
                 var tuple = new CombineTuple<T1, T2, T3, T4, T5, T6, T7, TResult>(resultSelector, startAtFirstElement);
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
@@ -606,9 +612,10 @@
             if (source7 == null) throw new ArgumentNullException(nameof(source7));
             if (source8 == null) throw new ArgumentNullException(nameof(source8));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            
-            return new AnonymousAsyncEnumerable<TResult>(token =>
+
+            return Create(token =>
             {
+                token.ThrowIfCancellationRequested();
                 var tuple = new CombineTuple<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(resultSelector, startAtFirstElement);
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
