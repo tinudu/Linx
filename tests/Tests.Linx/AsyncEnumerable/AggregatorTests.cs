@@ -78,23 +78,21 @@
         [Fact]
         public async Task TestMultiAggregateCancel()
         {
-            using (var vt = new VirtualTime())
-            {
-                var src = Marble.Parse("01--2|", null, 0, 1, 2).DematerializeAsyncEnumerable();
+            using var vt = new VirtualTime();
+            var src = Marble.Parse("01--2|", null, 0, 1, 2);
 #pragma warning disable IDE0067 // Dispose objects before losing scope
-                var cts = new CancellationTokenSource();
+            var cts = new CancellationTokenSource();
 #pragma warning restore IDE0067 // Dispose objects before losing scope
-                var tResult = src.MultiAggregate(
-                    (s, t) => s.ToList(t),
-                    (s, t) => s.Sum(t),
-                    (all, sum) => new { all, sum },
-                    cts.Token);
-                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(1), default);
-                vt.Start();
-                await tCancel;
-                var oce = await Assert.ThrowsAsync<OperationCanceledException>(() => tResult);
-                Assert.Equal(cts.Token, oce.CancellationToken);
-            }
+            var tResult = src.MultiAggregate(
+                (s, t) => s.ToList(t),
+                (s, t) => s.Sum(t),
+                (all, sum) => new { all, sum },
+                cts.Token);
+            var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(1), default);
+            vt.Start();
+            await tCancel;
+            var oce = await Assert.ThrowsAsync<OperationCanceledException>(() => tResult);
+            Assert.Equal(cts.Token, oce.CancellationToken);
         }
 
         [Fact]

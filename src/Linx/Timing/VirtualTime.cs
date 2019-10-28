@@ -108,7 +108,6 @@
             Time.Current = RealTime.Instance;
         }
 
-
         /// <inheritdoc />
         public async ValueTask Delay(TimeSpan due, CancellationToken token)
         {
@@ -128,12 +127,10 @@
 
         private async void Advance()
         {
-            // yield to other threads so they can schedule
-            Thread.Sleep(20);
-
             while (true)
             {
                 Timer timer;
+
                 var state = Atomic.Lock(ref _state);
                 switch (state)
                 {
@@ -204,7 +201,7 @@
             private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
             private readonly VirtualTime _time;
             private readonly CancellationToken _token;
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _state;
 
             public Timer(VirtualTime time, CancellationToken token)

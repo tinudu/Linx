@@ -22,9 +22,9 @@
         [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Completed()
         {
-            var i1 = Marble.Parse("-a- b-  c-|").DematerializeAsyncEnumerable();
-            var i2 = Marble.Parse(" a--b---c|").DematerializeAsyncEnumerable();
-            var i3 = Marble.Parse("-a- b-  c-d").DematerializeAsyncEnumerable();
+            var i1 = Marble.Parse("-a- b-  c-|");
+            var i2 = Marble.Parse(" a--b---c|");
+            var i3 = Marble.Parse("-a- b-  c-d");
             using (var vt = new VirtualTime())
             {
                 var testee = i1.SequenceEqual(i2, default);
@@ -37,16 +37,15 @@
                 vt.Start();
                 Assert.False(await testee);
             }
-
         }
 
         [Fact]
         [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Error()
         {
-            var i1 = Marble.Parse("-a- b-  c-|").DematerializeAsyncEnumerable();
-            var i2 = Marble.Parse(" a--b---c#").DematerializeAsyncEnumerable();
-            var i3 = Marble.Parse("-a- b-  c-d#").DematerializeAsyncEnumerable();
+            var i1 = Marble.Parse("-a- b-  c-|");
+            var i2 = Marble.Parse(" a--b---c#");
+            var i3 = Marble.Parse("-a- b-  c-d#");
             using (var vt = new VirtualTime())
             {
                 var testee = i1.SequenceEqual(i2, default);
@@ -65,8 +64,8 @@
         [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Cancel()
         {
-            var i1 = Marble.Parse(" -a-bc").DematerializeAsyncEnumerable();
-            var i2 = Marble.Parse("a- -b ---c---#").DematerializeAsyncEnumerable();
+            var i1 = Marble.Parse(" -a-bc");
+            var i2 = Marble.Parse("a- -b ---c---#");
 
             using (var vt = new VirtualTime())
             {

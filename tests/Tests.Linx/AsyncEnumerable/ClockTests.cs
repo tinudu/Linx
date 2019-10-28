@@ -22,13 +22,11 @@
             var w = Enumerable.Range(0, 2).Select(h => new DateTimeOffset(date + new TimeSpan(h, 0, 0), _winterOffset));
             var s = Enumerable.Range(3, 21).Select(h => new DateTimeOffset(date + new TimeSpan(h, 0, 0), _summerOffset));
             var expected = w.Concat(s).ToList();
-            using (var vt = new VirtualTime(date.ToUniversalTime().AddHours(0.5)))
-            {
-                var tActual = testee.ToList(default);
-                vt.Start();
-                var actual = await tActual;
-                Assert.True(expected.SequenceEqual(actual, ExactDateTimeOffsetComparer.Default));
-            }
+            using var vt = new VirtualTime(date.ToUniversalTime().AddHours(0.5));
+            var tActual = testee.ToList(default);
+            vt.Start();
+            var actual = await tActual;
+            Assert.True(expected.SequenceEqual(actual, ExactDateTimeOffsetComparer.Default));
         }
 
         [Fact]
@@ -39,13 +37,11 @@
             var s = Enumerable.Range(0, 3).Select(h => new DateTimeOffset(date + new TimeSpan(h, 0, 0), _summerOffset));
             var w = Enumerable.Range(2, 22).Select(h => new DateTimeOffset(date + new TimeSpan(h, 0, 0), _winterOffset));
             var expected = s.Concat(w).ToList();
-            using (var vt = new VirtualTime(date.ToUniversalTime().AddHours(0.5)))
-            {
-                var tActual = testee.ToList(default);
-                vt.Start();
-                var actual = await tActual;
-                Assert.True(expected.SequenceEqual(actual, ExactDateTimeOffsetComparer.Default));
-            }
+            using var vt = new VirtualTime(date.ToUniversalTime().AddHours(0.5));
+            var tActual = testee.ToList(default);
+            vt.Start();
+            var actual = await tActual;
+            Assert.True(expected.SequenceEqual(actual, ExactDateTimeOffsetComparer.Default));
         }
 
         private sealed class ExactDateTimeOffsetComparer : IEqualityComparer<DateTimeOffset>

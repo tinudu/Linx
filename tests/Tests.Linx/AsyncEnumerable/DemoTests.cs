@@ -2,11 +2,20 @@
 {
     using global::Linx.AsyncEnumerable;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using Xunit;
 
     public sealed class DemoTests
     {
+        [Fact]
+        public async Task Demo1()
+        {
+            const string colors = "grrbrggbr";
+            var src = colors.Async().GroupBy(c => c).SelectMany(g => g);
+            var result = await Task.Run(() => src.ToList(default));
+        }
+
         private sealed class ColorAndIndex
         {
             public char Color { get; }
@@ -45,7 +54,7 @@
                     var groups = bla.Async().GroupBy(ci => ci.Color).Connectable(stack);
                     var red = ColorGroup('r').Prepend(null).Connectable(stack);
                     var enumeration = ColorGroup('g').Merge(ColorGroup('b'), ColorGroup('y'))
-                        .Combine(red.Prepend(null), (c, r) => new {RedIndex = r?.Index, c.Color, ColorIndex = c.Index})
+                        .Combine(red.Prepend(null), (c, r) => new { RedIndex = r?.Index, c.Color, ColorIndex = c.Index })
                         .CopyTo(yield, token);
                     stack.Connect();
                     await enumeration.ConfigureAwait(false);

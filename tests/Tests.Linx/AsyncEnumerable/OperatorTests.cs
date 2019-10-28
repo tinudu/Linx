@@ -17,12 +17,12 @@
             var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             try
             {
-                using (var timer = Time.Current.GetTimer(token))
-                    while (await ae.MoveNextAsync())
-                    {
-                        if (!await yield(ae.Current).ConfigureAwait(false)) return;
-                        await timer.Delay(delay).ConfigureAwait(false);
-                    }
+                using var timer = Time.Current.GetTimer(token);
+                while (await ae.MoveNextAsync())
+                {
+                    if (!await yield(ae.Current).ConfigureAwait(false)) return;
+                    await timer.Delay(delay).ConfigureAwait(false);
+                }
             }
             finally { await ae.DisposeAsync(); }
         });
@@ -43,16 +43,14 @@
         [Fact]
         public async Task TestDelay()
         {
-            var delay = 3 * MarbleSettings.DefaultFrameSize;
-            var source = Marble.Parse("   -a-bc-d-|").DematerializeAsyncEnumerable();
-            var expect = Marble.Parse("----a-bc-d-|");
+            var delay = 10 * MarbleSettings.DefaultFrameSize;
+            var source = Marble.Parse("   -a-bc-d-|");
+            var expect = Marble.Parse("---------- -a-bc-d-|");
             var testee = source.Delay(delay);
-            using (var vt = new VirtualTime())
-            {
-                var eq = testee.AssertEqual(expect, default);
-                vt.Start();
-                await eq;
-            }
+            using var vt = new VirtualTime();
+            var eq = expect.AssertEqual(testee, default);
+            vt.Start();
+            await eq;
         }
 
         [Fact]
@@ -127,30 +125,26 @@
         [Fact]
         public async Task TestTimeout()
         {
-            var testee = Marble.Parse("a-b--c----d|").DematerializeAsyncEnumerable().Timeout(TimeSpan.FromSeconds(3));
+            var testee = Marble.Parse("a-b--c-----d|").Timeout(3 * MarbleSettings.DefaultFrameSize);
             var expect = Marble.Parse("a-b--c---#", new MarbleSettings { Error = new TimeoutException() });
 
-            using (var vt = new VirtualTime())
-            {
-                var eq = testee.AssertEqual(expect, default);
-                vt.Start();
-                await eq;
-            }
+            using var vt = new VirtualTime();
+            var eq = expect.AssertEqual(testee, default);
+            vt.Start();
+            await eq;
         }
 
         [Fact]
         public async Task TestZip()
         {
-            var src1 = Marble.Parse("a-  - -bc- -d- -e").DematerializeAsyncEnumerable();
-            var src2 = Marble.Parse(" -fg-h-  -i- -|  ").DematerializeAsyncEnumerable();
+            var src1 = Marble.Parse("a-  - -bc- -d- -e");
+            var src2 = Marble.Parse(" -fg-h-  -i- -|  ");
             var expt = Marble.Parse(" -x - -xx- -x-|", default, "af", "bg", "ch", "di");
             var testee = src1.Zip(src2, (x, y) => $"{x}{y}");
-            using (var vt = new VirtualTime())
-            {
-                var eq = testee.AssertEqual(expt, default);
-                vt.Start();
-                await eq;
-            }
+            using var vt = new VirtualTime();
+            var eq = expt.AssertEqual(testee, default);
+            vt.Start();
+            await eq;
         }
     }
 }

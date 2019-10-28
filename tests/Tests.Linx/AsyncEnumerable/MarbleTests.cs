@@ -19,7 +19,7 @@
         [Fact]
         public void TestNever()
         {
-            var m = Marble.Parse("a-b--c").ToList();
+            var m = Marble.Parse("a-b--c").Marbles.ToList();
             var x = new[]
             {
                 Next(0, 'a'),
@@ -32,7 +32,7 @@
         [Fact]
         public void TestComplete()
         {
-            var m = Marble.Parse("a-b--|").ToList();
+            var m = Marble.Parse("a-b--|").Marbles.ToList();
             var x = new[]
             {
                 Next(0, 'a'),
@@ -45,7 +45,7 @@
         [Fact]
         public void TestError()
         {
-            var m = Marble.Parse("a-b--#").ToList();
+            var m = Marble.Parse("a-b--#").Marbles.ToList();
             var x = new[]
             {
                 Next(0, 'a'),
@@ -58,7 +58,7 @@
         [Fact]
         public void TestForever()
         {
-            var m = Marble.Parse("a-b*--c---d").Take(7).ToList();
+            var m = Marble.Parse("a-b*--c---d").Marbles.Take(7).ToList();
             var x = new[]
             {
                 Next(0, 'a'),
@@ -75,7 +75,7 @@
         [Fact]
         public void TestReplaceFunc()
         {
-            var m = Marble.Parse("X-X--X---|", (ch, i) => i).ToList();
+            var m = Marble.Parse("X-X--X---|", (ch, i) => i).Marbles.ToList();
             var x = new[]
             {
                 Next(0, 0),
@@ -89,7 +89,7 @@
         [Fact]
         public void TestReplaceElements()
         {
-            var m = Marble.Parse("X-X--X---|", null, 1, 2, 3).ToList();
+            var m = Marble.Parse("X-X--X---|", null, 1, 2, 3).Marbles.ToList();
             var x = new[]
             {
                 Next(0, 1),
@@ -104,7 +104,7 @@
         public void TestSettings()
         {
             var ms = new MarbleSettings { Error = new TimeoutException(), FrameSize = TimeSpan.FromSeconds(2) };
-            var m = Marble.Parse("a-b--#", ms).ToList();
+            var m = Marble.Parse("a-b--#", ms).Marbles.ToList();
             var x = new[]
             {
                 Next(0, 'a'),

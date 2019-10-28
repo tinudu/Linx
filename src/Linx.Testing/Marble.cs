@@ -19,10 +19,10 @@
     /// completed :== time-frame* '|'
     /// error :== time-frame* '#'
     /// time-frame :== '-'
-    /// forever :== '*' interval-next+
+    /// forever :== '*' next+
     /// </code>
     /// </remarks>
-    public static partial class Marble
+    public static class Marble
     {
         private static readonly ISet<char> _elementChars = new HashSet<char>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
 
@@ -31,7 +31,7 @@
         /// </summary>
         /// <param name="diagram">Marble diagram syntax.</param>
         /// <param name="settings">Optional. Marble parser settings.</param>
-        public static IEnumerable<TimeInterval<Notification<char>>> Parse(
+        public static Marble<char> Parse(
             IEnumerable<char> diagram,
             MarbleSettings settings = null)
             => Parse(diagram, (ch, i) => ch, settings);
@@ -42,7 +42,7 @@
         /// <param name="diagram">Marble diagram syntax.</param>
         /// <param name="elements">Positional element replacements.</param>
         /// <param name="settings">Optional. Marble parser settings.</param>
-        public static IEnumerable<TimeInterval<Notification<T>>> Parse<T>(
+        public static Marble<T> Parse<T>(
             IEnumerable<char> diagram,
             IEnumerable<T> elements,
             MarbleSettings settings = null)
@@ -57,7 +57,7 @@
         /// <param name="diagram">Marble diagram syntax.</param>
         /// <param name="settings">Optional. Marble parser settings.</param>
         /// <param name="elements">Positional element replacements.</param>
-        public static IEnumerable<TimeInterval<Notification<T>>> Parse<T>(
+        public static Marble<T> Parse<T>(
             IEnumerable<char> diagram,
             MarbleSettings settings,
             params T[] elements)
@@ -72,7 +72,7 @@
         /// <param name="diagram">Marble diagram syntax.</param>
         /// <param name="selector">Function to convert elements to <typeparamref name="T"/>.</param>
         /// <param name="settings">Optional. Marble parser settings.</param>
-        public static IEnumerable<TimeInterval<Notification<T>>> Parse<T>(
+        public static Marble<T> Parse<T>(
             IEnumerable<char> diagram,
             Func<char, int, T> selector,
             MarbleSettings settings = null)
@@ -81,30 +81,30 @@
             if (selector == null) throw new ArgumentNullException(nameof(selector));
             if (settings == null) settings = new MarbleSettings();
 
-            using (var context = new ParseContext<T>(diagram, selector, settings))
-                try
+            using var context = new ParseContext<T>(diagram, selector, settings);
+            try
+            {
+                var prefix = ParseTimeIntervals(context).ToList();
+                IEnumerable<TimeInterval<Notification<T>>> notifications;
+                if (!context.IsCompleted && context.HasNext && context.Next == '*') // forever
                 {
-                    var prefix = ParseTimeIntervals(context).ToList();
-                    IEnumerable<TimeInterval<Notification<T>>> notifications;
-                    if (!context.IsCompleted && context.HasNext && context.Next == '*') // forever
-                    {
-                        context.MoveNext();
-                        var suffix = ParseTimeIntervals(context).ToList();
-                        if (suffix.Count == 0)
-                            throw new MarbleParseException("Empty forever.", context.Position);
-                        if (context.IsCompleted)
-                            throw new MarbleParseException("Forever may not be completed.", context.Position);
-                        notifications = prefix.Concat(Forever(suffix));
-                    }
-                    else
-                        notifications = prefix;
-
-                    if (context.HasNext)
-                        throw new MarbleParseException("Unexpected character.", context.Position);
-                    return notifications;
+                    context.MoveNext();
+                    var suffix = ParseTimeIntervals(context).ToList();
+                    if (suffix.Count == 0)
+                        throw new MarbleParseException("Empty forever.", context.Position);
+                    if (context.IsCompleted)
+                        throw new MarbleParseException("Forever may not be completed.", context.Position);
+                    notifications = prefix.Concat(Forever(suffix));
                 }
-                catch (MarbleParseException) { throw; }
-                catch (Exception ex) { throw new MarbleParseException(ex.Message, context.Position); }
+                else
+                    notifications = prefix;
+
+                if (context.HasNext)
+                    throw new MarbleParseException("Unexpected character.", context.Position);
+                return new Marble<T>(notifications);
+            }
+            catch (MarbleParseException) { throw; }
+            catch (Exception ex) { throw new MarbleParseException(ex.Message, context.Position); }
         }
 
         private static IEnumerable<TimeInterval<Notification<T>>> ParseTimeIntervals<T>(ParseContext<T> ctx)

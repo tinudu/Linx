@@ -160,7 +160,7 @@
                 try
                 {
                     _token.ThrowIfCancellationRequested();
-                    await _generator(Yield, _token);
+                    await _generator(Yield, _token).ConfigureAwait(false);
                 }
                 catch (Exception ex) { error = ex; }
 
