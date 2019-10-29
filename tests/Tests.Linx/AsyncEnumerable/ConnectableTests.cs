@@ -6,7 +6,7 @@
     using global::Linx.AsyncEnumerable;
     using Xunit;
 
-    public sealed class ConnectableTestst
+    public sealed class ConnectableTests
     {
         [Fact]
         public async Task Success()

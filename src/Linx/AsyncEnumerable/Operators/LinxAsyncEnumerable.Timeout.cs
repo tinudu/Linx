@@ -28,7 +28,9 @@
             private const int _sAccepting = 1;
             private const int _sEmitting = 2;
             private const int _sCompleted = 3;
-            private const int _sFinal = 4;
+            private const int _fProduce = 1 << 2;
+            private const int _fTimer = 1 << 3;
+            private const int _sFinal = _sCompleted | _fProduce | _fTimer;
 
             private readonly IAsyncEnumerable<T> _source;
             private readonly TimeSpan _interval;
@@ -37,9 +39,9 @@
             private CancellationTokenRegistration _ctr;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
             private readonly ManualResetValueTaskSource<bool> _tsEmitting = new ManualResetValueTaskSource<bool>();
-            private ManualResetValueTaskSource _tsTimeout;
+            private ManualResetValueTaskSource _tsTimer;
             private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
-            private int _state, _active;
+            private int _state;
             private Exception _error;
             private DateTimeOffset _due;
 
@@ -59,26 +61,24 @@
                 _tsAccepting.Reset();
 
                 var state = Atomic.Lock(ref _state);
-                switch (state)
+                switch (state & _sCompleted)
                 {
                     case _sInitial:
                         _due = _time.Now + _interval;
-                        _active = 2;
                         _state = _sAccepting;
                         Produce();
-                        TimeoutWatchdog();
+                        Timer();
                         break;
 
                     case _sEmitting:
                         _due = _time.Now + _interval;
-                        var tsTimeout = Linx.Clear(ref _tsTimeout);
+                        var tsTimeout = Linx.Clear(ref _tsTimer);
                         _state = _sAccepting;
                         _tsEmitting.SetResult(true);
                         tsTimeout?.SetResult();
                         break;
 
                     case _sCompleted:
-                    case _sFinal:
                         Current = default;
                         _state = state;
                         _tsAccepting.SetExceptionOrResult(_error, false);
@@ -103,7 +103,7 @@
                 Debug.Assert(error != null);
 
                 var state = Atomic.Lock(ref _state);
-                switch (state)
+                switch (state & _sCompleted)
                 {
                     case _sInitial:
                         _error = error;
@@ -123,7 +123,7 @@
 
                     case _sEmitting:
                         _error = error;
-                        var tsTimeout = Linx.Clear(ref _tsTimeout);
+                        var tsTimeout = Linx.Clear(ref _tsTimer);
                         _state = _sCompleted;
                         _ctr.Dispose();
                         _cts.TryCancel();
@@ -132,51 +132,10 @@
                         break;
 
                     case _sCompleted:
-                    case _sFinal:
                         _state = state;
                         break;
 
                     default:
-                        _state = state;
-                        throw new Exception(state + "???");
-                }
-            }
-
-            private void OnCompleted()
-            {
-                var state = Atomic.Lock(ref _state);
-                Debug.Assert(_active > 0);
-                if (--_active > 0)
-                {
-                    _state = state;
-                    return;
-                }
-                switch (state)
-                {
-                    case _sAccepting:
-                        Debug.Assert(_error == null);
-                        Current = default;
-                        _state = _sFinal;
-                        _ctr.Dispose();
-                        _cts.TryCancel();
-                        _tsAccepting.SetResult(false);
-                        _atmbDisposed.SetResult();
-                        break;
-
-                    case _sEmitting:
-                        Debug.Assert(_error == null);
-                        _state = _sFinal;
-                        _ctr.Dispose();
-                        _cts.TryCancel();
-                        _atmbDisposed.SetResult();
-                        break;
-
-                    case _sCompleted:
-                        _state = _sFinal;
-                        _atmbDisposed.SetResult();
-                        break;
-
-                    default: // Initial, Final???
                         _state = state;
                         throw new Exception(state + "???");
                 }
@@ -189,31 +148,58 @@
                     await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
                     {
                         var state = Atomic.Lock(ref _state);
-                        switch (state)
+                        switch (state & _sCompleted)
                         {
                             case _sAccepting:
                                 Current = item;
                                 _tsEmitting.Reset();
                                 _state = _sEmitting;
                                 _tsAccepting.SetResult(true);
-                                if (await _tsEmitting.Task.ConfigureAwait(false)) continue;
-                                return;
+                                if (!await _tsEmitting.Task.ConfigureAwait(false)) return;
+                                break;
 
                             case _sCompleted:
-                                _state = _sCompleted;
+                                _state = state;
                                 return;
 
-                            default: // Initial, Emitting, Final???
+                            default: // Initial, Emitting???
                                 _state = state;
                                 throw new Exception(state + "???");
                         }
                     }
                 }
                 catch (Exception ex) { OnError(ex); }
-                finally { OnCompleted(); }
+                finally
+                {
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sAccepting:
+                            Debug.Assert(_error == null);
+                            Current = default;
+                            _state = _sCompleted | _fProduce;
+                            _ctr.Dispose();
+                            _cts.TryCancel();
+                            _tsAccepting.SetResult(false);
+                            break;
+
+                        case _sCompleted:
+                            _state = _sCompleted | _fProduce;
+                            break;
+
+                        case _sCompleted | _fTimer:
+                            _state = _sFinal;
+                            _atmbDisposed.SetResult();
+                            break;
+
+                        default: // Initial, Emitting???
+                            _state = state | _fProduce;
+                            throw new Exception(state + "???");
+                    }
+                }
             }
 
-            private async void TimeoutWatchdog()
+            private async void Timer()
             {
                 try
                 {
@@ -222,7 +208,7 @@
                     while (true)
                     {
                         var state = Atomic.Lock(ref _state);
-                        switch (state)
+                        switch (state & _sCompleted)
                         {
                             case _sAccepting:
                                 if (_time.Now < _due)
@@ -239,23 +225,41 @@
                                 }
 
                             case _sEmitting:
-                                _tsTimeout = ts;
+                                _tsTimer = ts;
                                 _state = _sEmitting;
                                 await ts.Task.ConfigureAwait(false);
                                 break;
 
                             case _sCompleted:
-                                _state = _sCompleted;
+                                _state = state;
                                 return;
 
-                            default: // Initial, Final???
+                            default: // Initial???
                                 _state = state;
                                 throw new Exception(state + "???");
                         }
                     }
                 }
                 catch (Exception ex) { OnError(ex); }
-                finally { OnCompleted(); }
+                finally
+                {
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sCompleted:
+                            _state = _sCompleted | _fTimer;
+                            break;
+
+                        case _sCompleted | _fProduce:
+                            _state = _sFinal;
+                            _atmbDisposed.SetResult();
+                            break;
+
+                        default:
+                            _state = state | _fTimer;
+                            throw new Exception(state + "???");
+                    }
+                }
             }
         }
     }

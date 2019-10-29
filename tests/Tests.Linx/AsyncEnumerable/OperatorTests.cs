@@ -41,19 +41,6 @@
         }
 
         [Fact]
-        public async Task TestDelay()
-        {
-            var delay = 10 * MarbleSettings.DefaultFrameSize;
-            var source = Marble.Parse("   -a-bc-d-|");
-            var expect = Marble.Parse("---------- -a-bc-d-|");
-            var testee = source.Delay(delay);
-            using var vt = new VirtualTime();
-            var eq = expect.AssertEqual(testee, default);
-            vt.Start();
-            await eq;
-        }
-
-        [Fact]
         public async Task TestGroupBy()
         {
             var result = await new[] { 1, 2, 1, 3, 2, 3, 1, 1, 2 }.Async().GroupBy(i => i).Parallel(async (g, t) => new { g.Key, Count = await g.Count(t) }).ToDictionary(kc => kc.Key, kc => kc.Count, default);
@@ -120,18 +107,6 @@
         {
             var result = await new[] { 1, 2, 3, 4 }.Async().Where(i => i != 2).Take(2).ToList(CancellationToken.None);
             Assert.True(new[] { 1, 3 }.SequenceEqual(result));
-        }
-
-        [Fact]
-        public async Task TestTimeout()
-        {
-            var testee = Marble.Parse("a-b--c-----d|").Timeout(3 * MarbleSettings.DefaultFrameSize);
-            var expect = Marble.Parse("a-b--c---#", new MarbleSettings { Error = new TimeoutException() });
-
-            using var vt = new VirtualTime();
-            var eq = expect.AssertEqual(testee, default);
-            vt.Start();
-            await eq;
         }
 
         [Fact]
