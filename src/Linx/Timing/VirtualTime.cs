@@ -201,7 +201,7 @@
             private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
             private readonly VirtualTime _time;
             private readonly CancellationToken _token;
-            private readonly CancellationTokenRegistration _ctr;
+            private CancellationTokenRegistration _ctr;
             private int _state;
 
             public Timer(VirtualTime time, CancellationToken token)

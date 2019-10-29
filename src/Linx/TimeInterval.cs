@@ -12,6 +12,20 @@
         /// <see cref="TimeInterval{T}"/> factory method.
         /// </summary>
         public static TimeInterval<T> Create<T>(T value, TimeSpan interval) => new TimeInterval<T>(interval, value);
+
+        /// <summary>
+        /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="TimeInterval{T}"/> using the specified comparer for <typeparamref name="T"/>.
+        /// </summary>
+        public static IEqualityComparer<TimeInterval<T>> GetEqualityComparer<T>(IEqualityComparer<T> valueComparer) => TimeIntervalEqualityComparer<T>.Create(valueComparer);
+
+        private sealed class TimeIntervalEqualityComparer<T> : IEqualityComparer<TimeInterval<T>>
+        {
+            public static IEqualityComparer<TimeInterval<T>> Create(IEqualityComparer<T> valueComparer) => valueComparer == null || valueComparer == EqualityComparer<T>.Default ? (IEqualityComparer<TimeInterval<T>>)EqualityComparer<TimeInterval<T>>.Default : new TimeIntervalEqualityComparer<T>(valueComparer);
+            private readonly IEqualityComparer<T> _valueComparer;
+            private TimeIntervalEqualityComparer(IEqualityComparer<T> valueComparer) => _valueComparer = valueComparer;
+            public bool Equals(TimeInterval<T> x, TimeInterval<T> y) => x.Interval == y.Interval && _valueComparer.Equals(x.Value, y.Value);
+            public int GetHashCode(TimeInterval<T> obj) => HashCode.Combine(obj.Interval, _valueComparer.GetHashCode(obj.Value));
+        }
     }
 
     /// <summary>
@@ -45,7 +59,7 @@
         public override bool Equals(object obj) => obj is TimeInterval<T> other && Equals(other);
 
         /// <inheritdoc />
-        public override int GetHashCode() => HashCode.Combine(Interval, Value);
+        public override int GetHashCode() => HashCode.Combine(Interval, EqualityComparer<T>.Default.GetHashCode(Value));
 
         /// <inheritdoc />
         public override string ToString() => $"{Value}@{Interval}";

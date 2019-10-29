@@ -22,18 +22,10 @@
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var lookup = new LookupBuilder<TKey, TSource>(comparer);
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    lookup.Add(keySelector(current), current);
-                }
-                return lookup;
-            }
-            finally { await ae.DisposeAsync(); }
+            var lookup = new Lookup<TKey, TSource>(comparer);
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                lookup.Add(keySelector(item), item);
+            return lookup;
         }
 
         /// <summary>
@@ -51,64 +43,68 @@
             if (elementSelector == null) throw new ArgumentNullException(nameof(elementSelector));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var lookup = new LookupBuilder<TKey, TElement>(comparer);
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    lookup.Add(keySelector(current), elementSelector(current));
-                }
-                return lookup;
-            }
-            finally { await ae.DisposeAsync(); }
+            var lookup = new Lookup<TKey, TElement>(comparer);
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                lookup.Add(keySelector(item), elementSelector(item));
+            return lookup;
         }
 
         // have to re-implement that because Lookup<,> has no public constructor
-        private sealed class LookupBuilder<TKey, TElement> : ILookup<TKey, TElement>
+        private sealed class Lookup<TKey, TElement> : ILookup<TKey, TElement>
         {
-            private readonly Dictionary<Wrapped<TKey>, Grouping> _groupings;
+            private readonly Dictionary<Boxed<TKey>, Grouping> _groupings;
 
-            public LookupBuilder(IEqualityComparer<TKey> comparer) => _groupings = new Dictionary<Wrapped<TKey>, Grouping>(Wrapped<TKey>.GetComparer(comparer));
+            public Lookup(IEqualityComparer<TKey> comparer) => _groupings = new Dictionary<Boxed<TKey>, Grouping>(Boxed.GetEqualityComparer(comparer));
 
             public int Count => _groupings.Count;
-            public IEnumerable<TElement> this[TKey key] => GetGrouping(key);
 
-            public bool Contains(TKey key) => _groupings.ContainsKey(new Wrapped<TKey>(key));
+            public IEnumerable<TElement> this[TKey key] => _groupings.TryGetValue(key, out var elements) ? elements : Enumerable.Empty<TElement>();
 
-            public void Add(TKey key, TElement element) => GetGrouping(key).Add(element);
+            public bool Contains(TKey key) => _groupings.ContainsKey(key);
 
-            public IEnumerator<IGrouping<TKey, TElement>> GetEnumerator()
+            public void Add(TKey key, TElement element)
             {
-                foreach (var g in _groupings.Values)
-                    if (g.Count > 0)
-                        yield return g;
+                var boxedKey = new Boxed<TKey>(key);
+                if (_groupings.TryGetValue(boxedKey, out var g))
+                    g.Add(element);
+                else
+                {
+                    g = new Grouping(key, element);
+                    _groupings.Add(boxedKey, g);
+                }
             }
+
+            public IEnumerator<IGrouping<TKey, TElement>> GetEnumerator() => _groupings.Values.GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-            private Grouping GetGrouping(TKey key)
+            private sealed class Grouping : IGrouping<TKey, TElement>, IReadOnlyList<TElement>
             {
-                var wKey = new Wrapped<TKey>(key);
-                if (_groupings.TryGetValue(wKey, out var g)) return g;
-                g = new Grouping(key);
-                _groupings.Add(wKey, g);
-                return g;
-            }
-
-            private sealed class Grouping : IGrouping<TKey, TElement>
-            {
-                private readonly List<TElement> _elements = new List<TElement>();
+                private TElement[] _elements;
 
                 public TKey Key { get; }
-                public int Count => _elements.Count;
+                public int Count { get; private set; }
+                public TElement this[int index] => index >= 0 && index < Count ? _elements[index] : throw new IndexOutOfRangeException();
 
-                public Grouping(TKey key) => Key = key;
+                public Grouping(TKey key, TElement first)
+                {
+                    Key = key;
+                    _elements = new[] { first };
+                    Count = 1;
+                }
 
-                public void Add(TElement element) => _elements.Add(element);
-                public IEnumerator<TElement> GetEnumerator() => _elements.GetEnumerator();
-                IEnumerator IEnumerable.GetEnumerator() => _elements.GetEnumerator();
+                public void Add(TElement element)
+                {
+                    if (Count == _elements.Length)
+                    {
+                        var old = Linx.Exchange(ref _elements, new TElement[_elements.Length * 2]);
+                        Array.Copy(old, 0, _elements, 0, old.Length);
+                    }
+                    _elements[Count++] = element;
+                }
+
+                public IEnumerator<TElement> GetEnumerator() => (_elements.Length == Count ? _elements : _elements.Take(Count)).GetEnumerator();
+                IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
             }
         }
     }

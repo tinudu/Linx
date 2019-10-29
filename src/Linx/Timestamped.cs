@@ -12,6 +12,24 @@
         /// Timestamp the specified value with the specified timestamp.
         /// </summary>
         public static Timestamped<T> Create<T>(DateTimeOffset timestamp, T value) => new Timestamped<T>(timestamp, value);
+
+        /// <summary>
+        /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="TimeInterval{T}"/> using the specified comparer for <typeparamref name="T"/>.
+        /// </summary>
+        public static IEqualityComparer<Timestamped<T>> GetEqualityComparer<T>(IEqualityComparer<T> valueComparer) => TimestampedEqualityComparer<T>.Create(valueComparer);
+
+        private sealed class TimestampedEqualityComparer<T> : IEqualityComparer<Timestamped<T>>
+        {
+            public static IEqualityComparer<Timestamped<T>> Create(IEqualityComparer<T> valueComparer)
+                => valueComparer == null || valueComparer == EqualityComparer<Timestamped<T>>.Default
+                    ? (IEqualityComparer<Timestamped<T>>)EqualityComparer<Timestamped<T>>.Default
+                    : new TimestampedEqualityComparer<T>(valueComparer);
+
+            private readonly IEqualityComparer<T> _valueComparer;
+            private TimestampedEqualityComparer(IEqualityComparer<T> valueComparer) => _valueComparer = valueComparer;
+            public bool Equals(Timestamped<T> x, Timestamped<T> y) => x.Timestamp == y.Timestamp && _valueComparer.Equals(x.Value, y.Value);
+            public int GetHashCode(Timestamped<T> obj) => HashCode.Combine(obj.Timestamp, _valueComparer.GetHashCode(obj.Value));
+        }
     }
 
     /// <summary>
@@ -45,7 +63,7 @@
         public override bool Equals(object obj) => obj is Timestamped<T> other && Equals(other);
 
         /// <inheritdoc />
-        public override int GetHashCode() => HashCode.Combine(Timestamp, Value);
+        public override int GetHashCode() => HashCode.Combine(Timestamp, EqualityComparer<T>.Default.GetHashCode(Value));
 
         /// <inheritdoc />
         public override string ToString() => $"{Value}@{Timestamp}";
