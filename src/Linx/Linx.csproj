@@ -19,10 +19,23 @@
     </ItemGroup>
 
     <ItemGroup>
+      <None Include="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>LinxAsyncEnumerable.FirstLastSingle.tt</DependentUpon>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
         <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.cs">
+          <DesignTime>True</DesignTime>
+          <AutoGen>True</AutoGen>
+          <DependentUpon>LinxAsyncEnumerable.FirstLastSingle.tt</DependentUpon>
+        </Compile>
         <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.cs">
             <DesignTime>True</DesignTime>
             <AutoGen>True</AutoGen>
@@ -71,6 +84,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.tt">
+          <Generator>TextTemplatingFileGenerator</Generator>
+          <LastGenOutput>LinxAsyncEnumerable.FirstLastSingle.cs</LastGenOutput>
+        </None>
         <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.tt">
             <Generator>TextTemplatingFileGenerator</Generator>
             <LastGenOutput>LinxAsyncEnumerable.Combine.cs</LastGenOutput>

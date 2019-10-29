@@ -18,15 +18,15 @@ namespace Linx.Enumerable
     {
 <# foreach(var mm in minMax) { #>
         /// <summary>
-        /// Returns the <#= mm.Op1 #>imum non-null element of a sequence, if any.
+        /// Returns the <#= mm.Op1 #>imum element of a sequence, or a default value.
         /// </summary>
-        public static Maybe<T> <#= mm.Op #>Maybe<T>(this IEnumerable<T> source, IComparer<T> comparer = null)
+        public static T? <#= mm.Op #>OrNull<T>(this IEnumerable<T> source, IComparer<T> comparer = null) where T : struct
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
 
             // ReSharper disable once GenericEnumeratorNotDisposed
-            using var e = source.Where(x => x != null).GetEnumerator();
+            using var e = source.GetEnumerator();
             if (!e.MoveNext()) return default;
             var <#= mm.Op1 #> = e.Current;
             while (e.MoveNext())
@@ -38,27 +38,25 @@ namespace Linx.Enumerable
         }
 
         /// <summary>
-        /// Returns the <#= mm.Op1 #>imum non-null element of a projection of a sequence, if any.
+        /// Returns the <#= mm.Op1 #>imum element of a projection of a sequence, or a default value.
         /// </summary>
-        public static Maybe<TResult> <#= mm.Op #>Maybe<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null)
-            => source.Select(selector).<#= mm.Op #>Maybe(comparer);
+        public static TResult? <#= mm.Op #>OrNull<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null) where TResult : struct
+            => source.Select(selector).<#= mm.Op #>OrNull(comparer);
 
         /// <summary>
         /// Returns the elements of a sequence witch have the <#= mm.Op1 #>imum non-null key.
         /// </summary>
-        public static IList<TSource> <#= mm.Op #>By<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, Maybe<TKey>> maybeKeySelector, IComparer<TKey> comparer = null)
+        public static IList<TSource> <#= mm.Op #>By<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            if (maybeKeySelector == null) throw new ArgumentNullException(nameof(maybeKeySelector));
+            if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             if (comparer == null) comparer = Comparer<TKey>.Default;
 
             TKey <#= mm.Op1 #> = default;
             var result = new List<TSource>();
             foreach (var element in source)
             {
-                var maybeKey = maybeKeySelector(element);
-                if (!maybeKey.HasValue) continue;
-                var key = maybeKey.GetValueOrDefault();
+                var key = keySelector(element);
                 if (key == null) continue;
                 if (result.Count == 0)
                     <#= mm.Op1 #> = key;

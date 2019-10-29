@@ -13,8 +13,8 @@
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
         public static async Task<T> Min<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
         {
-            var maybe = await source.MinMaybe(token, comparer);
-            return maybe.HasValue ? maybe.GetValueOrDefault() : throw new InvalidOperationException(Strings.SequenceContainsNoElement);
+            var (b, v) = await source.MinMaybe(token, comparer).ConfigureAwait(false);
+            return b ? v : throw new InvalidOperationException(Strings.SequenceContainsNoElement);
         }
 
         /// <summary>
@@ -22,39 +22,44 @@
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
         public static async Task<TResult> Min<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
-            => await source.Select(selector).Min(token, comparer).ConfigureAwait(false);
-
-        /// <summary>
-        /// Returns the minimum non-null element of a sequence, if any.
-        /// </summary>
-        public static async Task<Maybe<T>> MinMaybe<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
         {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (comparer == null) comparer = Comparer<T>.Default;
-            token.ThrowIfCancellationRequested();
-
-            var ae = source.Where(x => x != null).WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                if (!await ae.MoveNextAsync()) return default;
-                var min = ae.Current;
-
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    if (comparer.Compare(current, min) < 0) min = current;
-                }
-
-                return min;
-            }
-            finally { await ae.DisposeAsync(); }
+            var (b, v) = await source.Select(selector).MinMaybe(token, comparer).ConfigureAwait(false);
+            return b ? v : throw new InvalidOperationException(Strings.SequenceContainsNoElement);
         }
 
         /// <summary>
-        /// Returns the minimum non-null element of a projection of a sequence, if any.
+        /// Returns the minimum non-null element of a sequence, or a default value.
         /// </summary>
-        public static async Task<Maybe<TResult>> MinMaybe<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
-            => await source.Select(selector).MinMaybe(token, comparer).ConfigureAwait(false);
+        public static async Task<T> MinOrDefault<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
+        {
+            return (await source.MinMaybe(token, comparer).ConfigureAwait(false)).Value;
+        }
+
+        /// <summary>
+        /// Returns the minimum non-null element of a projection of a sequence, or a default value.
+        /// </summary>
+        public static async Task<TResult> MinOrDefault<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
+        {
+            return (await source.Select(selector).MinMaybe(token, comparer).ConfigureAwait(false)).Value;
+        }
+
+        /// <summary>
+        /// Returns the minimum element of a sequence, or a default value.
+        /// </summary>
+        public static async Task<T?> MinOrNull<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null) where T : struct
+        {
+            var (b, v) = await source.MinMaybe(token, comparer).ConfigureAwait(false);
+            return b ? v : default(T?);
+        }
+
+        /// <summary>
+        /// Returns the minimum element of a projection of a sequence, or a default value.
+        /// </summary>
+        public static async Task<TResult?> MinOrNull<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null) where TResult : struct
+        {
+            var (b, v) = await source.Select(selector).MinMaybe(token, comparer).ConfigureAwait(false);
+            return b ? v : default(TResult?);
+        }
 
         /// <summary>
         /// Returns the elements of a sequence with the minimum non-null key.
@@ -66,71 +71,43 @@
             if (comparer == null) comparer = Comparer<TKey>.Default;
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
+            TKey min = default;
+            var result = new List<TSource>();
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
             {
-                TKey min = default;
-                var result = new List<TSource>();
-                while (await ae.MoveNextAsync())
+                var key = keySelector(item);
+                if (key == null) continue;
+                if (result.Count == 0)
                 {
-                    var current = ae.Current;
-                    var key = keySelector(current);
-                    if (key == null) continue;
-                    if (result.Count == 0)
-                    {
-                        min = key;
-                        result.Add(current);
-                    }
-                    else
-                    {
-                        var cmp = comparer.Compare(key, min);
-                        if (cmp > 0) continue;
-                        min = key;
-                        if (cmp < 0) result.Clear();
-                        result.Add(current);
-                    }
+                    min = key;
+                    result.Add(item);
                 }
-                return result;
+                else
+                {
+                    var cmp = comparer.Compare(key, min);
+                    if (cmp > 0) continue;
+                    min = key;
+                    if (cmp < 0) result.Clear();
+                    result.Add(item);
+                }
             }
-            finally { await ae.DisposeAsync(); }
+            return result;
         }
 
-        /// <summary>
-        /// Returns the elements of a sequence witch have the minimum non-null key.
-        /// </summary>
-        public static async Task<IList<TSource>> MinBy<TSource, TKey>(this IAsyncEnumerable<TSource> source, Func<TSource, Maybe<TKey>> maybeKeySelector, CancellationToken token, IComparer<TKey> comparer = null)
+        private static async Task<(bool HasValue, T Value)> MinMaybe<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
         {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (maybeKeySelector == null) throw new ArgumentNullException(nameof(maybeKeySelector));
-            if (comparer == null) comparer = Comparer<TKey>.Default;
+            if (comparer == null) comparer = Comparer<T>.Default;
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
+            await using var ae = source.Where(x => x != null).WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+            if (!await ae.MoveNextAsync()) return default;
+            var min = ae.Current;
+            while (await ae.MoveNextAsync())
             {
-                TKey min = default;
-                var result = new List<TSource>();
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    var maybeKey = maybeKeySelector(current);
-                    if (!maybeKey.HasValue) continue;
-                    var key = maybeKey.GetValueOrDefault();
-                    if (key == null) continue;
-                    if (result.Count == 0)
-                        min = key;
-                    else
-                    {
-                        var cmp = comparer.Compare(key, min);
-                        if (cmp > 0) continue;
-                        min = key;
-                        if (cmp < 0) result.Clear();
-                    }
-                    result.Add(current);
-                }
-                return result;
+                var current = ae.Current;
+                if (comparer.Compare(current, min) < 0) min = current;
             }
-            finally { await ae.DisposeAsync(); }
+            return (true, min);
         }
 
         /// <summary>
@@ -139,8 +116,8 @@
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
         public static async Task<T> Max<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
         {
-            var maybe = await source.MaxMaybe(token, comparer);
-            return maybe.HasValue ? maybe.GetValueOrDefault() : throw new InvalidOperationException(Strings.SequenceContainsNoElement);
+            var (b, v) = await source.MaxMaybe(token, comparer).ConfigureAwait(false);
+            return b ? v : throw new InvalidOperationException(Strings.SequenceContainsNoElement);
         }
 
         /// <summary>
@@ -148,39 +125,44 @@
         /// </summary>
         /// <exception cref="InvalidOperationException">Sequence contains no non-null elements.</exception>
         public static async Task<TResult> Max<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
-            => await source.Select(selector).Max(token, comparer).ConfigureAwait(false);
-
-        /// <summary>
-        /// Returns the maximum non-null element of a sequence, if any.
-        /// </summary>
-        public static async Task<Maybe<T>> MaxMaybe<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
         {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (comparer == null) comparer = Comparer<T>.Default;
-            token.ThrowIfCancellationRequested();
-
-            var ae = source.Where(x => x != null).WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                if (!await ae.MoveNextAsync()) return default;
-                var max = ae.Current;
-
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    if (comparer.Compare(current, max) > 0) max = current;
-                }
-
-                return max;
-            }
-            finally { await ae.DisposeAsync(); }
+            var (b, v) = await source.Select(selector).MaxMaybe(token, comparer).ConfigureAwait(false);
+            return b ? v : throw new InvalidOperationException(Strings.SequenceContainsNoElement);
         }
 
         /// <summary>
-        /// Returns the maximum non-null element of a projection of a sequence, if any.
+        /// Returns the maximum non-null element of a sequence, or a default value.
         /// </summary>
-        public static async Task<Maybe<TResult>> MaxMaybe<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
-            => await source.Select(selector).MaxMaybe(token, comparer).ConfigureAwait(false);
+        public static async Task<T> MaxOrDefault<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
+        {
+            return (await source.MaxMaybe(token, comparer).ConfigureAwait(false)).Value;
+        }
+
+        /// <summary>
+        /// Returns the maximum non-null element of a projection of a sequence, or a default value.
+        /// </summary>
+        public static async Task<TResult> MaxOrDefault<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null)
+        {
+            return (await source.Select(selector).MaxMaybe(token, comparer).ConfigureAwait(false)).Value;
+        }
+
+        /// <summary>
+        /// Returns the maximum element of a sequence, or a default value.
+        /// </summary>
+        public static async Task<T?> MaxOrNull<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null) where T : struct
+        {
+            var (b, v) = await source.MaxMaybe(token, comparer).ConfigureAwait(false);
+            return b ? v : default(T?);
+        }
+
+        /// <summary>
+        /// Returns the maximum element of a projection of a sequence, or a default value.
+        /// </summary>
+        public static async Task<TResult?> MaxOrNull<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, TResult> selector, CancellationToken token, IComparer<TResult> comparer = null) where TResult : struct
+        {
+            var (b, v) = await source.Select(selector).MaxMaybe(token, comparer).ConfigureAwait(false);
+            return b ? v : default(TResult?);
+        }
 
         /// <summary>
         /// Returns the elements of a sequence with the maximum non-null key.
@@ -192,71 +174,43 @@
             if (comparer == null) comparer = Comparer<TKey>.Default;
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
+            TKey max = default;
+            var result = new List<TSource>();
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
             {
-                TKey max = default;
-                var result = new List<TSource>();
-                while (await ae.MoveNextAsync())
+                var key = keySelector(item);
+                if (key == null) continue;
+                if (result.Count == 0)
                 {
-                    var current = ae.Current;
-                    var key = keySelector(current);
-                    if (key == null) continue;
-                    if (result.Count == 0)
-                    {
-                        max = key;
-                        result.Add(current);
-                    }
-                    else
-                    {
-                        var cmp = comparer.Compare(key, max);
-                        if (cmp < 0) continue;
-                        max = key;
-                        if (cmp > 0) result.Clear();
-                        result.Add(current);
-                    }
+                    max = key;
+                    result.Add(item);
                 }
-                return result;
+                else
+                {
+                    var cmp = comparer.Compare(key, max);
+                    if (cmp < 0) continue;
+                    max = key;
+                    if (cmp > 0) result.Clear();
+                    result.Add(item);
+                }
             }
-            finally { await ae.DisposeAsync(); }
+            return result;
         }
 
-        /// <summary>
-        /// Returns the elements of a sequence witch have the maximum non-null key.
-        /// </summary>
-        public static async Task<IList<TSource>> MaxBy<TSource, TKey>(this IAsyncEnumerable<TSource> source, Func<TSource, Maybe<TKey>> maybeKeySelector, CancellationToken token, IComparer<TKey> comparer = null)
+        private static async Task<(bool HasValue, T Value)> MaxMaybe<T>(this IAsyncEnumerable<T> source, CancellationToken token, IComparer<T> comparer = null)
         {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (maybeKeySelector == null) throw new ArgumentNullException(nameof(maybeKeySelector));
-            if (comparer == null) comparer = Comparer<TKey>.Default;
+            if (comparer == null) comparer = Comparer<T>.Default;
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
+            await using var ae = source.Where(x => x != null).WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+            if (!await ae.MoveNextAsync()) return default;
+            var max = ae.Current;
+            while (await ae.MoveNextAsync())
             {
-                TKey max = default;
-                var result = new List<TSource>();
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    var maybeKey = maybeKeySelector(current);
-                    if (!maybeKey.HasValue) continue;
-                    var key = maybeKey.GetValueOrDefault();
-                    if (key == null) continue;
-                    if (result.Count == 0)
-                        max = key;
-                    else
-                    {
-                        var cmp = comparer.Compare(key, max);
-                        if (cmp < 0) continue;
-                        max = key;
-                        if (cmp > 0) result.Clear();
-                    }
-                    result.Add(current);
-                }
-                return result;
+                var current = ae.Current;
+                if (comparer.Compare(current, max) > 0) max = current;
             }
-            finally { await ae.DisposeAsync(); }
+            return (true, max);
         }
 
     }

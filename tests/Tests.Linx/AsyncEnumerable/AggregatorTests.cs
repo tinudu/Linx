@@ -112,15 +112,15 @@
         }
 
         [Fact]
-        public async Task TestSingleMaybe()
+        public async Task TestSingleOrNull()
         {
-            var result = await new[] { 42 }.Async().SingleMaybe(CancellationToken.None);
+            var result = await new[] { 42 }.Async().SingleOrNull(CancellationToken.None);
             Assert.Equal(42, result.Value);
 
-            result = await LinxAsyncEnumerable.Empty<int>().SingleMaybe(CancellationToken.None);
+            result = await LinxAsyncEnumerable.Empty<int>().SingleOrNull(CancellationToken.None);
             Assert.False(result.HasValue);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => new[] { 1, 2, 3 }.Async().SingleMaybe(CancellationToken.None));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => new[] { 1, 2, 3 }.Async().SingleOrNull(CancellationToken.None));
         }
 
         [Fact]

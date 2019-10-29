@@ -31,7 +31,7 @@
                 var tuple = new CombineTuple<T1, T2, TResult>(resultSelector, startAtFirstElement);
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
-                return new[] { seq1, seq2 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.GetValueOrDefault()).GetAsyncEnumerator(token);
+                return new[] { seq1, seq2 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.Value).GetAsyncEnumerator(token);
             });
         }
 
@@ -48,7 +48,7 @@
                 if (!startAtFirstElement) _missing = (1 << 2) - 1;
             }
 
-            public Maybe<TResult> OnNext1(T1 value)
+            public (bool HasValue, TResult Value) OnNext1(T1 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
@@ -56,7 +56,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext2(T2 value)
+            public (bool HasValue, TResult Value) OnNext2(T2 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
@@ -64,11 +64,11 @@
                 return GetResult(missing);
             }
 
-            private Maybe<TResult> GetResult(int missing)
+            private (bool HasValue, TResult Value) GetResult(int missing)
             {
                 Debug.Assert((_missing & Atomic.LockBit) != 0);
                 if (missing != 0) { _missing = missing; return default; }
-                try { return _resultSelector(_value1, _value2); }
+                try { return (true, _resultSelector(_value1, _value2)); }
                 finally { _missing = 0; }
             }
         }
@@ -100,7 +100,7 @@
                 var seq1 = source1.Select(v => tuple.OnNext1(v));
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
                 var seq3 = source3.Select(v => tuple.OnNext3(v));
-                return new[] { seq1, seq2, seq3 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.GetValueOrDefault()).GetAsyncEnumerator(token);
+                return new[] { seq1, seq2, seq3 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.Value).GetAsyncEnumerator(token);
             });
         }
 
@@ -118,7 +118,7 @@
                 if (!startAtFirstElement) _missing = (1 << 3) - 1;
             }
 
-            public Maybe<TResult> OnNext1(T1 value)
+            public (bool HasValue, TResult Value) OnNext1(T1 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
@@ -126,7 +126,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext2(T2 value)
+            public (bool HasValue, TResult Value) OnNext2(T2 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
@@ -134,7 +134,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext3(T3 value)
+            public (bool HasValue, TResult Value) OnNext3(T3 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
@@ -142,11 +142,11 @@
                 return GetResult(missing);
             }
 
-            private Maybe<TResult> GetResult(int missing)
+            private (bool HasValue, TResult Value) GetResult(int missing)
             {
                 Debug.Assert((_missing & Atomic.LockBit) != 0);
                 if (missing != 0) { _missing = missing; return default; }
-                try { return _resultSelector(_value1, _value2, _value3); }
+                try { return (true, _resultSelector(_value1, _value2, _value3)); }
                 finally { _missing = 0; }
             }
         }
@@ -181,7 +181,7 @@
                 var seq2 = source2.Select(v => tuple.OnNext2(v));
                 var seq3 = source3.Select(v => tuple.OnNext3(v));
                 var seq4 = source4.Select(v => tuple.OnNext4(v));
-                return new[] { seq1, seq2, seq3, seq4 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.GetValueOrDefault()).GetAsyncEnumerator(token);
+                return new[] { seq1, seq2, seq3, seq4 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.Value).GetAsyncEnumerator(token);
             });
         }
 
@@ -200,7 +200,7 @@
                 if (!startAtFirstElement) _missing = (1 << 4) - 1;
             }
 
-            public Maybe<TResult> OnNext1(T1 value)
+            public (bool HasValue, TResult Value) OnNext1(T1 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
@@ -208,7 +208,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext2(T2 value)
+            public (bool HasValue, TResult Value) OnNext2(T2 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
@@ -216,7 +216,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext3(T3 value)
+            public (bool HasValue, TResult Value) OnNext3(T3 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
@@ -224,7 +224,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext4(T4 value)
+            public (bool HasValue, TResult Value) OnNext4(T4 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
@@ -232,11 +232,11 @@
                 return GetResult(missing);
             }
 
-            private Maybe<TResult> GetResult(int missing)
+            private (bool HasValue, TResult Value) GetResult(int missing)
             {
                 Debug.Assert((_missing & Atomic.LockBit) != 0);
                 if (missing != 0) { _missing = missing; return default; }
-                try { return _resultSelector(_value1, _value2, _value3, _value4); }
+                try { return (true, _resultSelector(_value1, _value2, _value3, _value4)); }
                 finally { _missing = 0; }
             }
         }
@@ -274,7 +274,7 @@
                 var seq3 = source3.Select(v => tuple.OnNext3(v));
                 var seq4 = source4.Select(v => tuple.OnNext4(v));
                 var seq5 = source5.Select(v => tuple.OnNext5(v));
-                return new[] { seq1, seq2, seq3, seq4, seq5 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.GetValueOrDefault()).GetAsyncEnumerator(token);
+                return new[] { seq1, seq2, seq3, seq4, seq5 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.Value).GetAsyncEnumerator(token);
             });
         }
 
@@ -294,7 +294,7 @@
                 if (!startAtFirstElement) _missing = (1 << 5) - 1;
             }
 
-            public Maybe<TResult> OnNext1(T1 value)
+            public (bool HasValue, TResult Value) OnNext1(T1 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
@@ -302,7 +302,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext2(T2 value)
+            public (bool HasValue, TResult Value) OnNext2(T2 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
@@ -310,7 +310,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext3(T3 value)
+            public (bool HasValue, TResult Value) OnNext3(T3 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
@@ -318,7 +318,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext4(T4 value)
+            public (bool HasValue, TResult Value) OnNext4(T4 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
@@ -326,7 +326,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext5(T5 value)
+            public (bool HasValue, TResult Value) OnNext5(T5 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 4);
@@ -334,11 +334,11 @@
                 return GetResult(missing);
             }
 
-            private Maybe<TResult> GetResult(int missing)
+            private (bool HasValue, TResult Value) GetResult(int missing)
             {
                 Debug.Assert((_missing & Atomic.LockBit) != 0);
                 if (missing != 0) { _missing = missing; return default; }
-                try { return _resultSelector(_value1, _value2, _value3, _value4, _value5); }
+                try { return (true, _resultSelector(_value1, _value2, _value3, _value4, _value5)); }
                 finally { _missing = 0; }
             }
         }
@@ -379,7 +379,7 @@
                 var seq4 = source4.Select(v => tuple.OnNext4(v));
                 var seq5 = source5.Select(v => tuple.OnNext5(v));
                 var seq6 = source6.Select(v => tuple.OnNext6(v));
-                return new[] { seq1, seq2, seq3, seq4, seq5, seq6 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.GetValueOrDefault()).GetAsyncEnumerator(token);
+                return new[] { seq1, seq2, seq3, seq4, seq5, seq6 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.Value).GetAsyncEnumerator(token);
             });
         }
 
@@ -400,7 +400,7 @@
                 if (!startAtFirstElement) _missing = (1 << 6) - 1;
             }
 
-            public Maybe<TResult> OnNext1(T1 value)
+            public (bool HasValue, TResult Value) OnNext1(T1 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
@@ -408,7 +408,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext2(T2 value)
+            public (bool HasValue, TResult Value) OnNext2(T2 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
@@ -416,7 +416,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext3(T3 value)
+            public (bool HasValue, TResult Value) OnNext3(T3 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
@@ -424,7 +424,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext4(T4 value)
+            public (bool HasValue, TResult Value) OnNext4(T4 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
@@ -432,7 +432,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext5(T5 value)
+            public (bool HasValue, TResult Value) OnNext5(T5 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 4);
@@ -440,7 +440,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext6(T6 value)
+            public (bool HasValue, TResult Value) OnNext6(T6 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 5);
@@ -448,11 +448,11 @@
                 return GetResult(missing);
             }
 
-            private Maybe<TResult> GetResult(int missing)
+            private (bool HasValue, TResult Value) GetResult(int missing)
             {
                 Debug.Assert((_missing & Atomic.LockBit) != 0);
                 if (missing != 0) { _missing = missing; return default; }
-                try { return _resultSelector(_value1, _value2, _value3, _value4, _value5, _value6); }
+                try { return (true, _resultSelector(_value1, _value2, _value3, _value4, _value5, _value6)); }
                 finally { _missing = 0; }
             }
         }
@@ -496,7 +496,7 @@
                 var seq5 = source5.Select(v => tuple.OnNext5(v));
                 var seq6 = source6.Select(v => tuple.OnNext6(v));
                 var seq7 = source7.Select(v => tuple.OnNext7(v));
-                return new[] { seq1, seq2, seq3, seq4, seq5, seq6, seq7 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.GetValueOrDefault()).GetAsyncEnumerator(token);
+                return new[] { seq1, seq2, seq3, seq4, seq5, seq6, seq7 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.Value).GetAsyncEnumerator(token);
             });
         }
 
@@ -518,7 +518,7 @@
                 if (!startAtFirstElement) _missing = (1 << 7) - 1;
             }
 
-            public Maybe<TResult> OnNext1(T1 value)
+            public (bool HasValue, TResult Value) OnNext1(T1 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
@@ -526,7 +526,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext2(T2 value)
+            public (bool HasValue, TResult Value) OnNext2(T2 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
@@ -534,7 +534,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext3(T3 value)
+            public (bool HasValue, TResult Value) OnNext3(T3 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
@@ -542,7 +542,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext4(T4 value)
+            public (bool HasValue, TResult Value) OnNext4(T4 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
@@ -550,7 +550,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext5(T5 value)
+            public (bool HasValue, TResult Value) OnNext5(T5 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 4);
@@ -558,7 +558,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext6(T6 value)
+            public (bool HasValue, TResult Value) OnNext6(T6 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 5);
@@ -566,7 +566,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext7(T7 value)
+            public (bool HasValue, TResult Value) OnNext7(T7 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 6);
@@ -574,11 +574,11 @@
                 return GetResult(missing);
             }
 
-            private Maybe<TResult> GetResult(int missing)
+            private (bool HasValue, TResult Value) GetResult(int missing)
             {
                 Debug.Assert((_missing & Atomic.LockBit) != 0);
                 if (missing != 0) { _missing = missing; return default; }
-                try { return _resultSelector(_value1, _value2, _value3, _value4, _value5, _value6, _value7); }
+                try { return (true, _resultSelector(_value1, _value2, _value3, _value4, _value5, _value6, _value7)); }
                 finally { _missing = 0; }
             }
         }
@@ -625,7 +625,7 @@
                 var seq6 = source6.Select(v => tuple.OnNext6(v));
                 var seq7 = source7.Select(v => tuple.OnNext7(v));
                 var seq8 = source8.Select(v => tuple.OnNext8(v));
-                return new[] { seq1, seq2, seq3, seq4, seq5, seq6, seq7, seq8 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.GetValueOrDefault()).GetAsyncEnumerator(token);
+                return new[] { seq1, seq2, seq3, seq4, seq5, seq6, seq7, seq8 }.Merge().SkipUntil(m => m.HasValue).Select(m => m.Value).GetAsyncEnumerator(token);
             });
         }
 
@@ -648,7 +648,7 @@
                 if (!startAtFirstElement) _missing = (1 << 8) - 1;
             }
 
-            public Maybe<TResult> OnNext1(T1 value)
+            public (bool HasValue, TResult Value) OnNext1(T1 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 0);
@@ -656,7 +656,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext2(T2 value)
+            public (bool HasValue, TResult Value) OnNext2(T2 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 1);
@@ -664,7 +664,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext3(T3 value)
+            public (bool HasValue, TResult Value) OnNext3(T3 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 2);
@@ -672,7 +672,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext4(T4 value)
+            public (bool HasValue, TResult Value) OnNext4(T4 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 3);
@@ -680,7 +680,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext5(T5 value)
+            public (bool HasValue, TResult Value) OnNext5(T5 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 4);
@@ -688,7 +688,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext6(T6 value)
+            public (bool HasValue, TResult Value) OnNext6(T6 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 5);
@@ -696,7 +696,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext7(T7 value)
+            public (bool HasValue, TResult Value) OnNext7(T7 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 6);
@@ -704,7 +704,7 @@
                 return GetResult(missing);
             }
 
-            public Maybe<TResult> OnNext8(T8 value)
+            public (bool HasValue, TResult Value) OnNext8(T8 value)
             {
                 // ReSharper disable once ShiftExpressionRealShiftCountIsZero
                 var missing = Atomic.Lock(ref _missing) & ~(1 << 7);
@@ -712,11 +712,11 @@
                 return GetResult(missing);
             }
 
-            private Maybe<TResult> GetResult(int missing)
+            private (bool HasValue, TResult Value) GetResult(int missing)
             {
                 Debug.Assert((_missing & Atomic.LockBit) != 0);
                 if (missing != 0) { _missing = missing; return default; }
-                try { return _resultSelector(_value1, _value2, _value3, _value4, _value5, _value6, _value7, _value8); }
+                try { return (true, _resultSelector(_value1, _value2, _value3, _value4, _value5, _value6, _value7, _value8)); }
                 finally { _missing = 0; }
             }
         }
