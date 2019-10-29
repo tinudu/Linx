@@ -1,8 +1,11 @@
 ﻿namespace Linx
 {
+    using System.Diagnostics;
+
     /// <summary>
     /// A ratio (sum and count).
     /// </summary>
+    [DebuggerNonUserCode]
     public struct Int64Ratio
     {
         /// <summary>

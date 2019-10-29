@@ -56,6 +56,8 @@
         /// <summary>
         /// <see cref="CancellationTokenSource.Cancel()"/> catching exception.
         /// </summary>
+        [DebuggerNonUserCode]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TryCancel(this CancellationTokenSource cts)
         {
             try { cts.Cancel(); } catch {/**/}
@@ -64,6 +66,7 @@
         /// <summary>
         /// Gets a task that completes as <see cref="TaskStatus.Canceled"/> when the specified <paramref name="token"/> requests cancellation.
         /// </summary>
+        [DebuggerNonUserCode]
         public static Task WhenCanceled(this CancellationToken token)
         {
             if (token.IsCancellationRequested) return Task.FromCanceled(token);

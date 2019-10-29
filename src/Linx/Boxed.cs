@@ -2,10 +2,12 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     /// <summary>
     /// Static <see cref="Boxed{T}"/> methods.
     /// </summary>
+    [DebuggerNonUserCode]
     public static class Boxed
     {
         /// <summary>
@@ -36,6 +38,7 @@
     /// A value of type <typeparamref name="T"/>, wrapped into a struct.
     /// </summary>
     /// <remarks>Useful in places where nulls are not allowed, like dictionary keys.</remarks>
+    [DebuggerNonUserCode]
     public struct Boxed<T> : IEquatable<Boxed<T>>
     {
         /// <summary>

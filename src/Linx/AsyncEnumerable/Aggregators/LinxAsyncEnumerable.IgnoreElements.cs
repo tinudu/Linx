@@ -15,9 +15,9 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try { while (await ae.MoveNextAsync()) { } }
-            finally { await ae.DisposeAsync(); }
+            await foreach (var _ in source.WithCancellation(token).ConfigureAwait(false))
+            {
+            }
         }
     }
 }

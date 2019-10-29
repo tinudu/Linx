@@ -16,15 +16,10 @@
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.ConfigureAwait(false).WithCancellation(token).GetAsyncEnumerator();
-            try
-            {
-                while (await ae.MoveNextAsync())
-                    if (!predicate(ae.Current))
-                        return false;
-                return true;
-            }
-            finally { await ae.DisposeAsync(); }
+            await foreach (var item in source.ConfigureAwait(false).WithCancellation(token))
+                if (!predicate(item))
+                    return false;
+            return true;
         }
     }
 }

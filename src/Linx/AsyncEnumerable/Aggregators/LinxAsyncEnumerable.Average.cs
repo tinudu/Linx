@@ -29,6 +29,11 @@
         /// <summary>
         /// Computes the average of a sequence.
         /// </summary>
+        public static async Task<float?> Average(this IAsyncEnumerable<FloatRatio> source, CancellationToken token) => (await source.Ratio(token).ConfigureAwait(false)).Average();
+
+        /// <summary>
+        /// Computes the average of a sequence.
+        /// </summary>
         public static async Task<double?> Average(this IAsyncEnumerable<double> source, CancellationToken token) => (await source.Ratio(token).ConfigureAwait(false)).Average();
 
         /// <summary>

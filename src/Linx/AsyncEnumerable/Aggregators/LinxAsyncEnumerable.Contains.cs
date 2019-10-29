@@ -16,15 +16,10 @@
             if (comparer == null) comparer = EqualityComparer<T>.Default;
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                while (await ae.MoveNextAsync())
-                    if (comparer.Equals(ae.Current, value))
-                        return true;
-                return false;
-            }
-            finally { await ae.DisposeAsync(); }
+            await foreach(var item in source.WithCancellation(token).ConfigureAwait(false))
+                if (comparer.Equals(item, value))
+                    return true;
+            return false;
         }
     }
 }

@@ -2,10 +2,12 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     /// <summary>
     /// Static <see cref="TimeInterval{T}"/> methods.
     /// </summary>
+    [DebuggerNonUserCode]
     public static class TimeInterval
     {
         /// <summary>
@@ -31,6 +33,7 @@
     /// <summary>
     /// Represents a time interval value.
     /// </summary>
+    [DebuggerNonUserCode]
     public struct TimeInterval<T> : IEquatable<TimeInterval<T>>
     {
         /// <summary>

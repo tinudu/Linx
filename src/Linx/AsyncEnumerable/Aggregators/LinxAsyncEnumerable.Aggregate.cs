@@ -20,14 +20,9 @@
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                while (await ae.MoveNextAsync())
-                    seed = accumulator(seed, ae.Current);
-                return seed;
-            }
-            finally { await ae.DisposeAsync(); }
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                seed = accumulator(seed, item);
+            return seed;
         }
 
         /// <summary>
@@ -45,14 +40,9 @@
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                while (await ae.MoveNextAsync())
-                    seed = accumulator(seed, ae.Current);
-                return resultSelector(seed);
-            }
-            finally { await ae.DisposeAsync(); }
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                seed = accumulator(seed, item);
+            return resultSelector(seed);
         }
     }
 }

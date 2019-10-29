@@ -15,23 +15,16 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var count = 0;
-                while (await ae.MoveNextAsync()) checked { count++; }
-                return count;
-            }
-            finally { await ae.DisposeAsync(); }
+            var count = 0;
+            await foreach (var _ in source.WithCancellation(token).ConfigureAwait(false))
+                checked { count++; }
+            return count;
         }
 
         /// <summary>
         /// Returns a number that represents how many elements in the specified sequence satisfy a condition.
         /// </summary>
-        public static Task<int> Count<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
-        {
-            try { return source.Where(predicate).Count(token); }
-            catch (Exception ex) { return Task.FromException<int>(ex); }
-        }
+        public static async Task<int> Count<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+            => await source.Where(predicate).Count(token).ConfigureAwait(false);
     }
 }

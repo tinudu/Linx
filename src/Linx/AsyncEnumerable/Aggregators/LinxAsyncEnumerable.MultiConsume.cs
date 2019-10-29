@@ -13,13 +13,13 @@
         /// <summary>
         /// Multiple consumers sharing a subscription.
         /// </summary>
-        public static Task MultiConsume<T>(IAsyncEnumerable<T> source, IEnumerable<ConsumerDelegate<T>> consumers, CancellationToken token)
+        public static Task MultiConsume<T>(this IAsyncEnumerable<T> source, IEnumerable<ConsumerDelegate<T>> consumers, CancellationToken token)
             => MultiConsumer<T>.Consume(source, consumers, token);
 
         /// <summary>
         /// Multiple consumers sharing a subscription.
         /// </summary>
-        public static Task MultiConsume<T>(IAsyncEnumerable<T> source, CancellationToken token, params ConsumerDelegate<T>[] consumers)
+        public static Task MultiConsume<T>(this IAsyncEnumerable<T> source, CancellationToken token, params ConsumerDelegate<T>[] consumers)
             => MultiConsumer<T>.Consume(source, consumers, token);
 
         private sealed class MultiConsumer<T>
@@ -53,7 +53,7 @@
             }
 
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
+            private readonly CancellationTokenRegistration _ctr;
             private int _active;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();

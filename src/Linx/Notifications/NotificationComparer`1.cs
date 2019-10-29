@@ -32,9 +32,9 @@
         {
             return x.Kind switch
             {
-                NotificationKind.Completed => (y.Kind == NotificationKind.Completed),
-                NotificationKind.Next => (y.Kind == NotificationKind.Next && (x.Value == null ? y.Value == null : y.Value != null && _valueComparer.Equals(x.Value, y.Value))),
+                NotificationKind.Next => (y.Kind == NotificationKind.Next && _valueComparer.Equals(x.Value, y.Value)),
                 NotificationKind.Error => (x.Kind == NotificationKind.Error && x.Error.GetType() == y.Error.GetType() && x.Error.Message == y.Error.Message),
+                NotificationKind.Completed => (y.Kind == NotificationKind.Completed),
                 _ => throw new Exception(x.Kind + "???")
             };
         }
@@ -44,9 +44,9 @@
         {
             return n.Kind switch
             {
-                NotificationKind.Completed => 0,
                 NotificationKind.Next => (n.Value == null ? 0 : _valueComparer.GetHashCode(n.Value)),
                 NotificationKind.Error => HashCode.Combine(n.Error.GetType(), n.Error.Message),
+                NotificationKind.Completed => 0,
                 _ => throw new Exception(n.Kind + "???")
             };
         }

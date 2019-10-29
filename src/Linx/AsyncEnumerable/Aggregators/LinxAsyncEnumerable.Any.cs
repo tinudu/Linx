@@ -15,18 +15,23 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try { return await ae.MoveNextAsync(); }
-            finally { await ae.DisposeAsync(); }
+            await using var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+            return await ae.MoveNextAsync();
         }
 
         /// <summary>
         /// Determines whether any element of a sequence satisfies a condition.
         /// </summary>
-        public static Task<bool> Any<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
+        public static async Task<bool> Any<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate, CancellationToken token)
         {
-            try { return source.Where(predicate).Any(token); }
-            catch (Exception ex) { return Task.FromException<bool>(ex); }
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+            token.ThrowIfCancellationRequested();
+
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                if (predicate(item))
+                    return true;
+            return false;
         }
     }
 }

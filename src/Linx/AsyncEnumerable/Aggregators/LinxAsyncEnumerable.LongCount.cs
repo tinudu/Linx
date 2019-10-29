@@ -15,14 +15,10 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var count = 0L;
-                while (await ae.MoveNextAsync()) checked { count++; }
-                return count;
-            }
-            finally { await ae.DisposeAsync(); }
+            var count = 0L;
+            await foreach (var _ in source.WithCancellation(token).ConfigureAwait(false))
+                checked { count++; }
+            return count;
         }
 
         /// <summary>

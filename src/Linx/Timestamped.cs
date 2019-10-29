@@ -2,10 +2,12 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     /// <summary>
     /// Static <see cref="Timestamped{T}"/> methods.
     /// </summary>
+    [DebuggerNonUserCode]
     public static class Timestamped
     {
         /// <summary>
@@ -35,6 +37,7 @@
     /// <summary>
     /// Represents a timestamped value.
     /// </summary>
+    [DebuggerNonUserCode]
     public struct Timestamped<T> : IEquatable<Timestamped<T>>
     {
         /// <summary>

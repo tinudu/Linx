@@ -2,10 +2,12 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     /// <summary>
     /// Static <see cref="KeyValuePair{TKey,TValue}"/> methods.
     /// </summary>
+    [DebuggerNonUserCode]
     public static class KeyValuePair
     {
         /// <summary>
