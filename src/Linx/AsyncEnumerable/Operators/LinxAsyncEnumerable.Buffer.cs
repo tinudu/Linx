@@ -25,88 +25,220 @@
             return
                 maxSize <= 0 ? source :
                 maxSize == int.MaxValue ? source.Buffer()
-                : new BufferEnumerable<T>(source, maxSize);
+                : Create(token => new BufferEnumerator<T>(source, maxSize, token));
         }
 
-        private sealed class BufferEnumerable<T> : AsyncEnumerableBase<T>
+        private sealed class BufferEnumerator<T> : IAsyncEnumerator<T>
         {
+            private const int _sInitial = 0; // not enumerating
+            private const int _sActive = 1; // enumerating
+            private const int _sPulling = 2; // enumerating, queue empty
+            private const int _sPushing = 3; // enumerating, queue full
+            private const int _sCompleted = 4; // done enumerating, queue not empty
+            private const int _sCanceling = 5; // enumerating and canceled
+            private const int _sCancelingPulling = 6;
+            private const int _sFinal = 7;
+
             private readonly IAsyncEnumerable<T> _source;
             private readonly int _maxSize;
+            private readonly ManualResetValueTaskSource<bool> _tpPull = new ManualResetValueTaskSource<bool>();
+            private readonly ManualResetValueTaskSource _tpPush = new ManualResetValueTaskSource();
+            private ErrorHandler _eh = ErrorHandler.Init();
+            private AsyncTaskMethodBuilder _atmbDisposed = default;
+            private int _state;
+            private Queue<T> _queue;
 
-            public BufferEnumerable(IAsyncEnumerable<T> source, int maxSize)
+            public BufferEnumerator(IAsyncEnumerable<T> source, int maxSize, CancellationToken token)
             {
                 Debug.Assert(source != null);
-                Debug.Assert(maxSize > 0);
+                Debug.Assert(maxSize > 0 && maxSize < int.MaxValue);
                 _source = source;
                 _maxSize = maxSize;
+
+                if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
             }
 
-            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public T Current { get; private set; }
 
-            public override string ToString() => "Buffer";
-
-            private sealed class Enumerator : IAsyncEnumerator<T>
+            public ValueTask<bool> MoveNextAsync()
             {
-                private const int _sInitial = 0; // not enumerating
-                private const int _sActive = 1; // enumerating
-                private const int _sPulling = 2; // enumerating, queue empty
-                private const int _sPushing = 3; // enumerating, queue full
-                private const int _sCompleted = 4; // done enumerating, queue not empty
-                private const int _sCanceling = 5; // enumerating and canceled
-                private const int _sCancelingPulling = 6;
-                private const int _sFinal = 7;
+                _tpPull.Reset();
 
-                private readonly BufferEnumerable<T> _enumerable;
-                private readonly ManualResetValueTaskSource<bool> _tpPull = new ManualResetValueTaskSource<bool>();
-                private readonly ManualResetValueTaskSource _tpPush = new ManualResetValueTaskSource();
-                private ErrorHandler _eh = ErrorHandler.Init();
-                private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private int _state;
-                private Queue<T> _queue;
-
-                public Enumerator(BufferEnumerable<T> enumerable, CancellationToken token)
+                var state = Atomic.Lock(ref _state);
+                switch (state)
                 {
-                    _enumerable = enumerable;
-                    if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
-                }
+                    case _sInitial:
+                        _state = _sPulling;
+                        Produce();
+                        break;
 
-                public T Current { get; private set; }
-
-                public ValueTask<bool> MoveNextAsync()
-                {
-                    _tpPull.Reset();
-
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
+                    case _sActive:
+                        if (_queue == null || _queue.Count == 0)
                             _state = _sPulling;
-                            Produce();
-                            break;
-
-                        case _sActive:
-                            if (_queue == null || _queue.Count == 0)
-                                _state = _sPulling;
-                            else
-                            {
-                                Current = _queue.Dequeue(); // no exception assumed
-                                _state = _sActive;
-                                _tpPull.SetResult(true);
-                            }
-                            break;
-
-                        case _sPushing: // queue is full
-                            Debug.Assert(_queue.Count > 0);
+                        else
+                        {
                             Current = _queue.Dequeue(); // no exception assumed
                             _state = _sActive;
                             _tpPull.SetResult(true);
-                            _tpPush.SetResult();
-                            break;
+                        }
+                        break;
 
-                        case _sCompleted:
-                            Debug.Assert(_queue.Count > 0);
-                            Current = _queue.Dequeue(); // no exception assumed
-                            if (_queue.Count > 0)
+                    case _sPushing: // queue is full
+                        Debug.Assert(_queue.Count > 0);
+                        Current = _queue.Dequeue(); // no exception assumed
+                        _state = _sActive;
+                        _tpPull.SetResult(true);
+                        _tpPush.SetResult();
+                        break;
+
+                    case _sCompleted:
+                        Debug.Assert(_queue.Count > 0);
+                        Current = _queue.Dequeue(); // no exception assumed
+                        if (_queue.Count > 0)
+                            _state = _sCompleted;
+                        else
+                        {
+                            _queue = null;
+                            _state = _sFinal;
+                            _eh.Cancel();
+                            _atmbDisposed.SetResult();
+                        }
+                        _tpPull.SetResult(true);
+                        break;
+
+                    case _sCanceling:
+                        _state = _sCancelingPulling;
+                        break;
+
+                    case _sFinal:
+                        _state = _sFinal;
+                        Current = default;
+                        _tpPull.SetExceptionOrResult(_eh.Error, false);
+                        break;
+
+                    default: // Pulling, CancelingPulling???
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+
+                return _tpPull.Task;
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                Cancel(AsyncEnumeratorDisposedException.Instance);
+                return new ValueTask(_atmbDisposed.Task);
+            }
+
+            private void Cancel(Exception error)
+            {
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sInitial:
+                    case _sCompleted:
+                        _eh.SetExternalError(error);
+                        _state = _sFinal;
+                        _eh.Cancel();
+                        _atmbDisposed.SetResult();
+                        break;
+
+                    case _sActive:
+                        _eh.SetExternalError(error);
+                        _queue = null;
+                        _state = _sCanceling;
+                        _eh.Cancel();
+                        break;
+
+                    case _sPushing:
+                        _eh.SetExternalError(error);
+                        _queue = null;
+                        _state = _sCanceling;
+                        _eh.Cancel();
+                        _tpPush.SetException(new OperationCanceledException(_eh.InternalToken));
+                        break;
+
+                    case _sPulling:
+                        _eh.SetExternalError(error);
+                        _queue = null;
+                        _state = _sCancelingPulling;
+                        _eh.Cancel();
+                        break;
+
+                    case _sCanceling:
+                    case _sCancelingPulling:
+                    case _sFinal:
+                        _state = state;
+                        break;
+
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+            }
+
+            private async void Produce()
+            {
+                Exception error;
+                try
+                {
+                    var ae = _source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
+                    try
+                    {
+                        while (await ae.MoveNextAsync())
+                        {
+                            var state = Atomic.Lock(ref _state);
+                            while (state == _sActive && _queue != null && _queue.Count >= _maxSize)
+                            {
+                                _tpPush.Reset();
+                                _state = _sPushing;
+                                await _tpPush.Task.ConfigureAwait(false);
+                                state = Atomic.Lock(ref _state);
+                            }
+                            switch (state)
+                            {
+                                case _sActive:
+                                    try
+                                    {
+                                        if (_queue == null) _queue = new Queue<T>();
+                                        _queue.Enqueue(ae.Current);
+                                    }
+                                    finally { _state = _sActive; }
+                                    break;
+
+                                case _sPulling:
+                                    Debug.Assert(_queue == null || _queue.Count == 0);
+                                    try { Current = ae.Current; }
+                                    catch { _state = _sPulling; throw; }
+                                    _state = _sActive;
+                                    _tpPull.SetResult(true);
+                                    _eh.InternalToken.ThrowIfCancellationRequested();
+                                    break;
+
+                                case _sCanceling:
+                                case _sCancelingPulling:
+                                    _state = state;
+                                    throw new OperationCanceledException(_eh.InternalToken);
+
+                                default: // Initial, Pushing, Completed, Final???
+                                    _state = state;
+                                    throw new Exception(state + "???");
+                            }
+                        }
+                    }
+                    finally { await ae.DisposeAsync(); }
+
+                    error = null;
+                }
+                catch (Exception ex) { error = ex; }
+
+                {
+                    var state = Atomic.Lock(ref _state);
+                    _eh.SetInternalError(error);
+                    switch (state)
+                    {
+                        case _sActive:
+                            if (_eh.Error == null && _queue != null && _queue.Count > 0)
                                 _state = _sCompleted;
                             else
                             {
@@ -115,176 +247,31 @@
                                 _eh.Cancel();
                                 _atmbDisposed.SetResult();
                             }
-                            _tpPull.SetResult(true);
                             break;
 
-                        case _sCanceling:
-                            _state = _sCancelingPulling;
-                            break;
-
-                        case _sFinal:
+                        case _sPulling:
+                            _queue = null;
                             _state = _sFinal;
+                            _eh.Cancel();
+                            _atmbDisposed.SetResult();
                             Current = default;
                             _tpPull.SetExceptionOrResult(_eh.Error, false);
                             break;
 
-                        default: // Pulling, CancelingPulling???
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-
-                    return _tpPull.Task;
-                }
-
-                public ValueTask DisposeAsync()
-                {
-                    Cancel(AsyncEnumeratorDisposedException.Instance);
-                    return new ValueTask(_atmbDisposed.Task);
-                }
-
-                private void Cancel(Exception error)
-                {
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                        case _sCompleted:
-                            _eh.SetExternalError(error);
+                        case _sCanceling:
                             _state = _sFinal;
-                            _eh.Cancel();
                             _atmbDisposed.SetResult();
                             break;
 
-                        case _sActive:
-                            _eh.SetExternalError(error);
-                            _queue = null;
-                            _state = _sCanceling;
-                            _eh.Cancel();
-                            break;
-
-                        case _sPushing:
-                            _eh.SetExternalError(error);
-                            _queue = null;
-                            _state = _sCanceling;
-                            _eh.Cancel();
-                            _tpPush.SetException(new OperationCanceledException(_eh.InternalToken));
-                            break;
-
-                        case _sPulling:
-                            _eh.SetExternalError(error);
-                            _queue = null;
-                            _state = _sCancelingPulling;
-                            _eh.Cancel();
-                            break;
-
-                        case _sCanceling:
                         case _sCancelingPulling:
-                        case _sFinal:
-                            _state = state;
+                            _state = _sFinal;
+                            _atmbDisposed.SetResult();
+                            _tpPull.SetExceptionOrResult(_eh.Error, false);
                             break;
 
-                        default:
+                        default: // Initial, Pushing, Last, Final???
                             _state = state;
-                            throw new Exception(state + "???");
-                    }
-                }
-
-                private async void Produce()
-                {
-                    Exception error;
-                    try
-                    {
-                        var ae = _enumerable._source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
-                        try
-                        {
-                            while (await ae.MoveNextAsync())
-                            {
-                                var state = Atomic.Lock(ref _state);
-                                while (state == _sActive && _queue != null && _queue.Count >= _enumerable._maxSize)
-                                {
-                                    _tpPush.Reset();
-                                    _state = _sPushing;
-                                    await _tpPush.Task.ConfigureAwait(false);
-                                    state = Atomic.Lock(ref _state);
-                                }
-                                switch (state)
-                                {
-                                    case _sActive:
-                                        try
-                                        {
-                                            if (_queue == null) _queue = new Queue<T>();
-                                            _queue.Enqueue(ae.Current);
-                                        }
-                                        finally { _state = _sActive; }
-                                        break;
-
-                                    case _sPulling:
-                                        Debug.Assert(_queue == null || _queue.Count == 0);
-                                        try { Current = ae.Current; }
-                                        catch { _state = _sPulling; throw; }
-                                        _state = _sActive;
-                                        _tpPull.SetResult(true);
-                                        _eh.InternalToken.ThrowIfCancellationRequested();
-                                        break;
-
-                                    case _sCanceling:
-                                    case _sCancelingPulling:
-                                        _state = state;
-                                        throw new OperationCanceledException(_eh.InternalToken);
-
-                                    default: // Initial, Pushing, Completed, Final???
-                                        _state = state;
-                                        throw new Exception(state + "???");
-                                }
-                            }
-                        }
-                        finally { await ae.DisposeAsync(); }
-
-                        error = null;
-                    }
-                    catch (Exception ex) { error = ex; }
-
-                    {
-                        var state = Atomic.Lock(ref _state);
-                        _eh.SetInternalError(error);
-                        switch (state)
-                        {
-                            case _sActive:
-                                if (_eh.Error == null && _queue != null && _queue.Count > 0)
-                                    _state = _sCompleted;
-                                else
-                                {
-                                    _queue = null;
-                                    _state = _sFinal;
-                                    _eh.Cancel();
-                                    _atmbDisposed.SetResult();
-                                }
-                                break;
-
-                            case _sPulling:
-                                _queue = null;
-                                _state = _sFinal;
-                                _eh.Cancel();
-                                _atmbDisposed.SetResult();
-                                Current = default;
-                                _tpPull.SetExceptionOrResult(_eh.Error, false);
-                                break;
-
-                            case _sCanceling:
-                                _state = _sFinal;
-                                _atmbDisposed.SetResult();
-                                break;
-
-                            case _sCancelingPulling:
-                                _state = _sFinal;
-                                _atmbDisposed.SetResult();
-                                _tpPull.SetExceptionOrResult(_eh.Error, false);
-                                break;
-
-                            default: // Initial, Pushing, Last, Final???
-                                _state = state;
-                                throw new Exception(_state + "???");
-                        }
+                            throw new Exception(_state + "???");
                     }
                 }
             }

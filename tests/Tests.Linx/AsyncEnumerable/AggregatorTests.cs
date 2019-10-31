@@ -248,8 +248,8 @@
         [Fact]
         public async Task TestMultiConsume()
         {
-            Task Good(IAsyncEnumerable<int> xs, CancellationToken t) => xs.IgnoreElements(t);
-            Task Bad(IAsyncEnumerable<int> xs, CancellationToken t) => xs.Select((x, i) => i < 2 ? i.ToString() : throw new Exception("Boom!")).IgnoreElements(t);
+            static Task Good(IAsyncEnumerable<int> xs, CancellationToken t) => xs.IgnoreElements(t);
+            static Task Bad(IAsyncEnumerable<int> xs, CancellationToken t) => xs.Select((x, i) => i < 2 ? i.ToString() : throw new Exception("Boom!")).IgnoreElements(t);
             await new[] { 1, 2, 3 }.Async().MultiConsume(default, Good, Good);
             await Assert.ThrowsAsync<Exception>(() => new[] { 1, 2, 3 }.Async().MultiConsume(default, Good, Bad));
         }

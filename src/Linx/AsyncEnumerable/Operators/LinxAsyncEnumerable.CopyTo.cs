@@ -17,15 +17,10 @@
             if (yield == null) throw new ArgumentNullException(nameof(yield));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                while (await ae.MoveNextAsync())
-                    if (!await yield(ae.Current).ConfigureAwait(false))
-                        return false;
-                return true;
-            }
-            finally { await ae.DisposeAsync(); }
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                if (!await yield(item).ConfigureAwait(false))
+                    return false;
+            return true;
         }
     }
 }

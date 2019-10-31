@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using Timing;
 
@@ -13,17 +14,17 @@
         public static IAsyncEnumerable<Timestamped<T>> Timestamp<T>(this IAsyncEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+            return Create(GetEnumerator);
 
-            return Create<Timestamped<T>>(async (yield, token) =>
+            async IAsyncEnumerator<Timestamped<T>> GetEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
                 var time = Time.Current;
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync() && await yield(new Timestamped<T>(time.Now, ae.Current)).ConfigureAwait(false)) { }
-                }
-                finally { await ae.DisposeAsync(); }
-            });
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                    yield return new Timestamped<T>(time.Now, item);
+            }
         }
     }
 }

@@ -14,17 +14,11 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
-            if (comparer == null) comparer = EqualityComparer<T>.Default;
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var result = new HashSet<T>(comparer);
-                while (await ae.MoveNextAsync())
-                    result.Add(ae.Current);
-                return result;
-            }
-            finally { await ae.DisposeAsync(); }
+            var result = new HashSet<T>(comparer);
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                result.Add(item);
+            return result;
         }
     }
 }

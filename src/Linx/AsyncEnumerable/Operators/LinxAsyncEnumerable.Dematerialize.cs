@@ -3,6 +3,7 @@
     using Notifications;
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -13,32 +14,28 @@
         public static IAsyncEnumerable<T> Dematerialize<T>(this IAsyncEnumerable<Notification<T>> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+            return Create(GetEnumerator);
 
-            return Create<T>(async (yield, token) =>
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
+                token.ThrowIfCancellationRequested();
+
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach (var n in source.WithCancellation(token).ConfigureAwait(false))
+                    switch (n.Kind)
                     {
-                        var current = ae.Current;
-                        switch (current.Kind)
-                        {
-                            case NotificationKind.Next:
-                                if (!await yield(current.Value).ConfigureAwait(false)) return;
-                                break;
-                            case NotificationKind.Completed:
-                                return;
-                            case NotificationKind.Error:
-                                throw current.Error;
-                            default:
-                                throw new Exception(current.Kind + "???");
-                        }
+                        case NotificationKind.Next:
+                            yield return n.Value;
+                            continue;
+                        case NotificationKind.Completed:
+                            yield break;
+                        case NotificationKind.Error:
+                            throw n.Error;
+                        default:
+                            throw new Exception(n.Kind + "???");
                     }
-                }
-                finally { await ae.DisposeAsync(); }
                 await token.WhenCanceled().ConfigureAwait(false);
-            });
+            }
         }
     }
 }

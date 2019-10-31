@@ -2,6 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
     {
@@ -11,12 +13,15 @@
         public static IAsyncEnumerable<T> Append<T>(this IAsyncEnumerable<T> source, T element)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+            return Create(GetEnumerator);
 
-            return Create<T>(async (yield, token) =>
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                if (!await source.CopyTo(yield, token).ConfigureAwait(false)) return;
-                await yield(element).ConfigureAwait(false);
-            });
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                    yield return item;
+                yield return element;
+            }
         }
     }
 }

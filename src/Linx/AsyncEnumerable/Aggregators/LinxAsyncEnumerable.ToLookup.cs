@@ -22,10 +22,10 @@
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             token.ThrowIfCancellationRequested();
 
-            var lookup = new Lookup<TKey, TSource>(comparer);
+            var result = new Lookup<TKey, TSource>(comparer);
             await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
-                lookup.Add(keySelector(item), item);
-            return lookup;
+                result.Add(keySelector(item), item);
+            return result;
         }
 
         /// <summary>
@@ -43,10 +43,10 @@
             if (elementSelector == null) throw new ArgumentNullException(nameof(elementSelector));
             token.ThrowIfCancellationRequested();
 
-            var lookup = new Lookup<TKey, TElement>(comparer);
+            var result = new Lookup<TKey, TElement>(comparer);
             await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
-                lookup.Add(keySelector(item), elementSelector(item));
-            return lookup;
+                result.Add(keySelector(item), elementSelector(item));
+            return result;
         }
 
         // have to re-implement that because Lookup<,> has no public constructor

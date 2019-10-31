@@ -3,6 +3,8 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
     {
@@ -22,19 +24,23 @@
             if (outerKeySelector == null) throw new ArgumentNullException(nameof(outerKeySelector));
             if (innerKeySelector == null) throw new ArgumentNullException(nameof(innerKeySelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            if (comparer == null) comparer = EqualityComparer<TKey>.Default;
 
-            return Create<TResult>(async (yield, token) =>
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
+                // ReSharper disable once PossibleMultipleEnumeration
                 var innerItems = inner
                     .Select(i => (key: innerKeySelector(i), value: i))
                     .Where(kv => kv.key != null)
                     .ToLookup(kv => kv.key, kv => kv.value, comparer);
-                await outer
-                    .Select(o => resultSelector(o, innerItems[outerKeySelector(o)]))
-                    .CopyTo(yield, token)
-                    .ConfigureAwait(false);
-            });
+
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach (var item in outer.WithCancellation(token).ConfigureAwait(false))
+                    yield return resultSelector(item, innerItems[outerKeySelector(item)]);
+            }
         }
     }
 }

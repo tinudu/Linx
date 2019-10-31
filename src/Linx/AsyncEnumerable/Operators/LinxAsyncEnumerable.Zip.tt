@@ -40,167 +40,164 @@ namespace Linx.AsyncEnumerable
 
     partial class LinxAsyncEnumerable
     {
-<#
-    foreach(var arg in args)
-    {
-#>
+<# foreach(var arg in args) { #>
         /// <summary>
         /// Merges sequences into one sequence by combining corresponding elements.
         /// </summary>
         public static IAsyncEnumerable<TResult> Zip<#= arg.GenArgList #>(this
-<#
-    foreach(var n in arg.Names)
-    {
-#>
+<# foreach(var n in arg.Names) { #>
             IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
-<#
-    }
-#>
+<# } #>
             Func<#= arg.GenArgList #> resultSelector)
-            => new ZipEnumerable<#= arg.GenArgList #>(<#= string.Join(", ", arg.Names.Select(n => n.Source)) #>, resultSelector);
+            => Create(token => new ZipEnumerator<#= arg.GenArgList #>(<#= string.Join(", ", arg.Names.Select(n => n.Source)) #>, resultSelector, token));
 
-        private sealed class ZipEnumerable<#= arg.GenArgList #> : AsyncEnumerableBase<TResult>
+        private sealed class ZipEnumerator<#= arg.GenArgList #> : IAsyncEnumerator<TResult>
         {
-<#
-    foreach(var n in arg.Names)
-    {
-#>
-            private readonly IAsyncEnumerable<<#= n.GenArg #>> _<#= n.Source #>;
-<#
-    }
-#>
-            private readonly Func<#= arg.GenArgList #> _resultSelector;
+            private const int _n = <#= arg.N #>;
 
-            public ZipEnumerable(
-<#
-    foreach(var n in arg.Names)
-    {
-#>
+            private const int _sInitial = 0;
+            private const int _sPulling = 1;
+            private const int _sPushing = 2;
+            private const int _sCanceling = 3;
+            private const int _sCancelingPulling = 4;
+            private const int _sFinal = 5;
+
+<# foreach (var n in arg.Names) { #>
+            private readonly IAsyncEnumerable<<#= n.GenArg #>> _<#= n.Source #>;
+<# } #>
+            private readonly Func<#= arg.GenArgList #> _resultSelector;
+            private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
+            private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
+            private uint _tpsPushingMask;
+            private ErrorHandler _eh = ErrorHandler.Init();
+            private AsyncTaskMethodBuilder _atmbDisposed = default;
+            private int _active;
+<# foreach(var n in arg.Names) { #>
+            private ConfiguredCancelableAsyncEnumerable<<#= n.GenArg #>>.Enumerator <#= n.Ae #>;
+<# } #>
+            private int _state;
+
+            public ZipEnumerator(
+<# foreach (var n in arg.Names) { #>
                 IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
-<#
-    }
-#>
-                Func<#= arg.GenArgList #> resultSelector)
+<# } #>
+                Func<#= arg.GenArgList #> resultSelector,
+                CancellationToken token)
             {
-<#
-    foreach(var n in arg.Names)
-    {
-#>
+<# foreach (var n in arg.Names) { #>
                 _<#= n.Source #> = <#= n.Source #> ?? throw new ArgumentNullException(nameof(<#= n.Source #>));
-<#
-    }
-#>
+<# } #>
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
+                if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
             }
 
-            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public TResult Current { get; private set; }
 
-            public override string ToString() => "Zip";
-
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
+            public ValueTask<bool> MoveNextAsync()
             {
-                private const int _n = <#= arg.N #>;
+                _tpMoveNext.Reset();
 
-                private const int _sInitial = 0;
-                private const int _sPulling = 1;
-                private const int _sPushing = 2;
-                private const int _sCanceling = 3;
-                private const int _sCancelingPulling = 4;
-                private const int _sFinal = 5;
-
-                private readonly ZipEnumerable<#= arg.GenArgList #> _enumerable;
-                private readonly ManualResetValueTaskSource<bool> _tpMoveNext = new ManualResetValueTaskSource<bool>();
-                private readonly ManualResetValueTaskSource[] _tpsPushing = new ManualResetValueTaskSource[_n];
-                private uint _tpsPushingMask;
-                private ErrorHandler _eh = ErrorHandler.Init();
-                private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private int _active;
-<#
-    foreach(var n in arg.Names)
-    {
-#>
-                private ConfiguredCancelableAsyncEnumerable<<#= n.GenArg #>>.Enumerator <#= n.Ae #>;
-<#
-    }
-#>
-                private int _state;
-
-                public Enumerator(ZipEnumerable<#= arg.GenArgList #> enumerable, CancellationToken token)
+                var state = Atomic.Lock(ref _state);
+                switch (state)
                 {
-                    _enumerable = enumerable;
-                    if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token)));
+                    case _sInitial:
+                        _active = _n;
+                        _state = _sPulling;
+<# foreach (var n in arg.Names) { #>
+                        Produce(_<#= n.Source #>, <#= n.Index #>, (e, ae) => e.<#= n.Ae #> = ae);
+<# } #>
+                        break;
+                    case _sPushing:
+                        Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
+                        _tpsPushingMask = 0;
+                        _state = _sPulling;
+                        foreach (var cp in _tpsPushing)
+                            cp.SetResult();
+                        break;
+                    case _sCanceling:
+                        _state = _sCancelingPulling;
+                        break;
+                    case _sFinal:
+                        _state = _sFinal;
+                        Current = default;
+                        _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
+                        break;
+                    default: // Pulling, CancelingPulling
+                        _state = state;
+                        _tpMoveNext.SetException(new Exception(state + "???"));
+                        break;
                 }
 
-                public TResult Current { get; private set; }
+                return _tpMoveNext.Task;
+            }
 
-                public ValueTask<bool> MoveNextAsync()
+            public ValueTask DisposeAsync()
+            {
+                Cancel(AsyncEnumeratorDisposedException.Instance);
+                return new ValueTask(_atmbDisposed.Task);
+            }
+
+            private void Cancel(Exception error)
+            {
+                var state = Atomic.Lock(ref _state);
+                switch (state)
                 {
-                    _tpMoveNext.Reset();
+                    case _sInitial:
+                        _eh.SetExternalError(error);
+                        _state = _sFinal;
+                        _eh.Cancel();
+                        _atmbDisposed.SetResult();
+                        break;
 
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                            _active = _n;
-                            _state = _sPulling;
-<#
-    foreach(var n in arg.Names)
-    {
-#>
-                            Produce(_enumerable._<#= n.Source #>, <#= n.Index #>, (e, ae) => e.<#= n.Ae #> = ae);
-<#
-    }
-#>
-                            break;
-                        case _sPushing:
-                            Debug.Assert(_tpsPushingMask == (1U << _n) - 1);
-                            _tpsPushingMask = 0;
-                            _state = _sPulling;
-                            foreach (var cp in _tpsPushing)
-                                cp.SetResult();
-                            break;
-                        case _sCanceling:
-                            _state = _sCancelingPulling;
-                            break;
-                        case _sFinal:
-                            _state = _sFinal;
-                            Current = default;
-                            _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
-                            break;
-                        default: // Pulling, CancelingPulling
-                            _state = state;
-                            _tpMoveNext.SetException(new Exception(state + "???"));
-                            break;
-                    }
+                    case _sPulling:
+                    case _sPushing:
+                        Debug.Assert(_active > 0);
+                        _eh.SetExternalError(error);
+                        var m = _tpsPushingMask;
+                        _tpsPushingMask = 0;
+                        _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
+                        _eh.Cancel();
+                        if (m != 0)
+                        {
+                            var ex = new OperationCanceledException(_eh.InternalToken);
+                            foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                ccs.SetException(ex);
+                        }
+                        break;
 
-                    return _tpMoveNext.Task;
+                    case _sCanceling:
+                    case _sCancelingPulling:
+                    case _sFinal:
+                        _state = state;
+                        break;
+
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
                 }
+            }
 
-                public ValueTask DisposeAsync()
+            private void OnCompleted(Exception error)
+            {
+                var state = Atomic.Lock(ref _state);
+                switch (state)
                 {
-                    Cancel(AsyncEnumeratorDisposedException.Instance);
-                    return new ValueTask(_atmbDisposed.Task);
-                }
-
-                private void Cancel(Exception error)
-                {
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                            _eh.SetExternalError(error);
+                    case _sPulling:
+                        Debug.Assert(_active > 0);
+                        _eh.SetInternalError(error);
+                        if (--_active == 0)
+                        {
+                            Debug.Assert(_tpsPushingMask == 0);
                             _state = _sFinal;
                             _eh.Cancel();
                             _atmbDisposed.SetResult();
-                            break;
-
-                        case _sPulling:
-                        case _sPushing:
-                            Debug.Assert(_active > 0);
-                            _eh.SetExternalError(error);
+                            _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
+                        }
+                        else
+                        {
                             var m = _tpsPushingMask;
                             _tpsPushingMask = 0;
-                            _state = state == _sPulling ? _sCancelingPulling : _sCanceling;
+                            _state = _sCancelingPulling;
                             _eh.Cancel();
                             if (m != 0)
                             {
@@ -208,146 +205,101 @@ namespace Linx.AsyncEnumerable
                                 foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
                                     ccs.SetException(ex);
                             }
-                            break;
+                        }
+                        break;
 
-                        case _sCanceling:
-                        case _sCancelingPulling:
-                        case _sFinal:
-                            _state = state;
-                            break;
-
-                        default:
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-                }
-
-                private void OnCompleted(Exception error)
-                {
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sPulling:
-                            Debug.Assert(_active > 0);
-                            _eh.SetInternalError(error);
-                            if (--_active == 0)
-                            {
-                                Debug.Assert(_tpsPushingMask == 0);
-                                _state = _sFinal;
-                                _eh.Cancel();
-                                _atmbDisposed.SetResult();
-                                _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
-                            }
-                            else
-                            {
-                                var m = _tpsPushingMask;
-                                _tpsPushingMask = 0;
-                                _state = _sCancelingPulling;
-                                _eh.Cancel();
-                                if (m != 0)
-                                {
-                                    var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetException(ex);
-                                }
-                            }
-                            break;
-
-                        case _sCanceling:
-                        case _sCancelingPulling:
-                            Debug.Assert(_active > 0);
-                            _eh.SetInternalError(error);
-                            if (--_active == 0)
-                            {
-                                Debug.Assert(_tpsPushingMask == 0);
-                                _state = _sFinal;
-                                _atmbDisposed.SetResult();
-                                if (state == _sCancelingPulling)
-                                    _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
-                            }
-                            else
-                            {
-                                var m = _tpsPushingMask;
-                                _tpsPushingMask = 0;
-                                _state = state;
-                                if (m != 0)
-                                {
-                                    var ex = new OperationCanceledException(_eh.InternalToken);
-                                    foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
-                                        ccs.SetException(ex);
-                                }
-                            }
-                            break;
-
-                        default: // Initial, Pushing, Final???
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-                }
-
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
-                {
-                    Exception error;
-                    try
-                    {
-                        _eh.InternalToken.ThrowIfCancellationRequested();
-
-                        var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
-                        var flag = 1U << index;
-                        var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
-                        try
+                    case _sCanceling:
+                    case _sCancelingPulling:
+                        Debug.Assert(_active > 0);
+                        _eh.SetInternalError(error);
+                        if (--_active == 0)
                         {
-                            setEnumerator(this, ae);
-
-                            while (await ae.MoveNextAsync())
+                            Debug.Assert(_tpsPushingMask == 0);
+                            _state = _sFinal;
+                            _atmbDisposed.SetResult();
+                            if (state == _sCancelingPulling)
+                                _tpMoveNext.SetExceptionOrResult(_eh.Error, false);
+                        }
+                        else
+                        {
+                            var m = _tpsPushingMask;
+                            _tpsPushingMask = 0;
+                            _state = state;
+                            if (m != 0)
                             {
-                                var state = Atomic.Lock(ref _state);
-                                switch (state)
-                                {
-                                    case _sPulling:
-                                        cpPushing.Reset();
-                                        _tpsPushingMask |= flag;
-                                        if (_tpsPushingMask == (1U << _n) - 1)
-                                        {
-                                            try { Current = _enumerable._resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>); }
-                                            catch
-                                            {
-                                                _tpsPushingMask &= ~flag;
-                                                _state = _sPulling;
-                                                throw;
-                                            }
-                                            _state = _sPushing;
-                                            _tpMoveNext.SetResult(true);
-                                        }
-                                        else
-                                            _state = _sPulling;
-                                        await cpPushing.Task.ConfigureAwait(false);
-                                        _eh.InternalToken.ThrowIfCancellationRequested();
-                                        break;
-
-                                    case _sCanceling:
-                                    case _sCancelingPulling:
-                                        _state = state;
-                                        throw new OperationCanceledException(_eh.InternalToken);
-
-                                    default: // Initial, Pushing, Final???
-                                        _state = state;
-                                        throw new Exception(state + "???");
-                                }
+                                var ex = new OperationCanceledException(_eh.InternalToken);
+                                foreach (var ccs in _tpsPushing.Where((x, i) => (m & (1U << i)) != 0))
+                                    ccs.SetException(ex);
                             }
                         }
-                        finally { await ae.DisposeAsync(); }
-                        error = null;
-                    }
-                    catch (Exception ex) { error = ex; }
+                        break;
 
-                    OnCompleted(error);
+                    default: // Initial, Pushing, Final???
+                        _state = state;
+                        throw new Exception(state + "???");
                 }
+            }
+
+            private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<ZipEnumerator<#= arg.GenArgList #>, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+            {
+                Exception error;
+                try
+                {
+                    _eh.InternalToken.ThrowIfCancellationRequested();
+
+                    var cpPushing = _tpsPushing[index] = new ManualResetValueTaskSource();
+                    var flag = 1U << index;
+                    var ae = source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
+                    try
+                    {
+                        setEnumerator(this, ae);
+
+                        while (await ae.MoveNextAsync())
+                        {
+                            var state = Atomic.Lock(ref _state);
+                            switch (state)
+                            {
+                                case _sPulling:
+                                    cpPushing.Reset();
+                                    _tpsPushingMask |= flag;
+                                    if (_tpsPushingMask == (1U << _n) - 1)
+                                    {
+                                        try { Current = _resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>); }
+                                        catch
+                                        {
+                                            _tpsPushingMask &= ~flag;
+                                            _state = _sPulling;
+                                            throw;
+                                        }
+                                        _state = _sPushing;
+                                        _tpMoveNext.SetResult(true);
+                                    }
+                                    else
+                                        _state = _sPulling;
+                                    await cpPushing.Task.ConfigureAwait(false);
+                                    _eh.InternalToken.ThrowIfCancellationRequested();
+                                    break;
+
+                                case _sCanceling:
+                                case _sCancelingPulling:
+                                    _state = state;
+                                    throw new OperationCanceledException(_eh.InternalToken);
+
+                                default: // Initial, Pushing, Final???
+                                    _state = state;
+                                    throw new Exception(state + "???");
+                            }
+                        }
+                    }
+                    finally { await ae.DisposeAsync(); }
+                    error = null;
+                }
+                catch (Exception ex) { error = ex; }
+
+                OnCompleted(error);
             }
         }
 
-<#
-    }
-#>
+<# } #>
     }
 }

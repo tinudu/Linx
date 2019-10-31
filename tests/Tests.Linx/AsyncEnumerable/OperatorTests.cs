@@ -1,13 +1,14 @@
 ﻿namespace Tests.Linx.AsyncEnumerable
 {
+    using global::Linx.AsyncEnumerable;
+    using global::Linx.Enumerable;
+    using global::Linx.Testing;
+    using global::Linx.Timing;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using global::Linx.AsyncEnumerable;
-    using global::Linx.Testing;
-    using global::Linx.Timing;
     using Xunit;
 
     internal static class MyOperators
@@ -35,7 +36,7 @@
         {
             var r = Enumerable.Range(0, 3).Async();
             // ReSharper disable PossibleMultipleEnumeration
-            var result = await r.Concat(r).Concat(r).ToList(default);
+            var result = await r.Concat(r, r).ToList(default);
             // ReSharper restore PossibleMultipleEnumeration
             Assert.True(new[] { 0, 1, 2, 0, 1, 2, 0, 1, 2 }.SequenceEqual(result));
         }
@@ -54,6 +55,7 @@
             Assert.Equal(2, result[3]);
 
             result = await new[] { 1, 2, 1, 3, 2, 3, 1, 1, 2 }.Async().GroupBy(i => i).Take(2).Parallel(async (g, t) => new { g.Key, Count = await g.Take(2).Count(t) }).ToDictionary(kc => kc.Key, kc => kc.Count, default);
+            Assert.Equal(2, result.Count);
             Assert.Equal(2, result[1]);
             Assert.Equal(2, result[2]);
         }

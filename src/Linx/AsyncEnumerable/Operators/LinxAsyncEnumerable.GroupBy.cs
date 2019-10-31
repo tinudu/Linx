@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
@@ -16,417 +17,385 @@
             this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             IEqualityComparer<TKey> keyComparer = null)
-            => new GroupByEnumerable<TSource, TKey>(source, keySelector, keyComparer, false);
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+            return Create(token => new GroupByEnumerator<TSource, TKey>(source, keySelector, keyComparer, false, token));
+        }
 
         /// <summary>
-        /// Group by a key; close a group when unsubscribed.
+        /// Group by a key, close groups once they are no longer enumerated.
         /// </summary>
-        public static IAsyncEnumerable<IAsyncGrouping<TKey, TSource>> GroupByWhileObserved<TSource, TKey>(
+        public static IAsyncEnumerable<IAsyncGrouping<TKey, TSource>> GroupByWhileEnumerated<TSource, TKey>(
             this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             IEqualityComparer<TKey> keyComparer = null)
-            => new GroupByEnumerable<TSource, TKey>(source, keySelector, keyComparer, true);
-
-        private sealed class GroupByEnumerable<TSource, TKey> : AsyncEnumerableBase<IAsyncGrouping<TKey, TSource>>
         {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+            return Create(token => new GroupByEnumerator<TSource, TKey>(source, keySelector, keyComparer, true, token));
+        }
+
+        private sealed class GroupByEnumerator<TSource, TKey> : IAsyncEnumerator<IAsyncGrouping<TKey, TSource>>
+        {
+            private const int _sGroup = 0; // GetAsyncEnumerator not called
+            private const int _sInitial = 1; // GetAsyncEnumerator called
+            private const int _sAccepting = 2; // MoveNextAsync called
+            private const int _sEmitting = 3; // MoveNextAsync acknowleded
+            private const int _sDisposed = 4; // Disposed
+
             private readonly IAsyncEnumerable<TSource> _source;
             private readonly Func<TSource, TKey> _keySelector;
-            private readonly IEqualityComparer<TKey> _keyComparer;
-            private readonly bool _whileObserved;
+            private readonly Dictionary<Boxed<TKey>, Group> _groups;
+            private bool _whileEnumerated;
+            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+            private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder(); // Task for last consumer
+            private int _active;
 
-            public GroupByEnumerable(
+            public GroupByEnumerator(
                 IAsyncEnumerable<TSource> source,
                 Func<TSource, TKey> keySelector,
                 IEqualityComparer<TKey> keyComparer,
-                bool whileObserved)
+                bool whileEnumerated,
+                CancellationToken token)
             {
-                _source = source ?? throw new ArgumentNullException(nameof(source));
-                _keySelector = keySelector ?? throw new ArgumentNullException(nameof(keySelector));
-                _keyComparer = keyComparer ?? EqualityComparer<TKey>.Default;
-                _whileObserved = whileObserved;
+                Debug.Assert(source != null);
+                Debug.Assert(keySelector != null);
+
+                _source = source;
+                _keySelector = keySelector;
+                _whileEnumerated = whileEnumerated;
+                _groups = new Dictionary<Boxed<TKey>, Group>(Boxed.GetEqualityComparer(keyComparer));
+
+                if (token.CanBeCanceled) _ctr = token.Register(() => Dispose(new OperationCanceledException(token)));
             }
 
-            public override IAsyncEnumerator<IAsyncGrouping<TKey, TSource>> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            #region outer enumerator context
 
-            public override string ToString() => "GroupBy";
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
+            private readonly ManualResetValueTaskSource _tsEmitting = new ManualResetValueTaskSource();
+            private CancellationTokenRegistration _ctr;
+            private int _state = _sInitial;
+            private Exception _error;
+            private Task _tDisposed;
 
-            private sealed class Enumerator : IAsyncEnumerator<IAsyncGrouping<TKey, TSource>>
+            public IAsyncGrouping<TKey, TSource> Current { get; private set; }
+
+            ValueTask<bool> IAsyncEnumerator<IAsyncGrouping<TKey, TSource>>.MoveNextAsync()
             {
-                private const int _sInitial = 0;
-                private const int _sAccepting = 1;
-                private const int _sEmitting = 2;
-                private const int _sCanceling = 3;
-                private const int _sCancelingAccepting = 4;
-                private const int _sFinal = 5;
+                _tsAccepting.Reset();
 
-                private readonly GroupByEnumerable<TSource, TKey> _enumerable;
-                private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>(); // pending MoveNextAsync
-                private readonly ManualResetValueTaskSource _tsEmitting = new ManualResetValueTaskSource(); // await MoveNextAsync either on the group enumerator or a group
-                private readonly Dictionary<TKey, Group> _groups;
-                private readonly CancellationTokenSource _cts = new CancellationTokenSource(); // request cancellation when Canceling[Accepting] and _nGroups == 0
-                private CancellationTokenRegistration _ctr;
-                private AsyncTaskMethodBuilder _atmbDisposed = default;
-                private int _state;
-                private Exception _error; // while canceling or when final
-                private int _nGroups; // number of groups that are not final
-
-                public Enumerator(GroupByEnumerable<TSource, TKey> enumerable, CancellationToken token)
+                var state = Atomic.Lock(ref _state);
+                switch (state)
                 {
-                    _enumerable = enumerable;
-                    _groups = new Dictionary<TKey, Group>(enumerable._keyComparer);
-                    if (token.CanBeCanceled) _ctr = token.Register(() => Cancel(new OperationCanceledException(token)));
+                    case _sInitial:
+                        _active = 1;
+                        _state = _sAccepting;
+                        Produce();
+                        break;
+
+                    case _sEmitting:
+                        _state = _sAccepting;
+                        _tsEmitting.SetResult();
+                        break;
+
+                    case _sDisposed:
+                        _state = _sDisposed;
+                        _tsAccepting.SetExceptionOrResult(_error, false);
+                        break;
+
+                    default: // Accepting???
+                        _state = state;
+                        throw new Exception(state + "???");
                 }
 
-                public IAsyncGrouping<TKey, TSource> Current { get; private set; }
+                return _tsAccepting.Task;
+            }
 
-                ValueTask<bool> IAsyncEnumerator<IAsyncGrouping<TKey, TSource>>.MoveNextAsync()
+            ValueTask IAsyncDisposable.DisposeAsync()
+            {
+                Dispose(AsyncEnumeratorDisposedException.Instance);
+                return new ValueTask(_tDisposed);
+            }
+
+            private void Dispose(Exception errorOpt)
+            {
+                var state = Atomic.Lock(ref _state);
+                switch (state)
                 {
-                    _tsAccepting.Reset();
+                    case _sInitial:
+                    case _sEmitting:
+                        break;
 
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
+                    case _sAccepting:
+                        Current = default;
+                        break;
+
+                    case _sDisposed:
+                        _state = _sDisposed;
+                        return;
+
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+
+                _error = errorOpt;
+                if (_active > 0 && --_active == 0)
+                {
+                    _tDisposed = _atmbDisposed.Task;
+                    _state = _sDisposed;
+                    _cts.TryCancel();
+                }
+                else
+                {
+                    _tDisposed = Task.CompletedTask;
+                    _state = _sDisposed;
+                }
+                _ctr.Dispose();
+                switch (state)
+                {
+                    case _sAccepting:
+                        _tsAccepting.SetExceptionOrResult(errorOpt, false);
+                        break;
+                    case _sEmitting:
+                        _tsEmitting.SetResult();
+                        break;
+                }
+            }
+
+            #endregion
+
+            private async void Produce()
+            {
+                Exception error = null;
+                try
+                {
+                    await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
                     {
-                        case _sInitial:
-                            _state = _sAccepting;
-                            Produce();
-                            break;
+                        var key = new Boxed<TKey>(_keySelector(item));
 
-                        case _sEmitting:
-                            _state = _sAccepting;
-                            _tsEmitting.SetResult();
-                            break;
+                        Group group;
+                        {
+                            var state = Atomic.Lock(ref _state);
+                            Debug.Assert(state == _sAccepting || state == _sDisposed);
 
-                        case _sCanceling:
-                            _state = _sCancelingAccepting;
-                            break;
+                            if (_active == 0)
+                            {
+                                Debug.Assert(state == _sDisposed);
+                                _state = _sDisposed;
+                                return;
+                            }
 
-                        case _sFinal:
-                            _state = _sFinal;
-                            if (_error == null) _tsAccepting.SetResult(false);
-                            else _tsAccepting.SetException(_error);
-                            break;
+                            try
+                            {
+                                if (_groups.TryGetValue(key, out group))
+                                    _state = state;
+                                else if (state == _sAccepting) // create and emit a new group
+                                {
+                                    group = new Group(this, key);
+                                    _groups.Add(key, group);
+                                    _active++;
+                                    _tsEmitting.Reset();
+                                    Current = group;
+                                    _state = state = _sEmitting;
+                                }
+                                else // Disposed, ignore item
+                                {
+                                    _state = _sDisposed;
+                                    continue;
+                                }
+                            }
+                            catch
+                            {
+                                _state = state;
+                                throw;
+                            }
 
-                        default: // Accepting, CancelingAccepting???
-                            _state = state;
-                            throw new Exception(state + "???");
+                            if (state == _sEmitting)
+                            {
+                                _tsAccepting.SetResult(true);
+                                await _tsEmitting.Task.ConfigureAwait(false);
+                            }
+                        }
+
+                        {
+                            var state = Atomic.Lock(ref group.State);
+                            if (state == _sEmitting)
+                            {
+                                group.State = _sEmitting;
+                                await group.TsEmitting.Task.ConfigureAwait(false);
+                                state = Atomic.Lock(ref group.State);
+                            }
+
+                            switch (state)
+                            {
+                                case _sInitial:
+                                case _sGroup:
+                                    group.State = state;
+                                    group.Dispose(AlreadyConnectedException.Instance);
+                                    break;
+
+                                case _sAccepting:
+                                    group.TsEmitting.Reset();
+                                    group.Current = item;
+                                    group.State = _sEmitting;
+                                    group.TsAccepting.SetResult(true);
+                                    break;
+
+                                case _sDisposed:
+                                    group.State = _sDisposed;
+                                    break;
+
+                                default: // Emitting???
+                                    group.State = state;
+                                    throw new Exception(group.State + "???");
+                            }
+                        }
+
+                        _cts.Token.ThrowIfCancellationRequested();
                     }
+                }
+                catch (Exception ex) { error = ex; }
+                finally
+                {
+                    _atmbDisposed.SetResult();
+                    Dispose(error);
+                    _whileEnumerated = false; // prevent groups from modifying the dictionary
+                    foreach (var group in _groups.Values)
+                        group.Dispose(error);
+                    _groups.Clear();
+                }
+            }
 
-                    return _tsAccepting.Task;
+            private sealed class Group : IAsyncGrouping<TKey, TSource>, IAsyncEnumerator<TSource>
+            {
+                private readonly GroupByEnumerator<TSource, TKey> _enumerator;
+                private readonly Boxed<TKey> _key;
+
+                public readonly ManualResetValueTaskSource<bool> TsAccepting = new ManualResetValueTaskSource<bool>();
+                public readonly ManualResetValueTaskSource TsEmitting = new ManualResetValueTaskSource();
+                public int State;
+                private CancellationTokenRegistration _ctr;
+                private Exception _error;
+                private Task _tDisposed;
+
+                TKey IAsyncGrouping<TKey, TSource>.Key => _key.Value;
+                public TSource Current { get; set; }
+
+                public Group(GroupByEnumerator<TSource, TKey> enumerator, Boxed<TKey> key)
+                {
+                    _enumerator = enumerator;
+                    _key = key;
                 }
 
-                public ValueTask DisposeAsync()
+                IAsyncEnumerator<TSource> IAsyncEnumerable<TSource>.GetAsyncEnumerator(CancellationToken token)
                 {
-                    Cancel(AsyncEnumeratorDisposedException.Instance);
-                    return new ValueTask(_atmbDisposed.Task);
-                }
-
-                private void Cancel(Exception error)
-                {
-                    var state = Atomic.Lock(ref _state);
-                    bool cancel;
+                    var state = Atomic.Lock(ref State);
                     switch (state)
                     {
+                        case _sGroup:
+                            if (token.CanBeCanceled)
+                                _ctr = token.Register(() => Dispose(new OperationCanceledException(token)));
+                            State = _sInitial;
+                            return this;
+
+                        case _sDisposed:
+                            State = _sDisposed;
+                            return this;
+
+                        default:
+                            State = state;
+                            throw new NotSupportedException($"Multiple enumerators on {nameof(IAsyncGrouping<TKey, TSource>)}.");
+                    }
+                }
+
+                ValueTask<bool> IAsyncEnumerator<TSource>.MoveNextAsync()
+                {
+                    TsAccepting.Reset();
+                    var state = Atomic.Lock(ref State);
+                    switch (state)
+                    {
+                        case _sGroup:
+                            TsAccepting.SetResult(false);
+                            State = _sGroup;
+                            throw new InvalidOperationException();
+
                         case _sInitial:
-                            _error = error;
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            _atmbDisposed.SetResult();
+                            State = _sAccepting;
                             break;
 
                         case _sEmitting:
-                            _error = error;
-                            cancel = _nGroups == 0;
-                            _state = _sCanceling;
-                            _ctr.Dispose();
-                            if (cancel)
-                                try { _cts.Cancel(); }
-                                catch { /**/ }
-                            _tsEmitting.SetResult();
+                            State = _sAccepting;
+                            TsEmitting.SetResult();
+                            break;
+
+                        case _sDisposed:
+                            Current = default;
+                            State = _sDisposed;
+                            TsAccepting.SetExceptionOrResult(_error, false);
+                            break;
+
+                        default: // Accepting???
+                            _enumerator._state = state;
+                            throw new Exception(State + "???");
+                    }
+                    return TsAccepting.Task;
+                }
+
+                ValueTask IAsyncDisposable.DisposeAsync()
+                {
+                    Dispose(AsyncEnumeratorDisposedException.Instance);
+                    return new ValueTask(_tDisposed);
+                }
+
+                public void Dispose(Exception errorOpt)
+                {
+                    var state = Atomic.Lock(ref State);
+                    switch (state)
+                    {
+                        case _sGroup:
+                            State = _sGroup;
+                            throw new InvalidOperationException();
+
+                        case _sInitial:
+                        case _sEmitting:
                             break;
 
                         case _sAccepting:
-                            _error = error;
-                            cancel = _nGroups == 0;
-                            _state = _sCancelingAccepting;
-                            _ctr.Dispose();
-                            if (cancel)
-                                try { _cts.Cancel(); }
-                                catch { /**/ }
+                            Current = default;
                             break;
 
-                        default: // Canceling, CancelingAccepting, Final
-                            _state = state;
+                        case _sDisposed:
+                            State = _sDisposed;
+                            return;
+
+                        default:
+                            State = state;
+                            throw new Exception(state + "???");
+                    }
+
+                    var eState = Atomic.Lock(ref _enumerator._state);
+                    Debug.Assert(_enumerator._active > 0);
+                    var last = --_enumerator._active == 0;
+                    if (_enumerator._whileEnumerated)
+                        try { _enumerator._groups.Remove(_key); }
+                        catch { /**/ }
+                    _enumerator._state = eState;
+
+                    _error = errorOpt;
+                    _tDisposed = last ? _enumerator._atmbDisposed.Task : Task.CompletedTask;
+                    State = _sDisposed;
+                    _ctr.Dispose();
+                    if (last) _enumerator._cts.TryCancel();
+                    switch (state)
+                    {
+                        case _sAccepting:
+                            TsAccepting.SetExceptionOrResult(errorOpt, false);
                             break;
-                    }
-                }
-
-                private async void Produce()
-                {
-                    Exception error;
-                    try
-                    {
-                        var ae = _enumerable._source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        try
-                        {
-                            while (await ae.MoveNextAsync())
-                            {
-                                var current = ae.Current;
-                                var key = _enumerable._keySelector(current);
-
-                                var state = Atomic.Lock(ref _state);
-                                Group group;
-                                try { _groups.TryGetValue(key, out group); }
-                                catch { _state = state; throw; }
-
-                                if (group == null && state == _sAccepting) // emit new group
-                                {
-                                    group = new Group(this, key);
-                                    _nGroups++;
-
-                                    // emit
-                                    _tsEmitting.Reset();
-                                    _state = _sEmitting;
-                                    Current = group;
-                                    _tsAccepting.SetResult(true);
-                                    await _tsEmitting.Task.ConfigureAwait(false);
-
-                                    state = Atomic.Lock(ref _state);
-                                    if (group.State == GroupState.Initial) // not enumerating
-                                    {
-                                        group.State = GroupState.TooLate;
-                                        if (--_nGroups == 0 && state != _sAccepting)
-                                        {
-                                            _state = state;
-                                            try { _cts.Cancel(); } catch {/**/}
-                                            throw new OperationCanceledException(_cts.Token);
-                                        }
-                                    }
-                                }
-
-                                if (group == null)
-                                    _state = state;
-                                else
-                                {
-                                    if (group.State == GroupState.Enumerating) // but not Accepting
-                                    {
-                                        _tsEmitting.Reset();
-                                        group.State = GroupState.Emitting;
-                                        _state = state;
-                                        await _tsEmitting.Task.ConfigureAwait(false);
-                                        state = Atomic.Lock(ref _state);
-                                    }
-
-                                    if (group.State == GroupState.Accepting)
-                                    {
-                                        group.State = GroupState.Enumerating;
-                                        _state = state;
-                                        group.Current = current;
-                                        group.TpAccepting.SetResult(true);
-                                    }
-                                    else
-                                        _state = state;
-                                }
-
-                                _cts.Token.ThrowIfCancellationRequested();
-                            }
-                        }
-                        finally { await ae.DisposeAsync(); }
-
-                        error = null;
-                    }
-                    catch (Exception ex) { error = ex; }
-
-                    // finalize
-                    {
-                        var state = Atomic.Lock(ref _state);
-                        if (error != null && (!(error is OperationCanceledException oce) || oce.CancellationToken != _cts.Token))
-                            _error = error;
-                        _state = _sFinal;
-                        if (state == _sAccepting || state == _sCancelingAccepting)
-                        {
-                            Current = null;
-                            if (_error == null) _tsAccepting.SetResult(false);
-                            else _tsAccepting.SetException(_error);
-                        }
-                        _atmbDisposed.SetResult();
-
-                        foreach (var group in _groups.Values)
-                        {
-                            if (group.State == GroupState.Final) continue;
-                            group.Error = error;
-                            var s = group.State;
-                            group.State = GroupState.Final;
-                            group.Ctr.Dispose();
-                            if (s != GroupState.Accepting) continue;
-                            group.Current = default;
-                            if (error == null) group.TpAccepting.SetResult(false);
-                            else group.TpAccepting.SetException(error);
-                        }
-
-                        _groups.Clear();
-                    }
-                }
-
-                private enum GroupState : byte
-                {
-                    Initial, // GetAsyncEnumerator not called
-                    TooLate, // GetAsyncEnumerator not called, will throw
-                    Accepting, // pending MoveNextAsync
-                    Enumerating, // enumeration started, not accepting
-                    Emitting, // same as Enumerating, but Generate() awaits _ccsEmitting
-                    Final // final state with or without error
-                }
-
-                private sealed class Group : AsyncEnumerableBase<TSource>, IAsyncGrouping<TKey, TSource>, IAsyncEnumerator<TSource>
-                {
-                    private readonly Enumerator _enumerator;
-                    public TKey Key { get; }
-
-                    public readonly ManualResetValueTaskSource<bool> TpAccepting = new ManualResetValueTaskSource<bool>();
-                    public CancellationTokenRegistration Ctr;
-                    public GroupState State;
-                    public Exception Error;
-
-                    public TSource Current { get; set; }
-
-                    public Group(Enumerator enumerator, TKey key)
-                    {
-                        _enumerator = enumerator;
-                        Key = key;
-                    }
-
-                    public override IAsyncEnumerator<TSource> GetAsyncEnumerator(CancellationToken token)
-                    {
-                        var state = Atomic.Lock(ref _enumerator._state);
-                        // ReSharper disable once SwitchStatementMissingSomeCases
-                        switch (State)
-                        {
-                            case GroupState.Initial:
-                                try
-                                {
-                                    _enumerator._groups.Add(Key, this);
-                                    State = GroupState.Enumerating;
-                                }
-                                finally { _enumerator._state = state; }
-                                if (token.CanBeCanceled) Ctr = token.Register(() => Cancel(new OperationCanceledException(token)));
-                                return this;
-                            case GroupState.TooLate:
-                                _enumerator._state = state;
-                                throw new InvalidOperationException("Group must be enumerated immediately.");
-                            default:
-                                _enumerator._state = state;
-                                throw new InvalidOperationException("Group can be enumerated at most once.");
-                        }
-                    }
-
-                    public override string ToString() => _enumerator._enumerable + ".Group";
-
-                    ValueTask<bool> IAsyncEnumerator<TSource>.MoveNextAsync()
-                    {
-                        TpAccepting.Reset();
-
-                        var state = Atomic.Lock(ref _enumerator._state);
-                        switch (State)
-                        {
-                            case GroupState.Initial:
-                            case GroupState.TooLate:
-                                // Pulling on the group rather than its enumerator? Invalid.
-                                _enumerator._state = state;
-                                TpAccepting.SetResult(default);
-                                throw new InvalidOperationException();
-
-                            case GroupState.Enumerating:
-                                State = GroupState.Accepting;
-                                _enumerator._state = state;
-                                break;
-
-                            case GroupState.Emitting:
-                                State = GroupState.Accepting;
-                                _enumerator._state = state;
-                                _enumerator._tsEmitting.SetResult();
-                                break;
-
-                            case GroupState.Final:
-                                _enumerator._state = state;
-                                Current = default;
-                                if (Error == null) TpAccepting.SetResult(false);
-                                else TpAccepting.SetException(Error);
-                                break;
-
-                            case GroupState.Accepting:
-                                _enumerator._state = state;
-                                TpAccepting.SetException(new InvalidOperationException());
-                                break;
-
-                            default: // Accepting???
-                                _enumerator._state = state;
-                                TpAccepting.SetException(new Exception(State + "???"));
-                                break;
-                        }
-
-                        return TpAccepting.Task;
-                    }
-
-                    ValueTask IAsyncDisposable.DisposeAsync()
-                    {
-                        Cancel(AsyncEnumeratorDisposedException.Instance);
-                        return new ValueTask(Task.CompletedTask);
-                    }
-
-                    private void Cancel(Exception error)
-                    {
-                        var state = Atomic.Lock(ref _enumerator._state);
-                        switch (State)
-                        {
-                            case GroupState.Initial:
-                            case GroupState.TooLate:
-                                // disposed the group rather than its enumerator? Ignore.
-                                _enumerator._state = state;
-                                break;
-
-                            case GroupState.Enumerating:
-                            case GroupState.Emitting:
-                            case GroupState.Accepting:
-                                if (state == _sFinal) // let Generate() do the finalization
-                                {
-                                    _enumerator._state = state;
-                                    return;
-                                }
-
-                                Error = error;
-                                var s = State;
-                                State = GroupState.Final;
-                                if (_enumerator._enumerable._whileObserved)
-                                    try { _enumerator._groups.Remove(Key); }
-                                    catch { /**/ }
-                                var cancel = --_enumerator._nGroups == 0 && (state == _sCanceling || state == _sCancelingAccepting);
-                                _enumerator._state = state;
-                                Ctr.Dispose();
-                                if (cancel)
-                                    try { _enumerator._cts.Cancel(); }
-                                    catch { /**/ }
-                                // ReSharper disable once SwitchStatementMissingSomeCases
-                                switch (s)
-                                {
-                                    case GroupState.Emitting:
-                                        _enumerator._tsEmitting.SetResult();
-                                        break;
-                                    case GroupState.Accepting:
-                                        Current = default;
-                                        if (Error == null) TpAccepting.SetResult(false);
-                                        else TpAccepting.SetException(Error);
-                                        break;
-                                }
-                                break;
-
-                            case GroupState.Final:
-                                _enumerator._state = state;
-                                break;
-
-                            default:
-                                _enumerator._state = state;
-                                throw new Exception(State + "???");
-                        }
+                        case _sEmitting:
+                            TsEmitting.SetResult();
+                            break;
                     }
                 }
             }

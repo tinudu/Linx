@@ -15,15 +15,10 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var list = new List<T>();
-                while (await ae.MoveNextAsync())
-                    list.Add(ae.Current);
-                return list;
-            }
-            finally { await ae.DisposeAsync(); }
+            var result = new List<T>();
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                result.Add(item);
+            return result;
         }
     }
 }

@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -14,30 +15,27 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return Create<T>(async (yield, token) =>
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
+                token.ThrowIfCancellationRequested();
+
+                // ReSharper disable once PossibleMultipleEnumeration
+                await using var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+                while (true)
                 {
-                    if (!await ae.MoveNextAsync()) return;
-                    var current = ae.Current;
-
-                    while (true)
-                    {
-                        if (!predicate(current)) break;
-                        if (!await ae.MoveNextAsync()) return;
-                        current = ae.Current;
-                    }
-
-                    while (true)
-                    {
-                        if (!await yield(current).ConfigureAwait(false)) return;
-                        if (!await ae.MoveNextAsync()) return;
-                        current = ae.Current;
-                    }
+                    if (!await ae.MoveNextAsync())
+                        yield break;
+                    var item = ae.Current;
+                    if (predicate(item)) continue;
+                    yield return item;
+                    break;
                 }
-                finally { await ae.DisposeAsync(); }
-            });
+
+                while (await ae.MoveNextAsync())
+                    yield return ae.Current;
+            }
         }
     }
 }

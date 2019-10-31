@@ -2,6 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
     {
@@ -16,12 +18,16 @@
             if (resourceFactory == null) throw new ArgumentNullException(nameof(resourceFactory));
             if (sequenceFactory == null) throw new ArgumentNullException(nameof(sequenceFactory));
 
-            return Create<T>(async (yield, token) =>
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                var resource = resourceFactory();
-                try { await sequenceFactory(resource).CopyTo(yield, token).ConfigureAwait(false); }
-                finally { resource.Dispose(); }
-            });
+                token.ThrowIfCancellationRequested();
+
+                using var resource = resourceFactory();
+                await foreach (var item in sequenceFactory(resource).WithCancellation(token).ConfigureAwait(false))
+                    yield return item;
+            }
         }
     }
 }

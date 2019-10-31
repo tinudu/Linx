@@ -20,19 +20,10 @@
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var dictionary = new Dictionary<TKey, TSource>(comparer ?? EqualityComparer<TKey>.Default);
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    dictionary.Add(keySelector(current), current);
-                }
-
-                return dictionary;
-            }
-            finally { await ae.DisposeAsync(); }
+            var result = new Dictionary<TKey, TSource>(comparer);
+            await foreach(var item in source.WithCancellation(token).ConfigureAwait(false)) 
+                result.Add(keySelector(item), item);
+            return result;
         }
 
         /// <summary>
@@ -50,19 +41,10 @@
             if (valueSelector == null) throw new ArgumentNullException(nameof(valueSelector));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var dictionary = new Dictionary<TKey, TValue>(comparer ?? EqualityComparer<TKey>.Default);
-                while (await ae.MoveNextAsync())
-                {
-                    var current = ae.Current;
-                    dictionary.Add(keySelector(current), valueSelector(current));
-                }
-
-                return dictionary;
-            }
-            finally { await ae.DisposeAsync(); }
+            var result = new Dictionary<TKey, TValue>(comparer);
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                result.Add(keySelector(item), valueSelector(item));
+            return result;
         }
     }
 }

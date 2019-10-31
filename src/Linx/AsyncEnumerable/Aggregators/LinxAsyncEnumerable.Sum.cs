@@ -15,43 +15,29 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var sum = 0;
-                while (await ae.MoveNextAsync())
-                    checked { sum += ae.Current; }
-                return sum;
-            }
-            finally { await ae.DisposeAsync(); }
+            var sum = 0;
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                checked { sum += item; }
+            return sum;
         }
 
         /// <summary>
-        /// Computes the sum of a sequence of non-null values.
+        /// Computes the sum of the non-null values of a sequence.
         /// </summary>
-        public static Task<int> Sum(this IAsyncEnumerable<int?> source, CancellationToken token)
-        {
-            try { return source.Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<int>(ex); }
-        }
+        public static async Task<int> Sum(this IAsyncEnumerable<int?> source, CancellationToken token)
+            => await source.Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of the sequence of values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<int> Sum<T>(this IAsyncEnumerable<T> source, Func<T, int> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Sum(token); }
-            catch (Exception ex) { return Task.FromException<int>(ex); }
-        }
+        public static async Task<int> Sum<T>(this IAsyncEnumerable<T> source, Func<T, int> selector, CancellationToken token)
+            => await source.Select(selector).Sum(token).ConfigureAwait(false);
 
         /// <summary>
-        /// Computes the sum of the sequence of non-null values that are obtained by invoking a transform function on each element of the input sequence.
+        /// Computes the sum of the sequence of the non-null values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<int> Sum<T>(this IAsyncEnumerable<T> source, Func<T, int?> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<int>(ex); }
-        }
+        public static async Task<int> Sum<T>(this IAsyncEnumerable<T> source, Func<T, int?> selector, CancellationToken token)
+            => await source.Select(selector).Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of a sequence values.
@@ -61,43 +47,29 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var sum = 0L;
-                while (await ae.MoveNextAsync())
-                    checked { sum += ae.Current; }
-                return sum;
-            }
-            finally { await ae.DisposeAsync(); }
+            var sum = 0L;
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                checked { sum += item; }
+            return sum;
         }
 
         /// <summary>
-        /// Computes the sum of a sequence of non-null values.
+        /// Computes the sum of the non-null values of a sequence.
         /// </summary>
-        public static Task<long> Sum(this IAsyncEnumerable<long?> source, CancellationToken token)
-        {
-            try { return source.Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<long>(ex); }
-        }
+        public static async Task<long> Sum(this IAsyncEnumerable<long?> source, CancellationToken token)
+            => await source.Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of the sequence of values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<long> Sum<T>(this IAsyncEnumerable<T> source, Func<T, long> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Sum(token); }
-            catch (Exception ex) { return Task.FromException<long>(ex); }
-        }
+        public static async Task<long> Sum<T>(this IAsyncEnumerable<T> source, Func<T, long> selector, CancellationToken token)
+            => await source.Select(selector).Sum(token).ConfigureAwait(false);
 
         /// <summary>
-        /// Computes the sum of the sequence of non-null values that are obtained by invoking a transform function on each element of the input sequence.
+        /// Computes the sum of the sequence of the non-null values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<long> Sum<T>(this IAsyncEnumerable<T> source, Func<T, long?> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<long>(ex); }
-        }
+        public static async Task<long> Sum<T>(this IAsyncEnumerable<T> source, Func<T, long?> selector, CancellationToken token)
+            => await source.Select(selector).Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of a sequence values.
@@ -107,43 +79,29 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var sum = 0D;
-                while (await ae.MoveNextAsync())
-                    sum += ae.Current;
-                return sum;
-            }
-            finally { await ae.DisposeAsync(); }
+            var sum = 0D;
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                sum += item;
+            return sum;
         }
 
         /// <summary>
-        /// Computes the sum of a sequence of non-null values.
+        /// Computes the sum of the non-null values of a sequence.
         /// </summary>
-        public static Task<double> Sum(this IAsyncEnumerable<double?> source, CancellationToken token)
-        {
-            try { return source.Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<double>(ex); }
-        }
+        public static async Task<double> Sum(this IAsyncEnumerable<double?> source, CancellationToken token)
+            => await source.Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of the sequence of values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<double> Sum<T>(this IAsyncEnumerable<T> source, Func<T, double> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Sum(token); }
-            catch (Exception ex) { return Task.FromException<double>(ex); }
-        }
+        public static async Task<double> Sum<T>(this IAsyncEnumerable<T> source, Func<T, double> selector, CancellationToken token)
+            => await source.Select(selector).Sum(token).ConfigureAwait(false);
 
         /// <summary>
-        /// Computes the sum of the sequence of non-null values that are obtained by invoking a transform function on each element of the input sequence.
+        /// Computes the sum of the sequence of the non-null values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<double> Sum<T>(this IAsyncEnumerable<T> source, Func<T, double?> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<double>(ex); }
-        }
+        public static async Task<double> Sum<T>(this IAsyncEnumerable<T> source, Func<T, double?> selector, CancellationToken token)
+            => await source.Select(selector).Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of a sequence values.
@@ -153,43 +111,29 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var sum = 0F;
-                while (await ae.MoveNextAsync())
-                    sum += ae.Current;
-                return sum;
-            }
-            finally { await ae.DisposeAsync(); }
+            var sum = 0F;
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                sum += item;
+            return sum;
         }
 
         /// <summary>
-        /// Computes the sum of a sequence of non-null values.
+        /// Computes the sum of the non-null values of a sequence.
         /// </summary>
-        public static Task<float> Sum(this IAsyncEnumerable<float?> source, CancellationToken token)
-        {
-            try { return source.Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<float>(ex); }
-        }
+        public static async Task<float> Sum(this IAsyncEnumerable<float?> source, CancellationToken token)
+            => await source.Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of the sequence of values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<float> Sum<T>(this IAsyncEnumerable<T> source, Func<T, float> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Sum(token); }
-            catch (Exception ex) { return Task.FromException<float>(ex); }
-        }
+        public static async Task<float> Sum<T>(this IAsyncEnumerable<T> source, Func<T, float> selector, CancellationToken token)
+            => await source.Select(selector).Sum(token).ConfigureAwait(false);
 
         /// <summary>
-        /// Computes the sum of the sequence of non-null values that are obtained by invoking a transform function on each element of the input sequence.
+        /// Computes the sum of the sequence of the non-null values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<float> Sum<T>(this IAsyncEnumerable<T> source, Func<T, float?> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<float>(ex); }
-        }
+        public static async Task<float> Sum<T>(this IAsyncEnumerable<T> source, Func<T, float?> selector, CancellationToken token)
+            => await source.Select(selector).Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of a sequence values.
@@ -199,43 +143,29 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();
 
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                var sum = 0M;
-                while (await ae.MoveNextAsync())
-                    sum += ae.Current;
-                return sum;
-            }
-            finally { await ae.DisposeAsync(); }
+            var sum = 0M;
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                sum += item;
+            return sum;
         }
 
         /// <summary>
-        /// Computes the sum of a sequence of non-null values.
+        /// Computes the sum of the non-null values of a sequence.
         /// </summary>
-        public static Task<decimal> Sum(this IAsyncEnumerable<decimal?> source, CancellationToken token)
-        {
-            try { return source.Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<decimal>(ex); }
-        }
+        public static async Task<decimal> Sum(this IAsyncEnumerable<decimal?> source, CancellationToken token)
+            => await source.Values().Sum(token).ConfigureAwait(false);
 
         /// <summary>
         /// Computes the sum of the sequence of values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<decimal> Sum<T>(this IAsyncEnumerable<T> source, Func<T, decimal> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Sum(token); }
-            catch (Exception ex) { return Task.FromException<decimal>(ex); }
-        }
+        public static async Task<decimal> Sum<T>(this IAsyncEnumerable<T> source, Func<T, decimal> selector, CancellationToken token)
+            => await source.Select(selector).Sum(token).ConfigureAwait(false);
 
         /// <summary>
-        /// Computes the sum of the sequence of non-null values that are obtained by invoking a transform function on each element of the input sequence.
+        /// Computes the sum of the sequence of the non-null values that are obtained by invoking a transform function on each element of the input sequence.
         /// </summary>
-        public static Task<decimal> Sum<T>(this IAsyncEnumerable<T> source, Func<T, decimal?> selector, CancellationToken token)
-        {
-            try { return source.Select(selector).Values().Sum(token); }
-            catch (Exception ex) { return Task.FromException<decimal>(ex); }
-        }
+        public static async Task<decimal> Sum<T>(this IAsyncEnumerable<T> source, Func<T, decimal?> selector, CancellationToken token)
+            => await source.Select(selector).Values().Sum(token).ConfigureAwait(false);
 
     }
 }

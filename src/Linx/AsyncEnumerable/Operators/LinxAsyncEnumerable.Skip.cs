@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -14,22 +15,26 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (count <= 0) return source;
 
-            return Create<T>(async (yield, token) =>
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
+                token.ThrowIfCancellationRequested();
+
+                // ReSharper disable once PossibleMultipleEnumeration
+                await using var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+                var skip = count;
+                while (true)
                 {
-                    var skip = count;
-                    while (await ae.MoveNextAsync())
-                    {
-                        if (skip > 0)
-                            skip--;
-                        else if (!await yield(ae.Current).ConfigureAwait(false))
-                            return;
-                    }
+                    if(!await ae.MoveNextAsync())
+                        yield break;
+                    if (--skip == 0)
+                        break;
                 }
-                finally { await ae.DisposeAsync(); }
-            });
+
+                do yield return ae.Current;
+                while (await ae.MoveNextAsync());
+            }
         }
     }
 }

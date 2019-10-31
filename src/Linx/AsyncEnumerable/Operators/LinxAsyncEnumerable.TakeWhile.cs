@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -14,21 +15,20 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return Create<T>(async (yield, token) =>
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
+                token.ThrowIfCancellationRequested();
+
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                 {
-                    while (true)
-                    {
-                        if (!await ae.MoveNextAsync()) return;
-                        var current = ae.Current;
-                        if (!predicate(current)) return;
-                        if (!await yield(current).ConfigureAwait(false)) return;
-                    }
+                    if (!predicate(item))
+                        break;
+                    yield return item;
                 }
-                finally { await ae.DisposeAsync(); }
-            });
+            }
         }
 
         /// <summary>
@@ -39,22 +39,21 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return Create<T>(async (yield, token) =>
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
+                token.ThrowIfCancellationRequested();
+
+                var i = 0;
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                 {
-                    var i = 0;
-                    while (true)
-                    {
-                        if (!await ae.MoveNextAsync()) return;
-                        var current = ae.Current;
-                        if (!predicate(current, i++)) return;
-                        if (!await yield(current).ConfigureAwait(false)) return;
-                    }
+                    if (!predicate(item, i++))
+                        break;
+                    yield return item;
                 }
-                finally { await ae.DisposeAsync(); }
-            });
+            }
         }
     }
 }
