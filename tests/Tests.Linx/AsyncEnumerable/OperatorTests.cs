@@ -1,7 +1,6 @@
 ﻿namespace Tests.Linx.AsyncEnumerable
 {
     using global::Linx.AsyncEnumerable;
-    using global::Linx.Enumerable;
     using global::Linx.Testing;
     using global::Linx.Timing;
     using System;
