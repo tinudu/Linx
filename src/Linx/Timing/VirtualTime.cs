@@ -13,6 +13,38 @@
     /// </summary>
     public sealed class VirtualTime : ITime, IDisposable
     {
+        /// <summary>
+        /// Run the specified async action on a virtual time machine.
+        /// </summary>
+        public static async Task Run(Func<Task> asyncAction)
+        {
+            if (asyncAction == null) throw new ArgumentNullException(nameof(asyncAction));
+
+            await Task.Run(async () =>
+            {
+                using var vt = new VirtualTime();
+                var t = asyncAction();
+                vt.Start();
+                await t.ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Run the specified async function on a virtual time machine.
+        /// </summary>
+        public static async Task<T> Run<T>(Func<Task<T>> asyncFunc)
+        {
+            if (asyncFunc == null) throw new ArgumentNullException(nameof(asyncFunc));
+
+            return await Task.Run(async () =>
+            {
+                using var vt = new VirtualTime();
+                var t = asyncFunc();
+                vt.Start();
+                return await t.ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
         private const int _sStopped = 0;
         private const int _sStarted = 1;
         private const int _sIdle = 2;
@@ -57,7 +89,7 @@
             {
                 case _sStopped:
                     _state = _sStarted;
-                    Task.Run(Advance);
+                    Advance();
                     break;
 
                 case _sStarted:

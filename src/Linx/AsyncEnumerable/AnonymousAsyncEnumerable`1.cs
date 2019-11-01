@@ -23,5 +23,4 @@
 
         public AnonymousAsyncEnumerable<T> WithName(string name) => name == _name ? this : new AnonymousAsyncEnumerable<T>(_getEnumerator, name);
     }
-
 }

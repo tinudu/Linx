@@ -22,14 +22,9 @@
             try
             {
                 observer.Token.ThrowIfCancellationRequested();
-                var ae = this.WithCancellation(observer.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
-                        if (!observer.OnNext(ae.Current))
-                            break;
-                }
-                finally { await ae.DisposeAsync(); }
+                await foreach (var item in this.WithCancellation(observer.Token).ConfigureAwait(false))
+                    if (!observer.OnNext(item))
+                        break;
                 observer.OnCompleted();
             }
             catch (Exception ex) { observer.OnError(ex); }

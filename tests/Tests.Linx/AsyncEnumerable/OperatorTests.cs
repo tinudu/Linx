@@ -60,50 +60,6 @@
         }
 
         [Fact]
-        public async Task TestParallel()
-        {
-            {
-                var ctss = Enumerable.Range(0, 5).Select(i => new TaskCompletionSource<int>()).ToList();
-                var tResult = ctss.Async().Parallel((cts, t) => cts.Task).ToList(CancellationToken.None);
-                foreach (var i in new[] { 3, 1, 4, 0, 2 })
-                {
-                    ctss[i].TrySetResult(i);
-                    await Task.Delay(1);
-                }
-                var result = await tResult;
-                Assert.True(new[] { 3, 1, 4, 0, 2 }.SequenceEqual(result));
-            }
-
-            {
-                var ctss = Enumerable.Range(0, 5).Select(i => new TaskCompletionSource<int>()).ToList();
-                var tResult = ctss.Async().Parallel((cts, t) => cts.Task, true).ToList(CancellationToken.None);
-                foreach (var i in new[] { 3, 1, 4, 0, 2 }) ctss[i].TrySetResult(i);
-                var result = await tResult;
-                Assert.True(new[] { 0, 1, 2, 3, 4 }.SequenceEqual(result));
-            }
-
-            {
-                var ctss = Enumerable.Range(0, 5).Select(i => new TaskCompletionSource<int>()).ToList();
-                var tResult = ctss.Async().Parallel((cts, t) => cts.Task, false, 2).ToList(CancellationToken.None);
-                foreach (var i in new[] { 3, 1, 4, 0, 2 })
-                {
-                    ctss[i].TrySetResult(i);
-                    await Task.Delay(1);
-                }
-                var result = await tResult;
-                Assert.True(new[] { 1, 0, 3, 4, 2 }.SequenceEqual(result));
-            }
-
-            {
-                var ctss = Enumerable.Range(0, 5).Select(i => new TaskCompletionSource<int>()).ToList();
-                var tResult = ctss.Async().Parallel((cts, t) => cts.Task, true, 2).ToList(CancellationToken.None);
-                foreach (var i in new[] { 3, 1, 4, 0, 2 }) ctss[i].TrySetResult(i);
-                var result = await tResult;
-                Assert.True(new[] { 0, 1, 2, 3, 4 }.SequenceEqual(result));
-            }
-        }
-
-        [Fact]
         public async Task TestTake()
         {
             var result = await new[] { 1, 2, 3, 4 }.Async().Where(i => i != 2).Take(2).ToList(CancellationToken.None);

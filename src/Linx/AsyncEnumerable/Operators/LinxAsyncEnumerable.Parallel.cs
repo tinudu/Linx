@@ -29,324 +29,339 @@
 
             return maxConcurrent == 1 ?
                 source.Select(selector) :
-                Create(token => new ParallelEnumerator<TSource, TResult>(source, selector, preserveOrder, maxConcurrent, token));
-
+                new ParallelEnumerable<TSource, TResult>(source, selector, preserveOrder, maxConcurrent);
         }
 
-        private sealed class ParallelEnumerator<TSource, TResult> : IAsyncEnumerator<TResult>
-        {
-            private const int _sInitial = 0;
-            private const int _sAccepting = 1;
-            private const int _sEmitting = 2;
-            private const int _sCanceling = 3;
-            private const int _sCancelingAccepting = 4;
-            private const int _sFinal = 5;
+        /// <summary>
+        /// Start a task for every item and emit its result.
+        /// </summary>
+        /// <param name="source">The source sequence.</param>
+        /// <param name="selector">A delegate to create a task.</param>
+        /// <param name="preserveOrder">true to emit result items in the order of their source items, false to emit them as soon as available.</param>
+        /// <param name="maxConcurrent">Maximum number of concurrent tasks.</param>
+        public static IAsyncEnumerable<TResult> Parallel<TSource, TResult>(
+            this IEnumerable<TSource> source,
+            Func<TSource, CancellationToken, Task<TResult>> selector,
+            bool preserveOrder = false,
+            int maxConcurrent = int.MaxValue)
+            => source.Async().Parallel(selector, preserveOrder, maxConcurrent);
 
+        private sealed class ParallelEnumerable<TSource, TResult> : AsyncEnumerableBase<TResult>
+        {
             private readonly IAsyncEnumerable<TSource> _source;
             private readonly Func<TSource, CancellationToken, Task<TResult>> _selector;
             private readonly bool _preserveOrder;
             private readonly int _maxConcurrent;
-            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-            private AsyncTaskMethodBuilder _atmbDisposed = default;
-            private ErrorHandler _eh = ErrorHandler.Init();
-            private int _state;
-            private int _active;
-            private Queue<(TResult next, AsyncTaskMethodBuilder ack)> _ready;
-            private ManualResetValueTaskSource _tsMaxConcurrent;
 
-            public ParallelEnumerator(
-                IAsyncEnumerable<TSource> source,
+            public ParallelEnumerable(IAsyncEnumerable<TSource> source,
                 Func<TSource, CancellationToken, Task<TResult>> selector,
                 bool preserveOrder,
-                int maxConcurrent,
-                CancellationToken token)
+                int maxConcurrent)
             {
                 _source = source;
                 _selector = selector;
                 _preserveOrder = preserveOrder;
                 _maxConcurrent = maxConcurrent;
-                if (token.CanBeCanceled) _eh.ExternalRegistration = token.Register(() => Cancel(new OperationCanceledException(token), true));
             }
 
-            public TResult Current { get; private set; }
 
-            public ValueTask<bool> MoveNextAsync()
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => "Parallel";
+
+            private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
-                _tsAccepting.Reset();
+                private const int _sInitial = 0;
+                private const int _sAccepting = 1;
+                private const int _sEmitting = 2;
+                private const int _sError = 3;
+                private const int _sFinal = 4;
 
-                var state = Atomic.Lock(ref _state);
-                switch (state)
+                private readonly ParallelEnumerable<TSource, TResult> _enumerable;
+                private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+                private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
+                private readonly Queue<TResult> _queue = new Queue<TResult>();
+                private CancellationTokenRegistration _ctr;
+                private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+                private int _state, _active;
+                private ManualResetValueTaskSource<bool> _tsMaxConcurrent;
+                private bool _incrementMaxConcurrent;
+                private Exception _error;
+
+                public Enumerator(ParallelEnumerable<TSource, TResult> enumerable, CancellationToken token)
                 {
-                    case _sInitial:
-                        _active = 1;
-                        _state = _sAccepting;
-                        Produce();
-                        break;
+                    _enumerable = enumerable;
+                    if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
+                }
 
-                    case _sEmitting:
-                        if (_ready == null || _ready.Count == 0)
+                public TResult Current { get; private set; }
+
+                public ValueTask<bool> MoveNextAsync()
+                {
+                    _tsAccepting.Reset();
+
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _active = 1;
                             _state = _sAccepting;
-                        else
-                        {
-                            var (next, ack) = _ready.Dequeue();
-                            Current = next;
+                            Produce();
+                            break;
+
+                        case _sEmitting:
+                            if (_queue.Count > 0)
+                            {
+                                Current = _queue.Dequeue(); // no exception assumed
+                                if (_active == 0 && _queue.Count == 0) // emitting the last result
+                                {
+                                    _state = _sFinal;
+                                    _ctr.Dispose();
+                                    _atmbDisposed.SetResult();
+                                }
+                                else
+                                    _state = _sEmitting;
+                                _tsAccepting.SetResult(true);
+                            }
+                            else if (_tsMaxConcurrent != null && _active <= _enumerable._maxConcurrent)
+                            {
+                                var ts = Linx.Clear(ref _tsMaxConcurrent);
+                                if (_incrementMaxConcurrent) _active++;
+                                _state = _sAccepting;
+                                ts.SetResult(true);
+                            }
+                            else
+                                _state = _sAccepting;
+                            break;
+
+                        case _sError:
+                        case _sFinal:
+                            Current = default;
+                            _state = state;
+                            _tsAccepting.SetExceptionOrResult(_error, false);
+                            break;
+
+                        default: // Accepting???
+                            _state = state;
+                            throw new Exception(state + "???");
+                    }
+
+                    return _tsAccepting.Task;
+                }
+
+                public ValueTask DisposeAsync()
+                {
+                    OnError(AsyncEnumeratorDisposedException.Instance);
+                    return new ValueTask(_atmbDisposed.Task);
+                }
+
+                private void OnNext(TResult value)
+                {
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sAccepting:
+                            Current = value;
                             _state = _sEmitting;
-                            ack.SetResult();
                             _tsAccepting.SetResult(true);
-                        }
-                        break;
+                            break;
 
-                    case _sCanceling:
-                        _state = _sCancelingAccepting;
-                        break;
+                        case _sEmitting:
+                            try { _queue.Enqueue(value); }
+                            finally { _state = _sEmitting; }
+                            break;
 
-                    case _sFinal:
-                        Current = default;
-                        _state = _sFinal;
-                        _tsAccepting.SetExceptionOrResult(_eh.Error, false);
-                        break;
-
-                    default: // Accepting, CancelingAccepting???
-                        _state = state;
-                        throw new Exception(state + "???");
+                        default:
+                            _state = state;
+                            break;
+                    }
                 }
 
-                return _tsAccepting.Task;
-            }
-
-            public ValueTask DisposeAsync()
-            {
-                Cancel(AsyncEnumeratorDisposedException.Instance, true);
-                return new ValueTask(_atmbDisposed.Task);
-            }
-
-            private void Cancel(Exception error, bool external)
-            {
-                Debug.Assert(error != null);
-
-                var state = Atomic.Lock(ref _state);
-                switch (state)
+                private void OnError(Exception error)
                 {
-                    case _sInitial:
-                        Debug.Assert(external);
-                        _eh.SetExternalError(error);
-                        _eh.SetInternalError(new OperationCanceledException(_eh.InternalToken));
-                        _state = _sFinal;
-                        _eh.Cancel();
-                        _atmbDisposed.SetResult();
-                        break;
+                    Debug.Assert(error != null);
 
-                    case _sAccepting:
-                    case _sEmitting:
-                        if (external) _eh.SetExternalError(error);
-                        else _eh.SetInternalError(error);
+                    var state = Atomic.Lock(ref _state);
+                    switch (state)
+                    {
+                        case _sInitial:
+                            _error = error;
+                            _state = _sFinal;
+                            _ctr.Dispose();
+                            _atmbDisposed.SetResult();
+                            break;
 
-                        Queue<(TResult next, AsyncTaskMethodBuilder ack)> ready;
-                        if (_ready != null)
-                        {
-                            ready = _ready.Count > 0 ? _ready : null;
-                            _ready = null;
-                        }
-                        else
-                            ready = null;
+                        case _sAccepting:
+                            Debug.Assert(_error == null && _active > 0 && _queue.Count == 0);
+                            Current = default;
+                            _error = error;
+                            _state = _sError;
+                            _ctr.Dispose();
+                            Linx.Clear(ref _tsMaxConcurrent)?.SetResult(false);
+                            _cts.TryCancel();
+                            _tsAccepting.SetException(error);
+                            break;
 
-                        var tsMaxConcurrent = _tsMaxConcurrent;
-                        _tsMaxConcurrent = null;
+                        case _sEmitting:
+                            Debug.Assert(_error == null && _active > 0);
+                            _error = error;
+                            _queue.Clear();
+                            _state = _sError;
+                            _ctr.Dispose();
+                            Linx.Clear(ref _tsMaxConcurrent)?.SetResult(false);
+                            _cts.TryCancel();
+                            break;
 
-                        _state = state == _sAccepting ? _sCancelingAccepting : _sCanceling;
-                        _eh.Cancel();
-
-                        if (ready != null)
-                        {
-                            var oce = new OperationCanceledException(_eh.InternalToken);
-                            foreach (var (_, ack) in ready)
-                                ack.SetException(oce);
-                        }
-                        tsMaxConcurrent?.SetException(new OperationCanceledException(_eh.InternalToken));
-                        break;
-
-                    default: // Canceling, CancelingAccepting, Final
-                        if (!external) _eh.SetInternalError(error);
-                        _state = state;
-                        break;
-                }
-            }
-
-            private Task Emit(TResult next)
-            {
-                Task tAck;
-                var state = Atomic.Lock(ref _state);
-                switch (state)
-                {
-                    case _sAccepting:
-                        Current = next;
-                        _state = _sEmitting;
-                        _tsAccepting.SetResult(true);
-                        tAck = Task.CompletedTask;
-                        break;
-
-                    case _sEmitting:
-                        try
-                        {
-                            var ack = new AsyncTaskMethodBuilder();
-                            tAck = ack.Task;
-                            if (_ready == null) _ready = new Queue<(TResult, AsyncTaskMethodBuilder)>();
-                            _ready.Enqueue((next, ack));
-                        }
-                        catch (Exception ex) { tAck = Task.FromException(ex); }
-                        _state = _sEmitting;
-                        break;
-
-                    case _sCanceling:
-                    case _sCancelingAccepting:
-                        tAck = Task.FromCanceled(_eh.InternalToken);
-                        break;
-
-                    default: // Initial, Final???
-                        _state = state;
-                        throw new Exception(state + "???");
+                        default:
+                            _state = state;
+                            break;
+                    }
                 }
 
-                return tAck;
-            }
-
-            private void DecrementActive()
-            {
-                var state = Atomic.Lock(ref _state);
-                Debug.Assert(_active > 0);
-
-                if (--_active == 0)
+                private void OnCompleted()
                 {
-                    Debug.Assert(_ready == null || _ready.Count == 0);
-                    _ready = null;
-
-                    Debug.Assert(_tsMaxConcurrent == null);
+                    var state = Atomic.Lock(ref _state);
+                    Debug.Assert(_active > 0);
 
                     switch (state)
                     {
                         case _sAccepting:
-                            Current = default;
-                            _state = _sFinal;
-                            _eh.Cancel();
-                            _atmbDisposed.SetResult();
-                            _tsAccepting.SetExceptionOrResult(_eh.Error, false);
+                            Debug.Assert(_error == null && _queue.Count == 0);
+                            if (--_active == 0)
+                            {
+                                Current = default;
+                                _state = _sFinal;
+                                _ctr.Dispose();
+                                Linx.Clear(ref _tsMaxConcurrent)?.SetResult(false);
+                                _cts.TryCancel();
+                                _atmbDisposed.SetResult();
+                                _tsAccepting.SetResult(false);
+                            }
+                            else if (_tsMaxConcurrent != null)
+                            {
+                                var ts = Linx.Clear(ref _tsMaxConcurrent);
+                                if (_incrementMaxConcurrent) _active++;
+                                _state = _sAccepting;
+                                ts.SetResult(true);
+                            }
+                            else
+                                _state = _sAccepting;
                             break;
 
                         case _sEmitting:
-                            _state = _sFinal;
-                            _eh.Cancel();
-                            _atmbDisposed.SetResult();
+                            if (--_active == 0)
+                            {
+                                if (_queue.Count == 0)
+                                {
+                                    _state = _sFinal;
+                                    _ctr.Dispose();
+                                    Linx.Clear(ref _tsMaxConcurrent)?.SetResult(false);
+                                    _atmbDisposed.SetResult();
+                                }
+                                else
+                                    _state = _sEmitting;
+
+                                _cts.TryCancel();
+                            }
+                            else
+                                _state = _sEmitting;
                             break;
 
-                        case _sCanceling:
-                            _state = _sFinal;
-                            _atmbDisposed.SetResult();
+                        case _sError:
+                            if (--_active == 0)
+                            {
+                                _state = _sFinal;
+                                _atmbDisposed.SetResult();
+                            }
+                            else
+                                _state = _sError;
                             break;
 
-                        case _sCancelingAccepting:
-                            Current = default;
-                            _state = _sFinal;
-                            _atmbDisposed.SetResult();
-                            _tsAccepting.SetExceptionOrResult(_eh.Error, false);
-                            break;
-
-                        default: // Initial, Final???
+                        default:
                             _state = state;
                             throw new Exception(state + "???");
                     }
                 }
-                else if (_tsMaxConcurrent != null)
+
+                private async void Produce()
                 {
-                    var tsMaxConcurrent = _tsMaxConcurrent;
-                    _tsMaxConcurrent = null;
-                    _state = state;
-                    tsMaxConcurrent.SetResult();
-                }
-                else
-                    _state = state;
-            }
-
-            private async void Produce()
-            {
-                Debug.Assert(_active == 1);
-
-                try
-                {
-                    Action<TSource> start;
-                    if (_preserveOrder)
-                    {
-                        var predecessor = Task.CompletedTask;
-                        start = item => predecessor = Start(item, predecessor);
-
-                        async Task Start(TSource item, Task p)
-                        {
-                            try
-                            {
-                                var result = await _selector(item, _eh.InternalToken).ConfigureAwait(false);
-                                await p.ConfigureAwait(false);
-                                await Emit(result).ConfigureAwait(false);
-                            }
-                            catch (Exception ex) { Cancel(ex, false); }
-
-                            DecrementActive();
-                        }
-                    }
-                    else
-                        start = async item =>
-                        {
-                            try
-                            {
-                                var result = await _selector(item, _eh.InternalToken).ConfigureAwait(false);
-                                await Emit(result).ConfigureAwait(false);
-                            }
-                            catch (Exception ex) { Cancel(ex, false); }
-
-                            DecrementActive();
-                        };
-
-                    var tsMaxConcurrent = new ManualResetValueTaskSource();
-
-                    var ae = _source.WithCancellation(_eh.InternalToken).ConfigureAwait(false).GetAsyncEnumerator();
                     try
                     {
-                        while (await ae.MoveNextAsync())
+                        Action<TSource> startTask;
+                        if (_enumerable._preserveOrder)
                         {
-                            var current = ae.Current;
-                            bool wait;
+                            async Task StartCore(TSource item, Task pred)
+                            {
+                                try
+                                {
+                                    _cts.Token.ThrowIfCancellationRequested();
+                                    var result = await _enumerable._selector(item, _cts.Token).ConfigureAwait(false);
+                                    await pred.ConfigureAwait(false);
+                                    OnNext(result);
+                                }
+                                catch (Exception ex) { OnError(ex); }
+                                finally { OnCompleted(); }
+                            }
 
+                            var predecessor = Task.CompletedTask;
+                            startTask = item => predecessor = StartCore(item, predecessor);
+                        }
+                        else
+                            startTask = async item =>
+                            {
+                                try
+                                {
+                                    _cts.Token.ThrowIfCancellationRequested();
+                                    var result = await _enumerable._selector(item, _cts.Token).ConfigureAwait(false);
+                                    OnNext(result);
+                                }
+                                catch (Exception ex) { OnError(ex); }
+                                finally { OnCompleted(); }
+                            };
+
+                        var tsMaxConcurrent = new ManualResetValueTaskSource<bool>();
+                        ValueTask<bool> Wait(bool increment)
+                        {
+                            tsMaxConcurrent.Reset();
                             var state = Atomic.Lock(ref _state);
                             switch (state)
                             {
+                                case _sAccepting when (_active <= _enumerable._maxConcurrent):
+                                    if (increment) _active++;
+                                    _state = _sAccepting;
+                                    tsMaxConcurrent.SetResult(true);
+                                    break;
+
                                 case _sAccepting:
                                 case _sEmitting:
-                                    wait = ++_active > _maxConcurrent;
-                                    if (wait)
-                                    {
-                                        tsMaxConcurrent.Reset();
-                                        _tsMaxConcurrent = tsMaxConcurrent;
-                                    }
+                                    _tsMaxConcurrent = tsMaxConcurrent;
+                                    _incrementMaxConcurrent = increment;
                                     _state = state;
                                     break;
 
-                                case _sCanceling:
-                                case _sCancelingAccepting:
-                                    _state = state;
-                                    throw new OperationCanceledException(_eh.InternalToken);
+                                case _sError:
+                                    _state = _sError;
+                                    tsMaxConcurrent.SetResult(false);
+                                    break;
 
-                                default: // Initial, Final
+                                default:
                                     _state = state;
                                     throw new Exception(state + "???");
                             }
 
-                            start(current);
-                            if (wait) await tsMaxConcurrent.Task.ConfigureAwait(false);
+                            return tsMaxConcurrent.Task;
+                        }
+
+                        await foreach (var item in _enumerable._source.WithCancellation(_cts.Token).ConfigureAwait(false))
+                        {
+                            if (!await Wait(true).ConfigureAwait(false)) return;
+                            startTask(item);
+                            if (!await Wait(false).ConfigureAwait(false)) return;
                         }
                     }
-                    finally { await ae.DisposeAsync(); }
+                    catch (Exception ex) { OnError(ex); }
+                    finally { OnCompleted(); }
                 }
-                catch (Exception ex) { Cancel(ex, false); }
-
-                DecrementActive();
             }
         }
     }

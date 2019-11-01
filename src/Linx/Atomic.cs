@@ -1,6 +1,5 @@
 ﻿namespace Linx
 {
-    using System;
     using System.Diagnostics;
     using System.Threading;
 
@@ -61,11 +60,9 @@
         /// <param name="value">The new state (may include the lock bit).</param>
         /// <param name="test">The value <paramref name="state"/> must have in order for the state to be updated.</param>
         /// <returns>The previous state.</returns>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="test"/> has the lock bit set.</exception>
+        /// <remarks>Don't include the lock bit in <paramref name="test"/>, or it results in an infinite loop.</remarks>
         public static int CompareExchange(ref int state, int value, int test)
         {
-            if ((test & LockBit) != 0) throw new ArgumentOutOfRangeException(nameof(test), "Lock bit is set.");
-
             var oldState = Interlocked.CompareExchange(ref state, value, test);
             if ((oldState & LockBit) == 0) return oldState;
 

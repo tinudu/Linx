@@ -107,16 +107,16 @@
                 {
                     OnError(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
-
                 }
 
-                private void OnNext(int index)
+                private void OnNext(uint flag, ManualResetValueTaskSource<bool> ts)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sAccepting:
-                            _emittingFlags |= 1u << index;
+                            Debug.Assert((_emittingFlags & flag) == 0);
+                            _emittingFlags |= flag;
                             if (_emittingFlags == _allFlags)
                             {
                                 try
@@ -140,7 +140,7 @@
                         case _sCompleted:
                         case _sFinal:
                             _state = state;
-                            _tssEmitting[index].SetResult(false);
+                            ts.SetResult(false);
                             break;
 
                         default: // Initial, Emitting???
@@ -166,13 +166,14 @@
                         case _sAccepting:
                             Current = default;
                             _error = error;
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetException(error);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetException(error);
                             break;
 
                         case _sEmitting:
@@ -205,13 +206,14 @@
                         case _sAccepting:
                             Current = default;
                             Debug.Assert(_active > 0);
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetResult(false);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetResult(false);
                             break;
 
                         case _sCompleted:
@@ -236,12 +238,13 @@
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
+                        var flag = 1u << index;
                         await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                         setEnumerator(this, ae);
                         while (await ae.MoveNextAsync())
                         {
                             ts.Reset();
-                            OnNext(index);
+                            OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
                                 break;
                         }
@@ -355,16 +358,16 @@
                 {
                     OnError(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
-
                 }
 
-                private void OnNext(int index)
+                private void OnNext(uint flag, ManualResetValueTaskSource<bool> ts)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sAccepting:
-                            _emittingFlags |= 1u << index;
+                            Debug.Assert((_emittingFlags & flag) == 0);
+                            _emittingFlags |= flag;
                             if (_emittingFlags == _allFlags)
                             {
                                 try
@@ -388,7 +391,7 @@
                         case _sCompleted:
                         case _sFinal:
                             _state = state;
-                            _tssEmitting[index].SetResult(false);
+                            ts.SetResult(false);
                             break;
 
                         default: // Initial, Emitting???
@@ -414,13 +417,14 @@
                         case _sAccepting:
                             Current = default;
                             _error = error;
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetException(error);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetException(error);
                             break;
 
                         case _sEmitting:
@@ -453,13 +457,14 @@
                         case _sAccepting:
                             Current = default;
                             Debug.Assert(_active > 0);
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetResult(false);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetResult(false);
                             break;
 
                         case _sCompleted:
@@ -484,12 +489,13 @@
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
+                        var flag = 1u << index;
                         await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                         setEnumerator(this, ae);
                         while (await ae.MoveNextAsync())
                         {
                             ts.Reset();
-                            OnNext(index);
+                            OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
                                 break;
                         }
@@ -609,16 +615,16 @@
                 {
                     OnError(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
-
                 }
 
-                private void OnNext(int index)
+                private void OnNext(uint flag, ManualResetValueTaskSource<bool> ts)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sAccepting:
-                            _emittingFlags |= 1u << index;
+                            Debug.Assert((_emittingFlags & flag) == 0);
+                            _emittingFlags |= flag;
                             if (_emittingFlags == _allFlags)
                             {
                                 try
@@ -642,7 +648,7 @@
                         case _sCompleted:
                         case _sFinal:
                             _state = state;
-                            _tssEmitting[index].SetResult(false);
+                            ts.SetResult(false);
                             break;
 
                         default: // Initial, Emitting???
@@ -668,13 +674,14 @@
                         case _sAccepting:
                             Current = default;
                             _error = error;
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetException(error);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetException(error);
                             break;
 
                         case _sEmitting:
@@ -707,13 +714,14 @@
                         case _sAccepting:
                             Current = default;
                             Debug.Assert(_active > 0);
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetResult(false);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetResult(false);
                             break;
 
                         case _sCompleted:
@@ -738,12 +746,13 @@
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
+                        var flag = 1u << index;
                         await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                         setEnumerator(this, ae);
                         while (await ae.MoveNextAsync())
                         {
                             ts.Reset();
-                            OnNext(index);
+                            OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
                                 break;
                         }
@@ -869,16 +878,16 @@
                 {
                     OnError(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
-
                 }
 
-                private void OnNext(int index)
+                private void OnNext(uint flag, ManualResetValueTaskSource<bool> ts)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sAccepting:
-                            _emittingFlags |= 1u << index;
+                            Debug.Assert((_emittingFlags & flag) == 0);
+                            _emittingFlags |= flag;
                             if (_emittingFlags == _allFlags)
                             {
                                 try
@@ -902,7 +911,7 @@
                         case _sCompleted:
                         case _sFinal:
                             _state = state;
-                            _tssEmitting[index].SetResult(false);
+                            ts.SetResult(false);
                             break;
 
                         default: // Initial, Emitting???
@@ -928,13 +937,14 @@
                         case _sAccepting:
                             Current = default;
                             _error = error;
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetException(error);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetException(error);
                             break;
 
                         case _sEmitting:
@@ -967,13 +977,14 @@
                         case _sAccepting:
                             Current = default;
                             Debug.Assert(_active > 0);
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetResult(false);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetResult(false);
                             break;
 
                         case _sCompleted:
@@ -998,12 +1009,13 @@
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
+                        var flag = 1u << index;
                         await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                         setEnumerator(this, ae);
                         while (await ae.MoveNextAsync())
                         {
                             ts.Reset();
-                            OnNext(index);
+                            OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
                                 break;
                         }
@@ -1135,16 +1147,16 @@
                 {
                     OnError(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
-
                 }
 
-                private void OnNext(int index)
+                private void OnNext(uint flag, ManualResetValueTaskSource<bool> ts)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sAccepting:
-                            _emittingFlags |= 1u << index;
+                            Debug.Assert((_emittingFlags & flag) == 0);
+                            _emittingFlags |= flag;
                             if (_emittingFlags == _allFlags)
                             {
                                 try
@@ -1168,7 +1180,7 @@
                         case _sCompleted:
                         case _sFinal:
                             _state = state;
-                            _tssEmitting[index].SetResult(false);
+                            ts.SetResult(false);
                             break;
 
                         default: // Initial, Emitting???
@@ -1194,13 +1206,14 @@
                         case _sAccepting:
                             Current = default;
                             _error = error;
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetException(error);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetException(error);
                             break;
 
                         case _sEmitting:
@@ -1233,13 +1246,14 @@
                         case _sAccepting:
                             Current = default;
                             Debug.Assert(_active > 0);
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetResult(false);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetResult(false);
                             break;
 
                         case _sCompleted:
@@ -1264,12 +1278,13 @@
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
+                        var flag = 1u << index;
                         await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                         setEnumerator(this, ae);
                         while (await ae.MoveNextAsync())
                         {
                             ts.Reset();
-                            OnNext(index);
+                            OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
                                 break;
                         }
@@ -1407,16 +1422,16 @@
                 {
                     OnError(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
-
                 }
 
-                private void OnNext(int index)
+                private void OnNext(uint flag, ManualResetValueTaskSource<bool> ts)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sAccepting:
-                            _emittingFlags |= 1u << index;
+                            Debug.Assert((_emittingFlags & flag) == 0);
+                            _emittingFlags |= flag;
                             if (_emittingFlags == _allFlags)
                             {
                                 try
@@ -1440,7 +1455,7 @@
                         case _sCompleted:
                         case _sFinal:
                             _state = state;
-                            _tssEmitting[index].SetResult(false);
+                            ts.SetResult(false);
                             break;
 
                         default: // Initial, Emitting???
@@ -1466,13 +1481,14 @@
                         case _sAccepting:
                             Current = default;
                             _error = error;
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetException(error);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetException(error);
                             break;
 
                         case _sEmitting:
@@ -1505,13 +1521,14 @@
                         case _sAccepting:
                             Current = default;
                             Debug.Assert(_active > 0);
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetResult(false);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetResult(false);
                             break;
 
                         case _sCompleted:
@@ -1536,12 +1553,13 @@
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
+                        var flag = 1u << index;
                         await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                         setEnumerator(this, ae);
                         while (await ae.MoveNextAsync())
                         {
                             ts.Reset();
-                            OnNext(index);
+                            OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
                                 break;
                         }
@@ -1685,16 +1703,16 @@
                 {
                     OnError(AsyncEnumeratorDisposedException.Instance);
                     return new ValueTask(_atmbDisposed.Task);
-
                 }
 
-                private void OnNext(int index)
+                private void OnNext(uint flag, ManualResetValueTaskSource<bool> ts)
                 {
                     var state = Atomic.Lock(ref _state);
                     switch (state)
                     {
                         case _sAccepting:
-                            _emittingFlags |= 1u << index;
+                            Debug.Assert((_emittingFlags & flag) == 0);
+                            _emittingFlags |= flag;
                             if (_emittingFlags == _allFlags)
                             {
                                 try
@@ -1718,7 +1736,7 @@
                         case _sCompleted:
                         case _sFinal:
                             _state = state;
-                            _tssEmitting[index].SetResult(false);
+                            ts.SetResult(false);
                             break;
 
                         default: // Initial, Emitting???
@@ -1744,13 +1762,14 @@
                         case _sAccepting:
                             Current = default;
                             _error = error;
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetException(error);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetException(error);
                             break;
 
                         case _sEmitting:
@@ -1783,13 +1802,14 @@
                         case _sAccepting:
                             Current = default;
                             Debug.Assert(_active > 0);
+                            var flags = _emittingFlags;
                             _state = _sCompleted;
                             _ctr.Dispose();
-                            _tsAccepting.SetResult(false);
-                            for (var i = 0; _emittingFlags != 0; i++, _emittingFlags >>= 1)
-                                if ((_emittingFlags & 1U) != 0)
+                            for (var i = 0; flags != 0; i++, flags >>= 1)
+                                if ((flags & 1U) != 0)
                                     _tssEmitting[i].SetResult(false);
                             _cts.TryCancel();
+                            _tsAccepting.SetResult(false);
                             break;
 
                         case _sCompleted:
@@ -1814,12 +1834,13 @@
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
+                        var flag = 1u << index;
                         await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                         setEnumerator(this, ae);
                         while (await ae.MoveNextAsync())
                         {
                             ts.Reset();
-                            OnNext(index);
+                            OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
                                 break;
                         }
