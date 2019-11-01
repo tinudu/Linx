@@ -18,8 +18,10 @@
             var t2 = connectable.Skip(1).First(default);
             // ReSharper restore PossibleMultipleEnumeration
             connect();
-            Assert.True(src.SequenceEqual(await t1));
-            Assert.Equal(2, await t2);
+            var r1 = await t1;
+            var r2 = await t2;
+            Assert.True(src.SequenceEqual(r1));
+            Assert.Equal(2, r2);
         }
 
         [Fact]

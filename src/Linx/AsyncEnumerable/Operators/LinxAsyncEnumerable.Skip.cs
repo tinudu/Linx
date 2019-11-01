@@ -28,7 +28,7 @@
                 {
                     if(!await ae.MoveNextAsync())
                         yield break;
-                    if (--skip == 0)
+                    if (skip-- == 0)
                         break;
                 }
 

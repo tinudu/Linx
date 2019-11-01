@@ -19,7 +19,7 @@
             Func<T1, T2, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, TResult>(source1, source2, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, TResult> : AsyncEnumerableBase<TResult>
         {
             private readonly IAsyncEnumerable<T1> _source1;
             private readonly IAsyncEnumerable<T2> _source2;
@@ -35,7 +35,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => "Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -260,7 +262,7 @@
             Func<T1, T2, T3, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, TResult>(source1, source2, source3, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, TResult> : AsyncEnumerableBase<TResult>
         {
             private readonly IAsyncEnumerable<T1> _source1;
             private readonly IAsyncEnumerable<T2> _source2;
@@ -279,7 +281,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => "Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -507,7 +511,7 @@
             Func<T1, T2, T3, T4, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, TResult>(source1, source2, source3, source4, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, TResult> : AsyncEnumerableBase<TResult>
         {
             private readonly IAsyncEnumerable<T1> _source1;
             private readonly IAsyncEnumerable<T2> _source2;
@@ -529,7 +533,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => "Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -760,7 +766,7 @@
             Func<T1, T2, T3, T4, T5, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, T5, TResult>(source1, source2, source3, source4, source5, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, TResult> : AsyncEnumerableBase<TResult>
         {
             private readonly IAsyncEnumerable<T1> _source1;
             private readonly IAsyncEnumerable<T2> _source2;
@@ -785,7 +791,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => "Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1019,7 +1027,7 @@
             Func<T1, T2, T3, T4, T5, T6, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult>(source1, source2, source3, source4, source5, source6, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> : AsyncEnumerableBase<TResult>
         {
             private readonly IAsyncEnumerable<T1> _source1;
             private readonly IAsyncEnumerable<T2> _source2;
@@ -1047,7 +1055,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => "Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1284,7 +1294,7 @@
             Func<T1, T2, T3, T4, T5, T6, T7, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult>(source1, source2, source3, source4, source5, source6, source7, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> : AsyncEnumerableBase<TResult>
         {
             private readonly IAsyncEnumerable<T1> _source1;
             private readonly IAsyncEnumerable<T2> _source2;
@@ -1315,7 +1325,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => "Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
@@ -1555,7 +1567,7 @@
             Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> resultSelector)
             => new ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(source1, source2, source3, source4, source5, source6, source7, source8, resultSelector);
 
-        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : IAsyncEnumerable<TResult>
+        private sealed class ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : AsyncEnumerableBase<TResult>
         {
             private readonly IAsyncEnumerable<T1> _source1;
             private readonly IAsyncEnumerable<T2> _source2;
@@ -1589,7 +1601,9 @@
                 _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
             }
 
-            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
+
+            public override string ToString() => "Zip";
 
             private sealed class Enumerator : IAsyncEnumerator<TResult>
             {
