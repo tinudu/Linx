@@ -13,6 +13,56 @@
     /// </summary>
     public sealed class VirtualTime : ITime, IDisposable
     {
+        /// <summary>
+        /// Runs the <paramref name="asyncAction"/> on virtual time.
+        /// </summary>
+        /// <returns>The completion timestamp.</returns>
+        public static async Task<DateTimeOffset> Run(Func<Task> asyncAction, DateTimeOffset now = default)
+        {
+            if (asyncAction == null) throw new ArgumentNullException(nameof(asyncAction));
+
+            async Task<DateTimeOffset> Timestamp()
+            {
+                var time = Time.Current;
+                await asyncAction().ConfigureAwait(false);
+                return time.Now;
+            }
+
+            // schedule on thread pool to ensure continuations run synchronously.
+            return await Task.Run(async () =>
+            {
+                using var vt = new VirtualTime(now);
+                var t = Timestamp();
+                vt.Start();
+                return await t.ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Runs the <paramref name="asyncFunc"/> on virtual time.
+        /// </summary>
+        /// <returns>The timestamped result.</returns>
+        public static async Task<Timestamped<T>> Run<T>(Func<Task<T>> asyncFunc, DateTimeOffset now = default)
+        {
+            if (asyncFunc == null) throw new ArgumentNullException(nameof(asyncFunc));
+
+            async Task<Timestamped<T>> Timestamp()
+            {
+                var time = Time.Current;
+                var result = await asyncFunc().ConfigureAwait(false);
+                return new Timestamped<T>(time.Now, result);
+            }
+
+            // schedule on thread pool to ensure continuations run synchronously.
+            return await Task.Run(async () =>
+            {
+                using var vt = new VirtualTime(now);
+                var t = Timestamp();
+                vt.Start();
+                return await t.ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
         private const int _sStopped = 0;
         private const int _sStarted = 1;
         private const int _sIdle = 2;

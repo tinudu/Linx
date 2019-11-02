@@ -4,10 +4,8 @@
     using global::Linx.Testing;
     using global::Linx.Timing;
     using System;
-    using System.Threading;
     using System.Threading.Tasks;
     using global::Linx;
-    using global::Linx.Expressions;
     using Xunit;
 
     public class GeneratorTests
@@ -30,16 +28,14 @@
             result = await LinxAsyncEnumerable.Return(() => 42).Single(default);
             Assert.Equal(42, result);
 
-            var delay = TimeSpan.FromDays(30);
-            var testee = Express.Func(async (CancellationToken t) =>
-            {
-                await Time.Current.Delay(delay, t).ConfigureAwait(false);
-                return new Timestamped<int>(Time.Current.Now, 42);
-            });
             var t0 = DateTimeOffset.Now;
-            var actual = await Marble.OnVirtualTime(testee, t0);
-            Assert.Equal(t0 + delay, actual.Timestamp);
-            Assert.Equal(42, actual.Value);
+            var delay = TimeSpan.FromDays(30);
+            var actual = await VirtualTime.Run(async () =>
+            {
+                await Time.Current.Delay(delay, default).ConfigureAwait(false);
+                return 42;
+            }, t0);
+            Assert.Equal(new Timestamped<int>(t0 + delay, 42), actual);
         }
 
         [Fact]

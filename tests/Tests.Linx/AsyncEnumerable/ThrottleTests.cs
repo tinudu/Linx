@@ -51,7 +51,7 @@
             var source = Marble.Parse("-a-bc-d-- -e-fg");
             var expect = Marble.Parse("- -  - --d- -  --g-#");
             var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
-            await expect.AssertCancel(testee, 10 * MarbleSettings.DefaultFrameSize);
+            await expect.AssertEqualCancel(testee, 10 * MarbleSettings.DefaultFrameSize);
         }
 
         [Fact]
@@ -60,7 +60,7 @@
             var source = Marble.Parse("-a-bc-d-- -e-fg");
             var expect = Marble.Parse("- -  - --d- -  -#");
             var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
-            await expect.AssertCancel(testee, 8 * MarbleSettings.DefaultFrameSize);
+            await expect.AssertEqualCancel(testee, 8 * MarbleSettings.DefaultFrameSize);
         }
     }
 }

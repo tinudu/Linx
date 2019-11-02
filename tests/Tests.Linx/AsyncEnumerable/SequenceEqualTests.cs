@@ -5,6 +5,7 @@
     using System;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
+    using global::Linx.Timing;
     using Xunit;
 
     public sealed class SequenceEqualTests
@@ -23,8 +24,8 @@
             var i1 = Marble.Parse("-a- b-  c-|");
             var i2 = Marble.Parse(" a--b---c|");
             var i3 = Marble.Parse("-a- b-  c-d");
-            Assert.True(await Marble.OnVirtualTime(t => i1.SequenceEqual(i2, t)));
-            Assert.False(await Marble.OnVirtualTime(t => i1.SequenceEqual(i3, t)));
+            Assert.True((await VirtualTime.Run(() => i1.SequenceEqual(i2, default))).Value);
+            Assert.False((await VirtualTime.Run(() => i1.SequenceEqual(i3, default))).Value);
         }
 
         [Fact]
@@ -34,8 +35,8 @@
             var i1 = Marble.Parse("-a- b-  c-|");
             var i2 = Marble.Parse(" a--b---c#");
             var i3 = Marble.Parse("-a- b-  c-d#");
-            await Assert.ThrowsAsync<MarbleException>(() => Marble.OnVirtualTime(t => i1.SequenceEqual(i2, t)));
-            Assert.False(await Marble.OnVirtualTime(t => i1.SequenceEqual(i3, t)));
+            await Assert.ThrowsAsync<MarbleException>(() => VirtualTime.Run(() => i1.SequenceEqual(i2, default)));
+            Assert.False((await VirtualTime.Run(() => i1.SequenceEqual(i3, default))).Value);
         }
 
         [Fact]

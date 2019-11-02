@@ -1,117 +1,78 @@
 ﻿namespace Linx.Testing
 {
+    using Notifications;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Notifications;
     using Timing;
 
     public static partial class Marble
     {
         /// <summary>
-        /// Assert that <paramref name="actual"/> represents the same sequence as <paramref name="expected"/> when enumerated on virtual time.
+        /// Assert that <paramref name="actual"/> represents the same sequence as <paramref name="expected"/>.
         /// </summary>
-        public static async Task AssertEqual<T>(this IMarbleDiagram<T> expected, IAsyncEnumerable<T> actual, DateTimeOffset startTime = default, IEqualityComparer<T> elementComparer = null)
-        {
-            // schedule on thread pool so continuations run synchronously
-            await Task.Run(async () =>
-            {
-                using var vt = new VirtualTime(startTime);
-                var eq = AssetEqual(expected.Absolute(startTime), actual, default, elementComparer);
-                vt.Start();
-                await eq.ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
+        public static async Task AssertEqual<T>(this IMarbleDiagram<T> expected, IAsyncEnumerable<T> actual, DateTimeOffset now = default, IEqualityComparer<T> elementComparer = null)
+            => await VirtualTime.Run(() => AssetEqualCore(expected.Absolute(now), actual, default, elementComparer), now).ConfigureAwait(false);
 
         /// <summary>
-        /// Assert that <paramref name="actual"/> represents the same sequence as <paramref name="expected"/> when enumeration is canceled.
+        /// Assert that <paramref name="actual"/> represents the same (canceled) sequence as <paramref name="expected"/>.
         /// </summary>
-        public static async Task AssertCancel<T>(this IMarbleDiagram<T> expected, IAsyncEnumerable<T> actual, TimeSpan cancelAfter, DateTimeOffset startTime = default, IEqualityComparer<T> elementComparer = null)
+        public static async Task AssertEqualCancel<T>(this IMarbleDiagram<T> expected, IAsyncEnumerable<T> actual, TimeSpan cancelAfter, DateTimeOffset now = default, IEqualityComparer<T> elementComparer = null)
         {
             if (expected == null) throw new ArgumentNullException(nameof(expected));
             if (actual == null) throw new ArgumentNullException(nameof(actual));
 
-            // schedule on thread pool so continuations run synchronously
-            await Task.Run(async () =>
+            var cancelAt = now + cancelAfter;
+#pragma warning disable IDE0067 // Dispose objects before losing scope
+            var cts = new CancellationTokenSource();
+#pragma warning restore IDE0067 // Dispose objects before losing scope
+            await VirtualTime.Run(async () =>
             {
-                using var cts = new CancellationTokenSource();
-                var cancelAt = startTime + cancelAfter;
+                var time = Time.Current;
+                _ = time.Schedule(cts.Cancel, cancelAt, default);
                 var exp = expected
-                    .Absolute(startTime)
+                    .Absolute(now)
                     .TakeWhile(ts => ts.Timestamp < cancelAt)
                     .Append(new Timestamped<Notification<T>>(cancelAt, Notification.Error<T>(new OperationCanceledException(cts.Token))));
-                using var vt = new VirtualTime(startTime);
-                _ = vt.Schedule(cts.Cancel, cancelAt, default);
-                var eq = AssetEqual(exp, actual, cts.Token, elementComparer);
-                vt.Start();
-                await eq.ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Run the delegate on virtual time.
-        /// </summary>
-        public static async Task<T> OnVirtualTime<T>(Func<CancellationToken, Task<T>> aggregator, DateTimeOffset startTime = default)
-        {
-            if (aggregator == null) throw new ArgumentNullException(nameof(aggregator));
-
-            // schedule on thread pool so continuations run synchronously
-            return await Task.Run(async () =>
-            {
-                using var vt = new VirtualTime(startTime);
-                var tResult = aggregator(default);
-                vt.Start();
-                return await tResult.ConfigureAwait(false);
-            }).ConfigureAwait(false);
-
+                await AssetEqualCore(exp, actual, cts.Token, elementComparer).ConfigureAwait(false);
+            }, now).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Assert that <paramref name="consumer"/> gets canceld after the specified interval.
         /// </summary>
-        public static async Task AssertCancel(Func<CancellationToken, Task> consumer, TimeSpan cancelAfter, DateTimeOffset startTime = default)
+        public static async Task AssertCancel(Func<CancellationToken, Task> consumer, TimeSpan cancelAfter, DateTimeOffset now = default)
         {
             if (consumer == null) throw new ArgumentNullException(nameof(consumer));
 
-            // schedule on thread pool so continuations run synchronously
-            await Task.Run(async () =>
+            var cancelAt = now + cancelAfter;
+#pragma warning disable IDE0067 // Dispose objects before losing scope
+            var cts = new CancellationTokenSource();
+#pragma warning restore IDE0067 // Dispose objects before losing scope
+            var tsEx = await VirtualTime.Run(async () =>
             {
-                using var cts = new CancellationTokenSource();
-                var cancelAt = startTime + cancelAfter;
-                using var vt = new VirtualTime(startTime);
-                _ = vt.Schedule(cts.Cancel, cancelAt, default);
-
-                async Task<(DateTimeOffset, Exception)> AwaitResult()
+                var time = Time.Current;
+                _ = time.Schedule(cts.Cancel, cancelAt, default);
+                try
                 {
-                    // ReSharper disable AccessToDisposedClosure
-                    try
-                    {
-                        await consumer(cts.Token).ConfigureAwait(false);
-                        return (vt.Now, null);
-                    }
-                    catch (Exception x)
-                    {
-                        return (vt.Now, x);
-                    }
-                    // ReSharper restore AccessToDisposedClosure
+                    await consumer(cts.Token).ConfigureAwait(false);
+                    return null;
                 }
+                catch (Exception ex) { return ex; }
+            }, now).ConfigureAwait(false);
 
-                var tResult = AwaitResult();
-                vt.Start();
-                var (ts, ex) = await tResult.ConfigureAwait(false);
-                if (ex == null)
-                    throw new Exception($"Consumer returned sucessfully @{ts}.");
-                if (!(ex is OperationCanceledException oce) || oce.CancellationToken != cts.Token)
-                    throw new Exception($"Consumer threw an exception other than an OCE on the specified token @{ts}", ex);
-                if (ts != cancelAt)
-                    throw new Exception($"Consumer canceld @{vt.Now}. Expected {cancelAt}");
-            }).ConfigureAwait(false);
+            if (tsEx.Value == null)
+                throw new Exception($"Consumer returned sucessfully @{tsEx.Timestamp}.");
+            if (!(tsEx.Value is OperationCanceledException oce) || oce.CancellationToken != cts.Token)
+                throw new Exception($"Consumer threw an exception other than an OCE on the specified token.@{tsEx.Timestamp}", tsEx.Value);
+            if (tsEx.Timestamp != cancelAt)
+                throw new Exception($"Consumer canceld @{tsEx.Value}. Expected {cancelAt}.");
         }
 
-        private static async Task AssetEqual<T>(IEnumerable<Timestamped<Notification<T>>> expected, IAsyncEnumerable<T> actual, CancellationToken token, IEqualityComparer<T> elementComparer)
+        private static async Task AssetEqualCore<T>(IEnumerable<Timestamped<Notification<T>>> expected, IAsyncEnumerable<T> actual, CancellationToken token, IEqualityComparer<T> elementComparer)
         {
             Debug.Assert(expected != null);
             Debug.Assert(actual != null);

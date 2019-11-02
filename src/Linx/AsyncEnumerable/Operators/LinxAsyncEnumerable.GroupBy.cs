@@ -199,6 +199,8 @@
                                     _tsEmitting.Reset();
                                     Current = group;
                                     _state = state = _sEmitting;
+                                    _tsAccepting.SetResult(true);
+                                    await _tsEmitting.Task.ConfigureAwait(false);
                                 }
                                 else // Disposed, ignore item
                                 {
@@ -211,28 +213,15 @@
                                 _state = state;
                                 throw;
                             }
-
-                            if (state == _sEmitting)
-                            {
-                                _tsAccepting.SetResult(true);
-                                await _tsEmitting.Task.ConfigureAwait(false);
-                            }
                         }
 
                         {
-                            var state = Atomic.Lock(ref group.State);
-                            if (state == _sEmitting)
-                            {
-                                group.State = _sEmitting;
-                                await group.TsEmitting.Task.ConfigureAwait(false);
-                                state = Atomic.Lock(ref group.State);
-                            }
-
-                            switch (state)
+                            var groupState = Atomic.Lock(ref group.State);
+                            switch (groupState)
                             {
                                 case _sInitial:
                                 case _sGroup:
-                                    group.State = state;
+                                    group.State = groupState;
                                     group.Dispose(AlreadyConnectedException.Instance);
                                     break;
 
@@ -241,6 +230,7 @@
                                     group.Current = item;
                                     group.State = _sEmitting;
                                     group.TsAccepting.SetResult(true);
+                                    await group.TsEmitting.Task.ConfigureAwait(false);
                                     break;
 
                                 case _sDisposed:
@@ -248,7 +238,7 @@
                                     break;
 
                                 default: // Emitting???
-                                    group.State = state;
+                                    group.State = groupState;
                                     throw new Exception(group.State + "???");
                             }
                         }
@@ -355,9 +345,6 @@
                     switch (state)
                     {
                         case _sGroup:
-                            State = _sGroup;
-                            throw new InvalidOperationException();
-
                         case _sInitial:
                         case _sEmitting:
                             break;

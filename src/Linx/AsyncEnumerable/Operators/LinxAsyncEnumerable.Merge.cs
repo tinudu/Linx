@@ -50,13 +50,12 @@
         /// <summary>
         /// Merges multiple sequences into one.
         /// </summary>
-        public static IAsyncEnumerable<T> Merge<T>(this IAsyncEnumerable<T> source, params IAsyncEnumerable<T>[] sources)
+        public static IAsyncEnumerable<T> Merge<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second, params IAsyncEnumerable<T>[] sources)
         {
-            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (first == null) throw new ArgumentNullException(nameof(first));
+            if (second == null) throw new ArgumentNullException(nameof(second));
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            return
-                sources.Length == 0 ? source :
-                Create(token => new MergeEnumerator<T>(sources.Prepend(source).Async(), int.MaxValue, token));
+            return Create(token => new MergeEnumerator<T>(sources.Prepend(second).Prepend(first).Async(), int.MaxValue, token));
         }
 
         private sealed class MergeEnumerator<T> : IAsyncEnumerator<T>
@@ -351,7 +350,7 @@
                                 throw new Exception(state + "???");
                         }
 
-                        if (!await tsEmitting.Task.ConfigureAwait(false)) 
+                        if (!await tsEmitting.Task.ConfigureAwait(false))
                             return;
                     }
                 }

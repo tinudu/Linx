@@ -2,7 +2,7 @@
 {
     using global::Linx;
     using global::Linx.AsyncEnumerable;
-    using global::Linx.Testing;
+    using global::Linx.Timing;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -33,7 +33,7 @@
                 return new Timestamped<DateTimeOffset>(t, t);
             });
             var expected = w.Concat(s).ToList();
-            var actual = await Marble.OnVirtualTime(t => testee.ToList(t), t0);
+            var actual = (await VirtualTime.Run(() => testee.ToList(default), t0)).Value;
             Assert.True(expected.SequenceEqual(actual, ExactComparer.Default));
         }
 
@@ -54,7 +54,7 @@
                 return new Timestamped<DateTimeOffset>(t, t);
             });
             var expected = s.Concat(w).ToList();
-            var actual = await Marble.OnVirtualTime(t => testee.ToList(t), t0);
+            var actual = (await VirtualTime.Run(() => testee.ToList(default), t0)).Value;
             Assert.True(expected.SequenceEqual(actual, ExactComparer.Default));
         }
 
