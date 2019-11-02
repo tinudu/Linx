@@ -58,12 +58,14 @@
                 bool preserveOrder,
                 int maxConcurrent)
             {
+                Debug.Assert(source != null);
+                Debug.Assert(maxConcurrent > 1);
+
                 _source = source;
                 _selector = selector;
                 _preserveOrder = preserveOrder;
                 _maxConcurrent = maxConcurrent;
             }
-
 
             public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
 
@@ -85,7 +87,7 @@
                 private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
                 private int _state, _active;
                 private ManualResetValueTaskSource<bool> _tsMaxConcurrent;
-                private bool _incrementMaxConcurrent;
+                private bool _incrementActive;
                 private Exception _error;
 
                 public Enumerator(ParallelEnumerable<TSource, TResult> enumerable, CancellationToken token)
@@ -126,7 +128,7 @@
                             else if (_tsMaxConcurrent != null && _active <= _enumerable._maxConcurrent)
                             {
                                 var ts = Linx.Clear(ref _tsMaxConcurrent);
-                                if (_incrementMaxConcurrent) _active++;
+                                if (_incrementActive) _active++;
                                 _state = _sAccepting;
                                 ts.SetResult(true);
                             }
@@ -205,10 +207,10 @@
                         case _sEmitting:
                             Debug.Assert(_error == null && _active > 0);
                             _error = error;
-                            _queue.Clear();
                             _state = _sError;
                             _ctr.Dispose();
                             Linx.Clear(ref _tsMaxConcurrent)?.SetResult(false);
+                            _queue.Clear();
                             _cts.TryCancel();
                             break;
 
@@ -240,7 +242,7 @@
                             else if (_tsMaxConcurrent != null)
                             {
                                 var ts = Linx.Clear(ref _tsMaxConcurrent);
-                                if (_incrementMaxConcurrent) _active++;
+                                if (_incrementActive) _active++;
                                 _state = _sAccepting;
                                 ts.SetResult(true);
                             }
@@ -335,7 +337,7 @@
                                 case _sAccepting:
                                 case _sEmitting:
                                     _tsMaxConcurrent = tsMaxConcurrent;
-                                    _incrementMaxConcurrent = increment;
+                                    _incrementActive = increment;
                                     _state = state;
                                     break;
 
@@ -348,7 +350,6 @@
                                     _state = state;
                                     throw new Exception(state + "???");
                             }
-
                             return tsMaxConcurrent.Task;
                         }
 

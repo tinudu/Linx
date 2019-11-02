@@ -2,180 +2,182 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
-    using Enumerable;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Notifications;
+    using Timing;
 
-    /// <summary>
-    /// Marble diagram parser.
-    /// </summary>
-    /// <remarks>
-    /// A parsed marble diagram represents a sequence of <see cref="TimeInterval{T}"/> of <see cref="Notification{T}"/> of <see cref="char"/>.
-    /// 
-    /// Syntax (spaces are ignored):
-    /// <code>
-    /// marble-diagram :== next* [ completed | error | forever ]
-    /// next :== time-frame* [0-9A-Za-z]
-    /// completed :== time-frame* '|'
-    /// error :== time-frame* '#'
-    /// time-frame :== '-'
-    /// forever :== '*' next+
-    /// </code>
-    /// </remarks>
-    public static class Marble
+    public static partial class Marble
     {
-        private static readonly ISet<char> _elementChars = new HashSet<char>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
-
         /// <summary>
-        /// Parse a marble diagram.
+        /// Assert that <paramref name="actual"/> represents the same sequence as <paramref name="expected"/> when enumerated on virtual time.
         /// </summary>
-        /// <param name="diagram">Marble diagram syntax.</param>
-        /// <param name="settings">Optional. Marble parser settings.</param>
-        public static Marble<char> Parse(
-            IEnumerable<char> diagram,
-            MarbleSettings settings = null)
-            => Parse(diagram, (ch, i) => ch, settings);
-
-        /// <summary>
-        /// Parse a marble diagram.
-        /// </summary>
-        /// <param name="diagram">Marble diagram syntax.</param>
-        /// <param name="elements">Positional element replacements.</param>
-        /// <param name="settings">Optional. Marble parser settings.</param>
-        public static Marble<T> Parse<T>(
-            IEnumerable<char> diagram,
-            IEnumerable<T> elements,
-            MarbleSettings settings = null)
+        public static async Task AssertEqual<T>(this IMarbleDiagram<T> expected, IAsyncEnumerable<T> actual, DateTimeOffset startTime = default, IEqualityComparer<T> elementComparer = null)
         {
-            var eleList = elements as IReadOnlyList<T> ?? (elements != null ? elements.ToList() : throw new ArgumentNullException(nameof(elements)));
-            return Parse(diagram, (ch, i) => eleList[i], settings);
-        }
-
-        /// <summary>
-        /// Parse a marble diagram.
-        /// </summary>
-        /// <param name="diagram">Marble diagram syntax.</param>
-        /// <param name="settings">Optional. Marble parser settings.</param>
-        /// <param name="elements">Positional element replacements.</param>
-        public static Marble<T> Parse<T>(
-            IEnumerable<char> diagram,
-            MarbleSettings settings,
-            params T[] elements)
-        {
-            var eleList = elements as IReadOnlyList<T> ?? (elements != null ? elements.ToList() : throw new ArgumentNullException(nameof(elements)));
-            return Parse(diagram, (ch, i) => eleList[i], settings);
-        }
-
-        /// <summary>
-        /// Parse a marble diagram.
-        /// </summary>
-        /// <param name="diagram">Marble diagram syntax.</param>
-        /// <param name="selector">Function to convert elements to <typeparamref name="T"/>.</param>
-        /// <param name="settings">Optional. Marble parser settings.</param>
-        public static Marble<T> Parse<T>(
-            IEnumerable<char> diagram,
-            Func<char, int, T> selector,
-            MarbleSettings settings = null)
-        {
-            if (diagram == null) throw new ArgumentNullException(nameof(diagram));
-            if (selector == null) throw new ArgumentNullException(nameof(selector));
-            if (settings == null) settings = new MarbleSettings();
-
-            using var context = new ParseContext<T>(diagram, selector, settings);
-            try
+            // schedule on thread pool so continuations run synchronously
+            await Task.Run(async () =>
             {
-                var prefix = ParseTimeIntervals(context).ToList();
-                IEnumerable<TimeInterval<Notification<T>>> notifications;
-                if (!context.IsCompleted && context.HasNext && context.Next == '*') // forever
-                {
-                    context.MoveNext();
-                    var suffix = ParseTimeIntervals(context).ToList();
-                    if (suffix.Count == 0)
-                        throw new MarbleParseException("Empty forever.", context.Position);
-                    if (context.IsCompleted)
-                        throw new MarbleParseException("Forever may not be completed.", context.Position);
-                    notifications = prefix.Concat(Forever(suffix));
-                }
-                else
-                    notifications = prefix;
-
-                if (context.HasNext)
-                    throw new MarbleParseException("Unexpected character.", context.Position);
-                return new Marble<T>(notifications);
-            }
-            catch (MarbleParseException) { throw; }
-            catch (Exception ex) { throw new MarbleParseException(ex.Message, context.Position); }
+                using var vt = new VirtualTime(startTime);
+                var eq = AssetEqual(expected.Absolute(startTime), actual, default, elementComparer);
+                vt.Start();
+                await eq.ConfigureAwait(false);
+            }).ConfigureAwait(false);
         }
 
-        private static IEnumerable<TimeInterval<Notification<T>>> ParseTimeIntervals<T>(ParseContext<T> ctx)
+        /// <summary>
+        /// Assert that <paramref name="actual"/> represents the same sequence as <paramref name="expected"/> when enumeration is canceled.
+        /// </summary>
+        public static async Task AssertCancel<T>(this IMarbleDiagram<T> expected, IAsyncEnumerable<T> actual, TimeSpan cancelAfter, DateTimeOffset startTime = default, IEqualityComparer<T> elementComparer = null)
         {
-            var interval = TimeSpan.Zero;
-            while (ctx.HasNext)
-                switch (ctx.Next)
+            if (expected == null) throw new ArgumentNullException(nameof(expected));
+            if (actual == null) throw new ArgumentNullException(nameof(actual));
+
+            // schedule on thread pool so continuations run synchronously
+            await Task.Run(async () =>
+            {
+                using var cts = new CancellationTokenSource();
+                var cancelAt = startTime + cancelAfter;
+                var exp = expected
+                    .Absolute(startTime)
+                    .TakeWhile(ts => ts.Timestamp < cancelAt)
+                    .Append(new Timestamped<Notification<T>>(cancelAt, Notification.Error<T>(new OperationCanceledException(cts.Token))));
+                using var vt = new VirtualTime(startTime);
+                _ = vt.Schedule(cts.Cancel, cancelAt, default);
+                var eq = AssetEqual(exp, actual, cts.Token, elementComparer);
+                vt.Start();
+                await eq.ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Run the delegate on virtual time.
+        /// </summary>
+        public static async Task<T> OnVirtualTime<T>(Func<CancellationToken, Task<T>> aggregator, DateTimeOffset startTime = default)
+        {
+            if (aggregator == null) throw new ArgumentNullException(nameof(aggregator));
+
+            // schedule on thread pool so continuations run synchronously
+            return await Task.Run(async () =>
+            {
+                using var vt = new VirtualTime(startTime);
+                var tResult = aggregator(default);
+                vt.Start();
+                return await tResult.ConfigureAwait(false);
+            }).ConfigureAwait(false);
+
+        }
+
+        /// <summary>
+        /// Assert that <paramref name="consumer"/> gets canceld after the specified interval.
+        /// </summary>
+        public static async Task AssertCancel(Func<CancellationToken, Task> consumer, TimeSpan cancelAfter, DateTimeOffset startTime = default)
+        {
+            if (consumer == null) throw new ArgumentNullException(nameof(consumer));
+
+            // schedule on thread pool so continuations run synchronously
+            await Task.Run(async () =>
+            {
+                using var cts = new CancellationTokenSource();
+                var cancelAt = startTime + cancelAfter;
+                using var vt = new VirtualTime(startTime);
+                _ = vt.Schedule(cts.Cancel, cancelAt, default);
+
+                async Task<(DateTimeOffset, Exception)> AwaitResult()
                 {
-                    case '-':
-                        interval += ctx.FrameSize;
-                        ctx.MoveNext();
-                        continue;
-                    case '|':
-                        yield return new TimeInterval<Notification<T>>(interval, Notification.Completed<T>());
-                        ctx.MoveNext();
-                        ctx.IsCompleted = true;
-                        yield break;
-                    case '#':
-                        yield return new TimeInterval<Notification<T>>(interval, Notification.Error<T>(ctx.Error));
-                        ctx.MoveNext();
-                        ctx.IsCompleted = true;
-                        yield break;
+                    // ReSharper disable AccessToDisposedClosure
+                    try
+                    {
+                        await consumer(cts.Token).ConfigureAwait(false);
+                        return (vt.Now, null);
+                    }
+                    catch (Exception x)
+                    {
+                        return (vt.Now, x);
+                    }
+                    // ReSharper restore AccessToDisposedClosure
+                }
+
+                var tResult = AwaitResult();
+                vt.Start();
+                var (ts, ex) = await tResult.ConfigureAwait(false);
+                if (ex == null)
+                    throw new Exception($"Consumer returned sucessfully @{ts}.");
+                if (!(ex is OperationCanceledException oce) || oce.CancellationToken != cts.Token)
+                    throw new Exception($"Consumer threw an exception other than an OCE on the specified token @{ts}", ex);
+                if (ts != cancelAt)
+                    throw new Exception($"Consumer canceld @{vt.Now}. Expected {cancelAt}");
+            }).ConfigureAwait(false);
+        }
+
+        private static async Task AssetEqual<T>(IEnumerable<Timestamped<Notification<T>>> expected, IAsyncEnumerable<T> actual, CancellationToken token, IEqualityComparer<T> elementComparer)
+        {
+            Debug.Assert(expected != null);
+            Debug.Assert(actual != null);
+            if (elementComparer == null) elementComparer = EqualityComparer<T>.Default;
+
+            bool Equals(Timestamped<Notification<T>> x, Timestamped<Notification<T>> y)
+            {
+                if (x.Timestamp != y.Timestamp)
+                    return false;
+
+                var nx = x.Value;
+                var ny = y.Value;
+                switch (nx.Kind)
+                {
+                    case NotificationKind.Completed:
+                        return ny.Kind == NotificationKind.Completed;
+                    case NotificationKind.Next:
+                        return ny.Kind == NotificationKind.Next && elementComparer.Equals(nx.Value, ny.Value);
+                    case NotificationKind.Error:
+                        if (ny.Kind != NotificationKind.Error)
+                            return false;
+                        var xx = nx.Error;
+                        var xy = ny.Error;
+                        if (xx.GetType() != xy.GetType() || xx.Message != xy.Message)
+                            return false;
+                        if (xx is OperationCanceledException ocex && xy is OperationCanceledException ocey)
+                            return ocex.CancellationToken == ocey.CancellationToken;
+                        return true;
                     default:
-                        if (!_elementChars.Contains(ctx.Next))
-                            yield break;
-                        var value = ctx.Selector(ctx.Next, ctx.Index++);
-                        yield return new TimeInterval<Notification<T>>(interval, Notification.Next(value));
-                        ctx.MoveNext();
-                        interval = TimeSpan.Zero;
-                        break;
+                        return false;
                 }
-            if (interval != TimeSpan.Zero)
-                throw new MarbleParseException("No notification for interval.", ctx.Position);
-        }
-
-        private sealed class ParseContext<T> : IDisposable
-        {
-            private readonly LookAhead<char> _input;
-
-            public readonly Func<char, int, T> Selector;
-            public readonly TimeSpan FrameSize;
-            public readonly Exception Error;
-            public int Position { get; private set; }
-            public int Index;
-            public bool IsCompleted;
-
-            public ParseContext(IEnumerable<char> diagram, Func<char, int, T> selector, MarbleSettings settingsOpt)
-            {
-                _input = diagram.Where(ch => ch != ' ').LookAhead();
-                Selector = selector;
-                FrameSize = settingsOpt?.FrameSize ?? MarbleSettings.DefaultFrameSize;
-                Error = settingsOpt?.Error ?? MarbleException.Singleton;
             }
 
-            public bool HasNext => _input.HasNext;
-            public char Next => _input.Next;
-            public void MoveNext()
-            {
-                _input.MoveNext();
-                Position++;
-            }
-
-            public void Dispose() => _input.Dispose();
-        }
-
-        private static IEnumerable<T> Forever<T>(IReadOnlyCollection<T> items)
-        {
+            var time = Time.Current;
+            var position = 1;
+            // ReSharper disable once GenericEnumeratorNotDisposed
+            using var e = expected.GetEnumerator();
+            await using var ae = actual.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
             while (true)
-                foreach (var item in items)
-                    yield return item;
-            // ReSharper disable once IteratorNeverReturns
+            {
+                Notification<T> notification;
+                try { notification = await ae.MoveNextAsync() ? Notification.Next(ae.Current) : Notification.Completed<T>(); }
+                catch (Exception ex) { notification = Notification.Error<T>(ex); }
+                var nActual = new Timestamped<Notification<T>>(time.Now, notification);
+
+                if (!e.MoveNext())
+                    throw new Exception($"Position {position}: Received {nActual}, Expected: EOS");
+
+                var nExpected = e.Current;
+                if (!Equals(nActual, nExpected))
+                    throw new Exception($"Position {position}: Received {nActual}, Expected: {nExpected}");
+
+                position++;
+
+                if (notification.Kind != NotificationKind.Next)
+                    break;
+            }
+        }
+
+        private static IEnumerable<Timestamped<Notification<T>>> Absolute<T>(this IMarbleDiagram<T> md, DateTimeOffset time)
+        {
+            foreach (var ti in md.Marbles)
+            {
+                time += ti.Interval;
+                yield return new Timestamped<Notification<T>>(time, ti.Value);
+            }
         }
     }
 }

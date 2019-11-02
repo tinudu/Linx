@@ -4,7 +4,10 @@
     using global::Linx.Testing;
     using global::Linx.Timing;
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
+    using global::Linx;
+    using global::Linx.Expressions;
     using Xunit;
 
     public class GeneratorTests
@@ -15,10 +18,7 @@
             var testee = LinxAsyncEnumerable.Interval(MarbleSettings.DefaultFrameSize).Take(5);
             var t0 = new DateTimeOffset(2019, 8, 6, 0, 0, 0, TimeSpan.FromHours(2));
             var expect = Marble.Parse("x-x-x-x-x|", (ch, i) => t0 + i * MarbleSettings.DefaultFrameSize);
-            using var vt = new VirtualTime(t0);
-            var eq = expect.AssertEqual(testee, default);
-            vt.Start();
-            await eq;
+            await expect.AssertEqual(testee, t0);
         }
 
         [Fact]
@@ -30,17 +30,16 @@
             result = await LinxAsyncEnumerable.Return(() => 42).Single(default);
             Assert.Equal(42, result);
 
-            var now = DateTimeOffset.Now;
             var delay = TimeSpan.FromDays(30);
-            using var vt = new VirtualTime(now);
-            var tResult = LinxAsyncEnumerable.Return(async () =>
+            var testee = Express.Func(async (CancellationToken t) =>
             {
-                await Time.Current.Delay(delay, default).ConfigureAwait(false);
-                return 42;
-            }).Single(default);
-            vt.Start();
-            Assert.Equal(42, await tResult);
-            Assert.Equal(vt.Now, now + delay);
+                await Time.Current.Delay(delay, t).ConfigureAwait(false);
+                return new Timestamped<int>(Time.Current.Now, 42);
+            });
+            var t0 = DateTimeOffset.Now;
+            var actual = await Marble.OnVirtualTime(testee, t0);
+            Assert.Equal(t0 + delay, actual.Timestamp);
+            Assert.Equal(42, actual.Value);
         }
 
         [Fact]

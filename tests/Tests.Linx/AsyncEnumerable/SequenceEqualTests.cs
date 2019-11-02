@@ -1,12 +1,10 @@
 ﻿namespace Tests.Linx.AsyncEnumerable
 {
-    using System;
-    using System.Diagnostics.CodeAnalysis;
-    using System.Threading;
-    using System.Threading.Tasks;
     using global::Linx.AsyncEnumerable;
     using global::Linx.Testing;
-    using global::Linx.Timing;
+    using System;
+    using System.Diagnostics.CodeAnalysis;
+    using System.Threading.Tasks;
     using Xunit;
 
     public sealed class SequenceEqualTests
@@ -25,18 +23,8 @@
             var i1 = Marble.Parse("-a- b-  c-|");
             var i2 = Marble.Parse(" a--b---c|");
             var i3 = Marble.Parse("-a- b-  c-d");
-            using (var vt = new VirtualTime())
-            {
-                var testee = i1.SequenceEqual(i2, default);
-                vt.Start();
-                Assert.True(await testee);
-            }
-            using (var vt = new VirtualTime())
-            {
-                var testee = i1.SequenceEqual(i3, default);
-                vt.Start();
-                Assert.False(await testee);
-            }
+            Assert.True(await Marble.OnVirtualTime(t => i1.SequenceEqual(i2, t)));
+            Assert.False(await Marble.OnVirtualTime(t => i1.SequenceEqual(i3, t)));
         }
 
         [Fact]
@@ -46,18 +34,8 @@
             var i1 = Marble.Parse("-a- b-  c-|");
             var i2 = Marble.Parse(" a--b---c#");
             var i3 = Marble.Parse("-a- b-  c-d#");
-            using (var vt = new VirtualTime())
-            {
-                var testee = i1.SequenceEqual(i2, default);
-                vt.Start();
-                await Assert.ThrowsAsync<MarbleException>(() => testee);
-            }
-            using (var vt = new VirtualTime())
-            {
-                var testee = i1.SequenceEqual(i3, default);
-                vt.Start();
-                Assert.False(await testee);
-            }
+            await Assert.ThrowsAsync<MarbleException>(() => Marble.OnVirtualTime(t => i1.SequenceEqual(i2, t)));
+            Assert.False(await Marble.OnVirtualTime(t => i1.SequenceEqual(i3, t)));
         }
 
         [Fact]
@@ -66,30 +44,8 @@
         {
             var i1 = Marble.Parse(" -a-bc");
             var i2 = Marble.Parse("a- -b ---c---#");
-
-            using (var vt = new VirtualTime())
-            {
-#pragma warning disable IDE0067 // Dispose objects before losing scope
-                var cts = new CancellationTokenSource();
-#pragma warning restore IDE0067 // Dispose objects before losing scope
-                var t = i1.SequenceEqual(i1, cts.Token);
-                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromHours(1), default);
-                vt.Start();
-                await tCancel;
-                await Assert.ThrowsAsync<OperationCanceledException>(() => t);
-            }
-
-            using (var vt = new VirtualTime())
-            {
-#pragma warning disable IDE0067 // Dispose objects before losing scope
-                var cts = new CancellationTokenSource();
-#pragma warning restore IDE0067 // Dispose objects before losing scope
-                var t = i1.SequenceEqual(i2, cts.Token);
-                var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(7), default);
-                vt.Start();
-                await tCancel;
-                await Assert.ThrowsAsync<OperationCanceledException>(() => t);
-            }
+            await Marble.AssertCancel(t => i1.SequenceEqual(i1, t), TimeSpan.FromHours(1));
+            await Marble.AssertCancel(t => i1.SequenceEqual(i2, t), TimeSpan.FromSeconds(7));
         }
     }
 }

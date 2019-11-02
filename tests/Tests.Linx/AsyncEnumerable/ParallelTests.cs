@@ -17,7 +17,7 @@
                 return i;
             });
             var expected = Marble.Parse("0-1-2-3-4|", (c, i) => c - '0');
-            await VirtualTime.Run(() => expected.AssertEqual(testee, default));
+            await expected.AssertEqual(testee);
         }
 
         [Fact]
@@ -29,7 +29,7 @@
                 return i;
             }, true);
             var expected = Marble.Parse("---31-402|", (c, i) => c - '0');
-            await VirtualTime.Run(() => expected.AssertEqual(testee, default));
+            await expected.AssertEqual(testee);
         }
 
         [Fact]
@@ -41,7 +41,7 @@
                 return i;
             }, false, 3);
             var expected = Marble.Parse("-10--32-4|", (c, i) => c - '0');
-            await VirtualTime.Run(() => expected.AssertEqual(testee, default));
+            await expected.AssertEqual(testee);
         }
 
         [Fact]
@@ -53,7 +53,7 @@
                 return i;
             }, true, 3);
             var expected = Marble.Parse("---31-40-2|", (c, i) => c - '0');
-            await VirtualTime.Run(() => expected.AssertEqual(testee, default));
+            await expected.AssertEqual(testee);
         }
     }
 }

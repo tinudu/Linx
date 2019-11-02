@@ -13,11 +13,9 @@
         {
             var s1 = Marble.Parse("-a- -c- -e|");
             var s2 = Marble.Parse("- -b- -d- -f|");
-            using var vt = new VirtualTime();
-            var tResult = s1.Merge(s2).ToArray(default);
-            vt.Start();
-            var result = new string(await tResult);
-            Assert.Equal("abcdef", result);
+            var ex = Marble.Parse("-a-b-c-d-e-f|");
+            var testee = s1.Merge(s2);
+            await ex.AssertEqual(testee);
         }
     }
 }

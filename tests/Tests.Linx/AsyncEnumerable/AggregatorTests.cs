@@ -2,8 +2,8 @@
 {
     using global::Linx;
     using global::Linx.AsyncEnumerable;
+    using global::Linx.Expressions;
     using global::Linx.Testing;
-    using global::Linx.Timing;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -228,21 +228,13 @@
         [Fact]
         public async Task TestMultiAggregateCancel()
         {
-            using var vt = new VirtualTime();
-            var src = Marble.Parse("01--2|", null, 0, 1, 2);
-#pragma warning disable IDE0067 // Dispose objects before losing scope
-            var cts = new CancellationTokenSource();
-#pragma warning restore IDE0067 // Dispose objects before losing scope
-            var tResult = src.MultiAggregate(
+            var src = Marble.Parse("01--2|", (c, i) => i);
+            var testee = Express.Func((CancellationToken token) => src.MultiAggregate(
                 (s, t) => s.ToList(t),
                 (s, t) => s.Sum(t),
-                (all, sum) => new { all, sum },
-                cts.Token);
-            var tCancel = vt.Schedule(() => cts.Cancel(), TimeSpan.FromSeconds(1), default);
-            vt.Start();
-            await tCancel;
-            var oce = await Assert.ThrowsAsync<OperationCanceledException>(() => tResult);
-            Assert.Equal(cts.Token, oce.CancellationToken);
+                (all, sum) => (all, sum),
+                token));
+            await Marble.AssertCancel(testee, 2 * MarbleSettings.DefaultFrameSize);
         }
 
         [Fact]

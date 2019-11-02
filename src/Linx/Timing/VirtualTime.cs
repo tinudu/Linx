@@ -13,38 +13,6 @@
     /// </summary>
     public sealed class VirtualTime : ITime, IDisposable
     {
-        /// <summary>
-        /// Run the specified async action on a virtual time machine.
-        /// </summary>
-        public static async Task Run(Func<Task> asyncAction)
-        {
-            if (asyncAction == null) throw new ArgumentNullException(nameof(asyncAction));
-
-            await Task.Run(async () =>
-            {
-                using var vt = new VirtualTime();
-                var t = asyncAction();
-                vt.Start();
-                await t.ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Run the specified async function on a virtual time machine.
-        /// </summary>
-        public static async Task<T> Run<T>(Func<Task<T>> asyncFunc)
-        {
-            if (asyncFunc == null) throw new ArgumentNullException(nameof(asyncFunc));
-
-            return await Task.Run(async () =>
-            {
-                using var vt = new VirtualTime();
-                var t = asyncFunc();
-                vt.Start();
-                return await t.ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-
         private const int _sStopped = 0;
         private const int _sStarted = 1;
         private const int _sIdle = 2;
@@ -59,16 +27,9 @@
         private int _state;
 
         /// <summary>
-        /// Crete with <see cref="Now"/> being <see cref="DateTimeOffset.MinValue"/>.
-        /// </summary>
-        public VirtualTime() : this(DateTimeOffset.MinValue)
-        {
-        }
-
-        /// <summary>
         /// Crete with <see cref="Now"/> being <paramref name="now"/>.
         /// </summary>
-        public VirtualTime(DateTimeOffset now)
+        public VirtualTime(DateTimeOffset now = default)
         {
             if (Time.Current != RealTime.Instance) throw new InvalidOperationException("Current time must be real time before switching to virtual time.");
 
@@ -180,8 +141,8 @@
                             var bucket = _queue.Peek();
                             if (bucket.Timers.Count > 0)
                             {
-                                if (Now < bucket.DueUtc) Now = bucket.DueUtc;
                                 timer = bucket.Timers.Dequeue();
+                                if (timer.IsWaiting() && Now < bucket.DueUtc) Now = bucket.DueUtc;
                                 _state = _sStarted;
                                 break;
                             }
@@ -242,6 +203,8 @@
                 _token = token;
                 if (_token.CanBeCanceled) _ctr = token.Register(TokenCanceled);
             }
+
+            public bool IsWaiting() => Atomic.CompareExchange(ref _state, _tWaiting, _tWaiting) == _tWaiting;
 
             public ValueTask Delay(TimeSpan due) => Delay(_time.Now + due);
 

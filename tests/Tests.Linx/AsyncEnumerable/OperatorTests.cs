@@ -73,10 +73,7 @@
             var src2 = Marble.Parse(" -fg-h-  -i- -|  ");
             var expt = Marble.Parse(" -x - -xx- -x-|", default, "af", "bg", "ch", "di");
             var testee = src1.Zip(src2, (x, y) => $"{x}{y}");
-            using var vt = new VirtualTime();
-            var eq = expt.AssertEqual(testee, default);
-            vt.Start();
-            await eq;
+            await expt.AssertEqual(testee);
         }
     }
 }

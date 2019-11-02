@@ -1,6 +1,5 @@
 ﻿namespace Linx.AsyncEnumerable
 {
-    using Enumerable;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -19,8 +18,29 @@
 
             async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
                 // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var outer in sources.WithCancellation(token).ConfigureAwait(false))
+                    await foreach (var inner in outer.WithCancellation(token).ConfigureAwait(false))
+                        yield return inner;
+            }
+        }
+
+        /// <summary>
+        /// Concats the elements of the specified sequences.
+        /// </summary>
+        public static IAsyncEnumerable<T> Concat<T>(this IEnumerable<IAsyncEnumerable<T>> sources)
+        {
+            if (sources == null) throw new ArgumentNullException(nameof(sources));
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            {
+                token.ThrowIfCancellationRequested();
+
+                // ReSharper disable once PossibleMultipleEnumeration
+                foreach (var outer in sources)
                     await foreach (var inner in outer.WithCancellation(token).ConfigureAwait(false))
                         yield return inner;
             }
