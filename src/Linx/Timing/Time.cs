@@ -2,7 +2,6 @@
 {
     using System;
     using System.Threading;
-    using System.Threading.Tasks;
 
     /// <summary>
     /// Access to current time.
@@ -21,93 +20,37 @@
         }
 
         /// <summary>
-        /// Schedule the specified action.
+        /// Schedule an action.
         /// </summary>
-        public static async Task Schedule(this ITime time, Action action, TimeSpan due, CancellationToken token)
+        public static async void Schedule(this ITime time, Action action, DateTimeOffset due, CancellationToken token)
         {
             if (time == null) throw new ArgumentNullException(nameof(time));
             if (action == null) throw new ArgumentNullException(nameof(action));
+            if (token.IsCancellationRequested) return;
 
-            await time.Delay(due, token).ConfigureAwait(false);
-            action();
+            try
+            {
+                await time.Delay(due, token).ConfigureAwait(false);
+                action();
+            }
+            catch{ /*ignore*/}
         }
 
         /// <summary>
-        /// Schedule the specified action.
+        /// Schedule an action.
         /// </summary>
-        public static async Task Schedule(this ITime time, Action action, DateTimeOffset due, CancellationToken token)
+        public static async void Schedule(this ITime time, Action action, TimeSpan due, CancellationToken token)
         {
             if (time == null) throw new ArgumentNullException(nameof(time));
             if (action == null) throw new ArgumentNullException(nameof(action));
+            if (token.IsCancellationRequested) return;
 
-            await time.Delay(due, token).ConfigureAwait(false);
-            action();
-        }
-
-        /// <summary>
-        /// Schedule the specified async action.
-        /// </summary>
-        public static async Task Schedule(this ITime time, Func<Task> action, TimeSpan due, CancellationToken token)
-        {
-            if (time == null) throw new ArgumentNullException(nameof(time));
-            if (action == null) throw new ArgumentNullException(nameof(action));
-
-            await time.Delay(due, token).ConfigureAwait(false);
-            await action().ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Schedule the specified async action.
-        /// </summary>
-        public static async Task Schedule(this ITime time, Func<Task> action, DateTimeOffset due, CancellationToken token)
-        {
-            await time.Delay(due, token).ConfigureAwait(false);
-            await action().ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Schedule the specified function.
-        /// </summary>
-        public static async Task<T> Schedule<T>(this ITime time, Func<T> function, TimeSpan due, CancellationToken token)
-        {
-            if (time == null) throw new ArgumentNullException(nameof(time));
-            if (function == null) throw new ArgumentNullException(nameof(function));
-
-            await time.Delay(due, token).ConfigureAwait(false);
-            return function();
-        }
-
-        /// <summary>
-        /// Schedule the specified function.
-        /// </summary>
-        public static async Task<T> Schedule<T>(this ITime time, Func<T> function, DateTimeOffset due, CancellationToken token)
-        {
-            if (time == null) throw new ArgumentNullException(nameof(time));
-            if (function == null) throw new ArgumentNullException(nameof(function));
-
-            await time.Delay(due, token).ConfigureAwait(false);
-            return function();
-        }
-
-        /// <summary>
-        /// Schedule the specified async function.
-        /// </summary>
-        public static async Task<T> Schedule<T>(this ITime time, Func<Task<T>> function, TimeSpan due, CancellationToken token)
-        {
-            if (time == null) throw new ArgumentNullException(nameof(time));
-            if (function == null) throw new ArgumentNullException(nameof(function));
-
-            await time.Delay(due, token).ConfigureAwait(false);
-            return await function().ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Schedule the specified async function.
-        /// </summary>
-        public static async Task<T> Schedule<T>(this ITime time, Func<Task<T>> function, DateTimeOffset due, CancellationToken token)
-        {
-            await time.Delay(due, token).ConfigureAwait(false);
-            return await function().ConfigureAwait(false);
+            try
+            {
+                await time.Delay(due, token).ConfigureAwait(false);
+                action();
+            }
+            catch { /*ignore*/}
         }
     }
 }

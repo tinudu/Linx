@@ -29,14 +29,14 @@
 #pragma warning disable IDE0067 // Dispose objects before losing scope
             var cts = new CancellationTokenSource();
 #pragma warning restore IDE0067 // Dispose objects before losing scope
+            var exp = expected
+                .Absolute(now)
+                .TakeWhile(ts => ts.Timestamp < cancelAt)
+                .Append(new Timestamped<Notification<T>>(cancelAt, Notification.Error<T>(new OperationCanceledException(cts.Token))));
             await VirtualTime.Run(async () =>
             {
                 var time = Time.Current;
-                _ = time.Schedule(cts.Cancel, cancelAt, default);
-                var exp = expected
-                    .Absolute(now)
-                    .TakeWhile(ts => ts.Timestamp < cancelAt)
-                    .Append(new Timestamped<Notification<T>>(cancelAt, Notification.Error<T>(new OperationCanceledException(cts.Token))));
+                time.Schedule(cts.Cancel, cancelAt, default);
                 await AssetEqualCore(exp, actual, cts.Token, elementComparer).ConfigureAwait(false);
             }, now).ConfigureAwait(false);
         }
@@ -55,7 +55,7 @@
             var tsEx = await VirtualTime.Run(async () =>
             {
                 var time = Time.Current;
-                _ = time.Schedule(cts.Cancel, cancelAt, default);
+                time.Schedule(cts.Cancel, cancelAt, default);
                 try
                 {
                     await consumer(cts.Token).ConfigureAwait(false);
