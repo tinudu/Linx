@@ -46,5 +46,22 @@
                 result.Add(keySelector(item), valueSelector(item));
             return result;
         }
+
+        /// <summary>
+        /// Aggregate to a dictionary.
+        /// </summary>
+        public static async Task<IDictionary<TKey, TValue>> ToDictionary<TKey, TValue>(
+            this IAsyncEnumerable<KeyValuePair<TKey, TValue>> source,
+            CancellationToken token,
+            IEqualityComparer<TKey> comparer = null)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            token.ThrowIfCancellationRequested();
+
+            var result = new Dictionary<TKey, TValue>(comparer);
+            await foreach (var kv in source.WithCancellation(token).ConfigureAwait(false))
+                result.Add(kv.Key, kv.Value);
+            return result;
+        }
     }
 }
