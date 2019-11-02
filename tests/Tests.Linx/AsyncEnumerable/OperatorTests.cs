@@ -2,31 +2,10 @@
 {
     using global::Linx.AsyncEnumerable;
     using global::Linx.Testing;
-    using global::Linx.Timing;
-    using System;
-    using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Xunit;
-
-    internal static class MyOperators
-    {
-        public static IAsyncEnumerable<T> ConsumeSlow<T>(this IAsyncEnumerable<T> source, TimeSpan delay) => LinxAsyncEnumerable.Create<T>(async (yield, token) =>
-        {
-            var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-            try
-            {
-                using var timer = Time.Current.GetTimer(token);
-                while (await ae.MoveNextAsync())
-                {
-                    if (!await yield(ae.Current).ConfigureAwait(false)) return;
-                    await timer.Delay(delay).ConfigureAwait(false);
-                }
-            }
-            finally { await ae.DisposeAsync(); }
-        });
-    }
 
     public sealed class OperatorTests
     {
