@@ -41,25 +41,6 @@
         }
 
         [Fact]
-        public async Task TestGroupBy()
-        {
-            var result = await new[] { 1, 2, 1, 3, 2, 3, 1, 1, 2 }.Async().GroupBy(i => i).Parallel(async (g, t) => new { g.Key, Count = await g.Count(t) }).ToDictionary(kc => kc.Key, kc => kc.Count, default);
-            Assert.Equal(4, result[1]);
-            Assert.Equal(3, result[2]);
-            Assert.Equal(2, result[3]);
-
-            result = await new[] { 1, 2, 1, 3, 2, 3, 1, 1, 2 }.Async().GroupBy(i => i).Parallel(async (g, t) => new { g.Key, Count = await g.Take(3).Count(t) }).ToDictionary(kc => kc.Key, kc => kc.Count, default);
-            Assert.Equal(3, result[1]);
-            Assert.Equal(3, result[2]);
-            Assert.Equal(2, result[3]);
-
-            result = await new[] { 1, 2, 1, 3, 2, 3, 1, 1, 2 }.Async().GroupBy(i => i).Take(2).Parallel(async (g, t) => new { g.Key, Count = await g.Take(2).Count(t) }).ToDictionary(kc => kc.Key, kc => kc.Count, default);
-            Assert.Equal(2, result.Count);
-            Assert.Equal(2, result[1]);
-            Assert.Equal(2, result[2]);
-        }
-
-        [Fact]
         public async Task TestTake()
         {
             var result = await new[] { 1, 2, 3, 4 }.Async().Where(i => i != 2).Take(2).ToList(CancellationToken.None);

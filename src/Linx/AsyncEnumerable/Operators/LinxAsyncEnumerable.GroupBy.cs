@@ -268,7 +268,7 @@
                 public int State;
                 private CancellationTokenRegistration _ctr;
                 private Exception _error;
-                private Task _tDisposed;
+                private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
 
                 TKey IAsyncGrouping<TKey, TSource>.Key => _key.Value;
                 public TSource Current { get; set; }
@@ -336,7 +336,7 @@
                 ValueTask IAsyncDisposable.DisposeAsync()
                 {
                     Dispose(AsyncEnumeratorDisposedException.Instance);
-                    return new ValueTask(_tDisposed);
+                    return new ValueTask(_atmbDisposed.Task);
                 }
 
                 public void Dispose(Exception errorOpt)
@@ -362,19 +362,30 @@
                             throw new Exception(state + "???");
                     }
 
+                    _error = errorOpt;
+                    State = _sDisposed;
+                    _ctr.Dispose();
+
                     var eState = Atomic.Lock(ref _enumerator._state);
                     Debug.Assert(_enumerator._active > 0);
                     var last = --_enumerator._active == 0;
                     if (_enumerator._whileEnumerated)
                         try { _enumerator._groups.Remove(_key); }
-                        catch { /**/ }
+                        catch { /* key comparer buggy? */ }
                     _enumerator._state = eState;
 
-                    _error = errorOpt;
-                    _tDisposed = last ? _enumerator._atmbDisposed.Task : Task.CompletedTask;
-                    State = _sDisposed;
-                    _ctr.Dispose();
-                    if (last) _enumerator._cts.TryCancel();
+                    if (last)
+                    {
+                        _enumerator._cts.TryCancel();
+                        var awaiter = _enumerator._atmbDisposed.Task.ConfigureAwait(false).GetAwaiter();
+                        if (awaiter.IsCompleted)
+                            _atmbDisposed.SetResult();
+                        else
+                            awaiter.OnCompleted(() => _atmbDisposed.SetResult());
+                    }
+                    else
+                        _atmbDisposed.SetResult();
+
                     switch (state)
                     {
                         case _sAccepting:
