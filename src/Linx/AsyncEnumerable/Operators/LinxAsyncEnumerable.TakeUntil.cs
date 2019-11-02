@@ -24,9 +24,9 @@
                 // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                 {
+                    yield return item;
                     if (predicate(item))
                         break;
-                    yield return item;
                 }
             }
         }

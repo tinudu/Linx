@@ -4,6 +4,7 @@
     using global::Linx.Testing;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
+    using System.Linq;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -26,7 +27,7 @@
 
         [Fact]
         [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
-        public async Task TestSuccess()
+        public async Task Success()
         {
             var source = "Abracadabra".Async().GroupBy(char.ToUpperInvariant);
 
@@ -48,7 +49,7 @@
         }
 
         [Fact]
-        public async Task TestError()
+        public async Task Error()
         {
             var source = Marble.Parse("Abracadabra#").GroupBy(char.ToUpperInvariant);
 
@@ -70,6 +71,17 @@
             await Assert.ThrowsAsync<MarbleException>(() => source.Parallel(Selector).Any(default));
             groups.Sort();
             Assert.Equal("ABCDR", new string(groups.ToArray()));
+        }
+
+        [Fact]
+        public async Task WhileEnumerated()
+        {
+            var result = await "ABabABababABababab".Async()
+                .GroupByWhileEnumerated(char.ToUpper)
+                .Parallel(async (g, t) => new string(await g.TakeUntil(char.IsUpper).ToArray(t).ConfigureAwait(false)), true)
+                .ToList(default);
+            var expected = new[] { "A", "B", "aA", "bB", "aaA", "bbB", "aaa", "bbb" };
+            Assert.True(expected.SequenceEqual(result));
         }
     }
 }
