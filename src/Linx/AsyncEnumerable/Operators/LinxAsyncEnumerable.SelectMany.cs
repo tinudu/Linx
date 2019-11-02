@@ -2,12 +2,13 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
     {
-        #region inner sync
+        #region async/sync
 
         /// <summary>
         /// Projects each element of a sequence to an <see cref="IEnumerable{T}"/> and flattens the resulting sequences into one sequence.
@@ -22,6 +23,8 @@
 
             async IAsyncEnumerator<TResult> GetAsycEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
                 // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var inner in source.WithCancellation(token).ConfigureAwait(false))
                     foreach (var element in collectionSelector(inner))
@@ -42,6 +45,8 @@
 
             async IAsyncEnumerator<TResult> GetAsycEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
                 var i = 0;
                 // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var inner in source.WithCancellation(token).ConfigureAwait(false))
@@ -65,6 +70,8 @@
 
             async IAsyncEnumerator<TResult> GetAsycEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
                 // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var inner in source.WithCancellation(token).ConfigureAwait(false))
                     foreach (var element in collectionSelector(inner))
@@ -87,6 +94,8 @@
 
             async IAsyncEnumerator<TResult> GetAsycEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
                 var i = 0;
                 // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var inner in source.WithCancellation(token).ConfigureAwait(false))
@@ -97,7 +106,7 @@
 
         #endregion
 
-        #region inner async
+        #region async/async
 
         /// <summary>
         /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/> and flattens the resulting sequences into one sequence.
@@ -112,8 +121,7 @@
 
             return source
                 .Select(collectionSelector)
-                .Merge(maxConcurrent)
-                .WithName();
+                .Merge(maxConcurrent);
         }
 
         /// <summary>
@@ -129,8 +137,7 @@
 
             return source
                 .Select(collectionSelector)
-                .Merge(maxConcurrent)
-                .WithName();
+                .Merge(maxConcurrent);
         }
 
         /// <summary>
@@ -150,7 +157,7 @@
                 .Select(s => collectionSelector(s).Select(c => (s, c)))
                 .Merge(maxConcurrent)
                 .Select(t => resultSelector(t.s, t.c))
-                .WithName();
+                .WithName(nameof(Merge));
         }
 
         /// <summary>
@@ -170,7 +177,83 @@
                 .Select((s, i) => collectionSelector(s, i).Select(c => (s, c)))
                 .Merge(maxConcurrent)
                 .Select(t => resultSelector(t.s, t.c))
-                .WithName();
+                .WithName(nameof(Merge));
+        }
+
+        #endregion
+
+        #region sync/async
+
+        /// <summary>
+        /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/> and flattens the resulting sequences into one sequence.
+        /// </summary>
+        public static IAsyncEnumerable<TResult> SelectMany<TSource, TResult>(
+            this IEnumerable<TSource> source,
+            Func<TSource, IAsyncEnumerable<TResult>> collectionSelector,
+            int maxConcurrent = int.MaxValue)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
+
+            return source
+                .Select(collectionSelector)
+                .Merge(maxConcurrent);
+        }
+
+        /// <summary>
+        /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/> and flattens the resulting sequences into one sequence.
+        /// </summary>
+        public static IAsyncEnumerable<TResult> SelectMany<TSource, TResult>(
+            this IEnumerable<TSource> source,
+            Func<TSource, int, IAsyncEnumerable<TResult>> collectionSelector,
+            int maxConcurrent = int.MaxValue)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
+
+            return source
+                .Select(collectionSelector)
+                .Merge(maxConcurrent);
+        }
+
+        /// <summary>
+        /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/>, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
+        /// </summary>
+        public static IAsyncEnumerable<TResult> SelectMany<TSource, TCollection, TResult>(
+            this IEnumerable<TSource> source,
+            Func<TSource, IAsyncEnumerable<TCollection>> collectionSelector,
+            Func<TSource, TCollection, TResult> resultSelector,
+            int maxConcurrent = int.MaxValue)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return source
+                .Select(s => collectionSelector(s).Select(c => (s, c)))
+                .Merge(maxConcurrent)
+                .Select(t => resultSelector(t.s, t.c))
+                .WithName(nameof(Merge));
+        }
+
+        /// <summary>
+        /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/>, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
+        /// </summary>
+        public static IAsyncEnumerable<TResult> SelectMany<TSource, TCollection, TResult>(
+            this IEnumerable<TSource> source,
+            Func<TSource, int, IAsyncEnumerable<TCollection>> collectionSelector,
+            Func<TSource, TCollection, TResult> resultSelector,
+            int maxConcurrent = int.MaxValue)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+
+            return source
+                .Select((s, i) => collectionSelector(s, i).Select(c => (s, c)))
+                .Merge(maxConcurrent)
+                .Select(t => resultSelector(t.s, t.c))
+                .WithName(nameof(Merge));
         }
 
         #endregion
