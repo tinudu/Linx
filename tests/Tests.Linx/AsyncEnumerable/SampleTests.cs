@@ -11,10 +11,10 @@
         [Fact]
         public async Task Success()
         {
-            var interval = 2 * MarbleSettings.DefaultFrameSize;
-            var source = Marble.Parse(" -abc- -----def- ---efg- ----|");
-            var expect = Marble.Parse(" -a  -c-----d  -f---e  -g----|");
-            var testee = source.Sample(interval).Latest();
+            var source = Marble.Parse(" -abc- -- -- -def- -- -efg- -- -|");
+            var sample = Marble.Parse("x-   -x--x--x-   -x--x-   -x--x- -x*--x").ToLinxObservable();
+            var expect = Marble.Parse(" -a  -c-- -- -d  -f-- -e  -g-- -|");
+            var testee = source.Sample(sample).Latest();
             await expect.AssertEqual(testee);
         }
     }

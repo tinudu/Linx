@@ -15,13 +15,11 @@
 
             return Create<TSource>(observer =>
             {
-                var context = new SampleContext<TSource>(observer);
+                if (observer == null) throw new ArgumentNullException(nameof(observer));
 
-                try { source.SafeSubscribe(context.OnNextSource, context.OnSourceError, context.OnSourceCompleted, context.Token); }
-                catch (Exception ex) { context.OnSourceError(ex); }
-
-                try { sampler.SafeSubscribe(x => context.OnNextSample(), context.OnSampleError, context.OnSampleCompleted, context.Token); }
-                catch (Exception ex) { context.OnSampleError(ex); }
+                var context = new SampleContext<TSource, TSample>(observer);
+                source.SafeSubscribe(context.SourceObserver);
+                sampler.SafeSubscribe(context.SampleObserver);
             });
         }
 
@@ -29,128 +27,207 @@
         /// Samples <paramref name="source"/> at the specified interval.
         /// </summary>
         public static ILinxObservable<T> Sample<T>(this ILinxObservable<T> source, TimeSpan interval)
-            => source.Sample(Interval(interval));
-
-        private sealed class SampleContext<T>
         {
-            // 2 bits while active
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            return source.Sample(Interval(interval));
+        }
+
+        private sealed class SampleContext<TSource, TSample>
+        {
             private const int _sInitial = 0;
-            private const int _sSource = 1;
+            private const int _sNext = 1;
             private const int _sSample = 2;
             private const int _sCompleted = 3;
+            private const int _sCompletedSource = 4;
+            private const int _sCompletedSample = 5;
+            private const int _sFinal = 6;
 
-            private const int _fSource = 1 << 2;
-            private const int _fSample = 1 << 3;
-            private const int _mFinal = _sCompleted | _fSource | _fSample;
-
-            private readonly ILinxObserver<T> _observer;
+            private readonly ILinxObserver<TSource> _observer;
             private readonly CancellationTokenSource _cts = new CancellationTokenSource();
             private CancellationTokenRegistration _ctr;
             private int _state;
-            private T _next;
+            private TSource _next;
             private Exception _error;
 
-            public SampleContext(ILinxObserver<T> observer)
+            public ILinxObserver<TSource> SourceObserver { get; }
+            public ILinxObserver<TSample> SampleObserver { get; }
+
+            public SampleContext(ILinxObserver<TSource> observer)
             {
                 _observer = observer;
                 var token = observer.Token;
                 if (token.CanBeCanceled) _ctr = token.Register(() => Complete(new OperationCanceledException(token)));
+                SourceObserver = new SourceObs(this);
+                SampleObserver = new SampleObs(this);
             }
 
-            public CancellationToken Token => _cts.Token;
-
-            public bool OnNextSource(T value)
+            private sealed class SourceObs : ILinxObserver<TSource>
             {
-                lock (_cts)
-                    switch (_state)
-                    {
-                        case _sInitial:
-                            _next = value;
-                            _state = _sSource;
-                            return true;
+                private readonly SampleContext<TSource, TSample> _c;
+                public SourceObs(SampleContext<TSource, TSample> context) => _c = context;
 
-                        case _sSource:
-                            _next = value;
-                            return true;
+                public CancellationToken Token => _c._cts.Token;
 
-                        case _sSample:
-                            Exception error;
-                            try
-                            {
-                                if (_observer.OnNext(value))
+                public bool OnNext(TSource value)
+                {
+                    lock (_c)
+                        switch (_c._state)
+                        {
+                            case _sInitial:
+                            case _sNext:
+                                _c._next = value;
+                                _c._state = _sNext;
+                                return true;
+
+                            case _sSample:
+                                _c._state = _sInitial;
+                                Exception error;
+                                try
                                 {
-                                    _state = _sInitial;
-                                    return true;
+                                    if (_c._observer.OnNext(value)) return true;
+                                    error = null;
                                 }
-                                error = null;
-                            }
-                            catch (Exception ex) { error = ex; }
+                                catch (Exception ex) { error = ex; }
 
-                            Complete(error);
-                            return false;
+                                _c.Complete(error);
+                                return false;
 
-                        default:
-                            return false;
-                    }
-            }
+                            default:
+                                return false;
+                        }
+                }
 
-            public bool OnNextSample()
-            {
-                lock (_cts)
-                    switch (_state)
+                public void OnError(Exception error)
+                {
+                    if (error == null) throw new ArgumentNullException(nameof(error));
+                    _c.Complete(error);
+                    OnCompleted();
+                }
+
+                public void OnCompleted()
+                {
+                    bool final;
+                    lock (_c)
+                        switch (_c._state)
+                        {
+                            case _sInitial:
+                            case _sNext:
+                            case _sSample:
+                                _c._next = default;
+                                _c._state = _sCompletedSource;
+                                final = false;
+                                break;
+
+                            case _sCompletedSample:
+                                _c._state = _sFinal;
+                                final = true;
+                                break;
+
+                            case _sCompleted:
+                                _c._state = _sCompletedSource;
+                                return;
+
+                            default:
+                                return;
+                        }
+
+                    if (final)
                     {
-                        case _sInitial:
-                            _state = _sSample;
-                            return true;
-
-                        case _sSample:
-                            return true;
-
-                        case _sSource:
-                            Exception error;
-                            try
-                            {
-                                if (_observer.OnNext(_next))
-                                {
-                                    _state = _sInitial;
-                                    return true;
-                                }
-                                error = null;
-                            }
-                            catch (Exception ex) { error = ex; }
-
-                            Complete(error);
-                            return false;
-
-                        default:
-                            return false;
+                        if (_c._error == null)
+                            _c._observer.OnCompleted();
+                        else
+                            _c._observer.OnError(_c._error);
                     }
+                    else
+                    {
+                        _c._ctr.Dispose();
+                        _c._cts.TryCancel();
+                    }
+                }
             }
 
-            public void OnSourceError(Exception error)
+            private sealed class SampleObs : ILinxObserver<TSample>
             {
-                if (error == null) throw new ArgumentNullException(nameof(error));
-                Complete(error);
-                Finally(_fSource);
-            }
+                private readonly SampleContext<TSource, TSample> _c;
+                public SampleObs(SampleContext<TSource, TSample> context) => _c = context;
 
-            public void OnSourceCompleted()
-            {
-                Complete(null);
-                Finally(_fSource);
-            }
+                public CancellationToken Token => _c._cts.Token;
 
-            public void OnSampleError(Exception error)
-            {
-                if (error == null) throw new ArgumentNullException(nameof(error));
-                Complete(error);
-                Finally(_fSample);
-            }
+                public bool OnNext(TSample _)
+                {
+                    lock (_c)
+                        switch (_c._state)
+                        {
+                            case _sInitial:
+                            case _sSample:
+                                _c._state = _sSample;
+                                return true;
 
-            public void OnSampleCompleted()
-            {
-                Complete(null);
-                Finally(_fSample);
+                            case _sNext:
+                                _c._state = _sInitial;
+                                Exception error;
+                                try
+                                {
+                                    if (_c._observer.OnNext(_c._next)) return true;
+                                    error = null;
+                                }
+                                catch (Exception ex) { error = ex; }
+
+                                _c.Complete(error);
+                                return false;
+
+                            default:
+                                return false;
+                        }
+                }
+
+                public void OnError(Exception error)
+                {
+                    if (error == null) throw new ArgumentNullException(nameof(error));
+                    _c.Complete(error);
+                    OnCompleted();
+                }
+
+                public void OnCompleted()
+                {
+                    bool final;
+                    lock (_c)
+                        switch (_c._state)
+                        {
+                            case _sInitial:
+                            case _sNext:
+                            case _sSample:
+                                _c._next = default;
+                                _c._state = _sCompletedSample;
+                                final = false;
+                                break;
+
+                            case _sCompletedSource:
+                                _c._state = _sFinal;
+                                final = true;
+                                break;
+
+                            case _sCompleted:
+                                _c._state = _sCompletedSample;
+                                return;
+
+                            default:
+                                return;
+                        }
+
+                    if (final)
+                    {
+                        if (_c._error == null)
+                            _c._observer.OnCompleted();
+                        else
+                            _c._observer.OnError(_c._error);
+                    }
+                    else
+                    {
+                        _c._ctr.Dispose();
+                        _c._cts.TryCancel();
+                    }
+                }
             }
 
             private void Complete(Exception errorOpt)
@@ -159,9 +236,8 @@
                     switch (_state)
                     {
                         case _sInitial:
-                        case _sSource:
+                        case _sNext:
                         case _sSample:
-                            _next = default;
                             _error = errorOpt;
                             _state = _sCompleted;
                             break;
@@ -170,18 +246,7 @@
                     }
 
                 _ctr.Dispose();
-                try { _cts.Cancel(); } catch { /**/ }
-            }
-
-            private void Finally(int flag)
-            {
-                lock (_cts)
-                {
-                    _state |= flag;
-                    if (_state != _mFinal) return;
-                    if (_error == null) _observer.OnCompleted();
-                    else _observer.OnError(_error);
-                }
+                _cts.TryCancel();
             }
         }
     }
