@@ -3,7 +3,6 @@
     using global::Linx.AsyncEnumerable;
     using global::Linx.Testing;
     using System.Threading.Tasks;
-    using global::Linx.Timing;
     using Xunit;
 
     public sealed class BufferTests
