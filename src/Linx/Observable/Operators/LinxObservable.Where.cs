@@ -1,6 +1,7 @@
 ﻿namespace Linx.Observable
 {
     using System;
+    using System.Threading;
 
     partial class LinxObservable
     {
@@ -14,15 +15,24 @@
 
             return Create<T>(observer =>
             {
-                try
-                {
-                    source.Subscribe(
-                        value => !predicate(value) && observer.OnNext(value),
-                        observer.OnError,
-                        observer.OnCompleted,
-                        observer.Token);
-                }
-                catch (Exception ex) { observer.OnError(ex); }
+                if (observer == null) throw new ArgumentNullException(nameof(observer));
+
+                source.SafeSubscribe(
+                    value =>
+                    {
+                        try
+                        {
+                            return !predicate(value) || observer.OnNext(value);
+                        }
+                        catch (Exception ex)
+                        {
+                            observer.OnError(ex);
+                            return false;
+                        }
+                    },
+                    observer.OnError,
+                    observer.OnCompleted,
+                    observer.Token);
             });
         }
 
@@ -36,16 +46,25 @@
 
             return Create<T>(observer =>
             {
-                try
-                {
-                    var i = 0;
-                    source.Subscribe(
-                        value => !predicate(value, i++) && observer.OnNext(value),
-                        observer.OnError,
-                        observer.OnCompleted,
-                        observer.Token);
-                }
-                catch (Exception ex) { observer.OnError(ex); }
+                if (observer == null) throw new ArgumentNullException(nameof(observer));
+
+                var i = 0;
+                source.SafeSubscribe(
+                    value =>
+                    {
+                        try
+                        {
+                            return !predicate(value, Interlocked.Increment(ref i)) || observer.OnNext(value);
+                        }
+                        catch (Exception ex)
+                        {
+                            observer.OnError(ex);
+                            return false;
+                        }
+                    },
+                    observer.OnError,
+                    observer.OnCompleted,
+                    observer.Token);
             });
         }
     }

@@ -17,10 +17,10 @@
             {
                 var context = new SampleContext<TSource>(observer);
 
-                try { source.Subscribe(context.OnNextSource, context.OnSourceError, context.OnSourceCompleted, context.Token); }
+                try { source.SafeSubscribe(context.OnNextSource, context.OnSourceError, context.OnSourceCompleted, context.Token); }
                 catch (Exception ex) { context.OnSourceError(ex); }
 
-                try { sampler.Subscribe(x => context.OnNextSample(), context.OnSampleError, context.OnSampleCompleted, context.Token); }
+                try { sampler.SafeSubscribe(x => context.OnNextSample(), context.OnSampleError, context.OnSampleCompleted, context.Token); }
                 catch (Exception ex) { context.OnSampleError(ex); }
             });
         }
@@ -30,12 +30,6 @@
         /// </summary>
         public static ILinxObservable<T> Sample<T>(this ILinxObservable<T> source, TimeSpan interval)
             => source.Sample(Interval(interval));
-
-        /// <summary>
-        /// Samples <paramref name="source"/> at the specified interval.
-        /// </summary>
-        public static ILinxObservable<T> Sample<T>(this ILinxObservable<T> source, int intervalMilliseconds)
-            => source.Sample(Interval(intervalMilliseconds));
 
         private sealed class SampleContext<T>
         {

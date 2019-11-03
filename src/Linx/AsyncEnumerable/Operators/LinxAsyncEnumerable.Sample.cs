@@ -17,11 +17,5 @@
         /// </summary>
         public static ILinxObservable<T> Sample<T>(this IAsyncEnumerable<T> source, TimeSpan interval)
             => source.ToLinxObservable().Sample(interval);
-
-        /// <summary>
-        /// Samples <paramref name="source"/> at the specified interval.
-        /// </summary>
-        public static ILinxObservable<T> Sample<T>(this IAsyncEnumerable<T> source, int intervalMilliseconds)
-            => source.ToLinxObservable().Sample(intervalMilliseconds);
     }
 }

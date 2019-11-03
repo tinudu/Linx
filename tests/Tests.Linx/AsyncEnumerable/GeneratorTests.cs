@@ -1,24 +1,14 @@
 ﻿namespace Tests.Linx.AsyncEnumerable
 {
+    using global::Linx;
     using global::Linx.AsyncEnumerable;
-    using global::Linx.Testing;
     using global::Linx.Timing;
     using System;
     using System.Threading.Tasks;
-    using global::Linx;
     using Xunit;
 
     public class GeneratorTests
     {
-        [Fact]
-        public async Task TestInterval()
-        {
-            var testee = LinxAsyncEnumerable.Interval(MarbleSettings.DefaultFrameSize).Take(5);
-            var t0 = new DateTimeOffset(2019, 8, 6, 0, 0, 0, TimeSpan.FromHours(2));
-            var expect = Marble.Parse("x-x-x-x-x|", (ch, i) => t0 + i * MarbleSettings.DefaultFrameSize);
-            await expect.AssertEqual(testee, t0);
-        }
-
         [Fact]
         public async Task TestReturn()
         {

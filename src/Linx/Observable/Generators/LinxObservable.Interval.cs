@@ -15,8 +15,12 @@
 
             return Create<DateTimeOffset>(async observer =>
             {
+                if (observer == null) throw new ArgumentNullException(nameof(observer));
+
                 try
                 {
+                    observer.Token.ThrowIfCancellationRequested();
+
                     var time = Time.Current;
                     var due = time.Now;
                     if (!observer.OnNext(due)) return;
@@ -31,12 +35,5 @@
                 catch (Exception ex) { observer.OnError(ex); }
             });
         }
-
-        /// <summary>
-        /// Returns a sequence that produces the current time immediately, then after every interval.
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">The interval must positive.</exception>
-        public static ILinxObservable<DateTimeOffset> Interval(int intervalMilliseconds) 
-            => Interval(TimeSpan.FromTicks(intervalMilliseconds * TimeSpan.TicksPerMillisecond));
     }
 }
