@@ -268,7 +268,7 @@
                 public int State;
                 private CancellationTokenRegistration _ctr;
                 private Exception _error;
-                private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+                private Task _tDisposed;
 
                 TKey IAsyncGrouping<TKey, TSource>.Key => _key.Value;
                 public TSource Current { get; set; }
@@ -336,7 +336,7 @@
                 ValueTask IAsyncDisposable.DisposeAsync()
                 {
                     Dispose(AsyncEnumeratorDisposedException.Instance);
-                    return new ValueTask(_atmbDisposed.Task);
+                    return new ValueTask(_tDisposed);
                 }
 
                 public void Dispose(Exception errorOpt)
@@ -362,29 +362,19 @@
                             throw new Exception(state + "???");
                     }
 
-                    _error = errorOpt;
-                    State = _sDisposed;
-                    _ctr.Dispose();
-
                     var eState = Atomic.Lock(ref _enumerator._state);
                     Debug.Assert(_enumerator._active > 0);
                     var last = --_enumerator._active == 0;
+                    _tDisposed = last ? _enumerator._tDisposed : Task.CompletedTask;
                     if (_enumerator._whileEnumerated)
                         try { _enumerator._groups.Remove(_key); }
                         catch { /* key comparer buggy? */ }
                     _enumerator._state = eState;
 
-                    if (last)
-                    {
-                        _enumerator._cts.TryCancel();
-                        var awaiter = _enumerator._atmbDisposed.Task.ConfigureAwait(false).GetAwaiter();
-                        if (awaiter.IsCompleted)
-                            _atmbDisposed.SetResult();
-                        else
-                            awaiter.OnCompleted(() => _atmbDisposed.SetResult());
-                    }
-                    else
-                        _atmbDisposed.SetResult();
+                    _error = errorOpt;
+                    State = _sDisposed;
+                    _ctr.Dispose();
+                    if (last) _enumerator._cts.TryCancel();
 
                     switch (state)
                     {
