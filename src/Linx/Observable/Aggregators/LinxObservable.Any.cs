@@ -7,31 +7,12 @@
     partial class LinxObservable
     {
         /// <summary>
-        /// Determines whether any element.
+        /// Determines whether the sequence contains any element.
         /// </summary>
-        public static Task<bool> Any<T>(this ILinxObservable<T> source, CancellationToken token)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-
-            var tcs = new TaskCompletionSource<bool>();
-            try
-            {
-                var result = false;
-                source.SafeSubscribe(
-                    value =>
-                    {
-                        result = true;
-                        return false;
-                    },
-                    error => tcs.TrySetException(error),
-                    () => tcs.TrySetResult(result),
-                    token);
-            }
-            catch (OperationCanceledException oce) when (oce.CancellationToken == token) { tcs.TrySetCanceled(token); }
-            catch (Exception ex) { tcs.TrySetException(ex); }
-
-            return tcs.Task;
-        }
+        public static async Task<bool> Any<T>(
+            this ILinxObservable<T> source, 
+            CancellationToken token) =>
+            await source.Aggregate(false, (a, c) => (true, false), token).ConfigureAwait(false);
 
         /// <summary>
         /// Determines whether any element of a sequence satisfies a condition.

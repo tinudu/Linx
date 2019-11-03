@@ -35,7 +35,20 @@
             Func<T, bool> onNext,
             Action<Exception> onError,
             Action onCompleted,
-            CancellationToken token) =>
-            source.SafeSubscribe(new AnonymousLinxObserver<T>(onNext, onError, onCompleted, token));
+            CancellationToken token)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (onNext == null) throw new ArgumentNullException(nameof(onNext));
+            if (onError == null) throw new ArgumentNullException(nameof(onError));
+            if (onCompleted == null) throw new ArgumentNullException(nameof(onCompleted));
+
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                source.Subscribe(new AnonymousLinxObserver<T>(onNext, onError, onCompleted, token));
+            }
+            catch (Exception ex) { onError(ex); }
+
+        }
     }
 }

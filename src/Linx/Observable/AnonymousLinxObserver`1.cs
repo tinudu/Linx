@@ -1,6 +1,7 @@
 ﻿namespace Linx.Observable
 {
     using System;
+    using System.Diagnostics;
     using System.Threading;
 
     partial class LinxObservable
@@ -20,9 +21,12 @@
 
             public AnonymousLinxObserver(Func<T, bool> onNext, Action<Exception> onError, Action onCompleted, CancellationToken token)
             {
-                if (onNext == null) throw new ArgumentNullException(nameof(onNext));
-                _onError = onError ?? throw new ArgumentNullException(nameof(onError));
-                _onCompleted = onCompleted ?? throw new ArgumentNullException(nameof(onCompleted));
+                Debug.Assert(onNext != null);
+                Debug.Assert(onError != null);
+                Debug.Assert(onCompleted != null);
+
+                _onError = onError;
+                _onCompleted = onCompleted;
                 Token = token;
                 _state = new InitialState(this, onNext);
             }
