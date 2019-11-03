@@ -40,33 +40,102 @@
             }
         }
 
-        private sealed class LatestOneEnumerator<T> : IAsyncEnumerator<T>, ILinxObserver<T>
+        private sealed class LatestOneEnumerator<T> : IAsyncEnumerator<T>
         {
             private const int _sInitial = 0;
             private const int _sAccepting = 1;
-            private const int _sCurrentMutable = 2;
-            private const int _sCurrentReadOnly = 3;
-            private const int _sNext = 4;
-            private const int _sLast = 5;
-            private const int _sCompleted = 6;
+            private const int _sEmittingCurrentMutable = 2;
+            private const int _sEmitting = 3;
+            private const int _sEmittingNext = 4;
+            private const int _sError = 5;
+            private const int _sLast = 6;
             private const int _sFinal = 7;
 
             private readonly ILinxObservable<T> _source;
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private CancellationTokenRegistration _ctr;
-            private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new ManualResetValueTaskSource<bool>();
-            private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+            private readonly CancellationToken _token;
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
+            private readonly Observer _observer;
             private int _state;
             private T _current, _next;
             private Exception _error;
+            private AsyncTaskMethodBuilder _atmbDisposed = default;
 
             public LatestOneEnumerator(ILinxObservable<T> source, CancellationToken token)
             {
+                Debug.Assert(source != null);
+
                 _source = source;
-                if (token.CanBeCanceled) _ctr = token.Register(() => Catch(new OperationCanceledException(token)));
+                _token = token;
+                _observer = new Observer(this);
             }
 
-            private void Catch(Exception error)
+            public T Current
+            {
+                get
+                {
+                    Atomic.CompareExchange(ref _state, _sEmitting, _sEmittingCurrentMutable);
+                    return _current;
+                }
+            }
+
+            public ValueTask<bool> MoveNextAsync()
+            {
+                _tsAccepting.Reset();
+
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sInitial:
+                        _state = _sAccepting;
+                        _source.SafeSubscribe(_observer);
+                        break;
+
+                    case _sEmittingCurrentMutable:
+                    case _sEmitting:
+                        _state = _sAccepting;
+                        break;
+
+                    case _sEmittingNext:
+                        _current = _next;
+                        _state = _sEmittingCurrentMutable;
+                        _tsAccepting.SetResult(true);
+                        break;
+
+                    case _sError:
+                        _current = default;
+                        _state = _sError;
+                        _tsAccepting.SetException(_error);
+                        break;
+
+                    case _sLast:
+                        Debug.Assert(_error == null);
+                        _current = Linx.Clear(ref _next);
+                        _state = _sFinal;
+                        _atmbDisposed.SetResult();
+                        _tsAccepting.SetResult(true);
+                        break;
+
+                    case _sFinal:
+                        _current = default;
+                        _state = _sFinal;
+                        _tsAccepting.SetExceptionOrResult(_error, false);
+                        break;
+
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+
+                return _tsAccepting.Task;
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                OnError(AsyncEnumeratorDisposedException.Instance);
+                return new ValueTask(_atmbDisposed.Task);
+            }
+
+            private void OnError(Exception error)
             {
                 Debug.Assert(error != null);
 
@@ -76,218 +145,118 @@
                     case _sInitial:
                         _error = error;
                         _state = _sFinal;
-                        _ctr.Dispose();
-                        try { _cts.Cancel(); } catch { /**/ }
                         _atmbDisposed.SetResult();
                         break;
 
                     case _sAccepting:
-                        _error = error;
-                        _current = _next = default;
-                        _state = _sCompleted;
-                        _ctr.Dispose();
-                        try { _cts.Cancel(); } catch { /**/ }
-                        _tsMoveNext.SetException(error);
-                        break;
-
-                    case _sCurrentMutable:
-                    case _sCurrentReadOnly:
-                    case _sNext:
-                        _error = error;
-                        _next = default;
-                        _state = _sCompleted;
-                        _ctr.Dispose();
-                        try { _cts.Cancel(); } catch { /**/ }
-                        break;
-
-                    case _sLast:
-                        _error = error;
-                        _next = default;
-                        _state = _sFinal;
-                        _ctr.Dispose();
-                        _atmbDisposed.SetResult();
-                        break;
-
-                    case _sCompleted:
-                    case _sFinal:
-                        _state = state;
-                        break;
-
-                    default:
-                        _state = state;
-                        throw new Exception(state + "???");
-                }
-            }
-
-            private void Finally()
-            {
-                var state = Atomic.Lock(ref _state);
-                switch (state)
-                {
-                    case _sInitial:
-                        _state = _sInitial;
-                        throw new InvalidOperationException();
-
-                    case _sAccepting:
-                        _current = _next = default;
-                        _state = _sFinal;
-                        _ctr.Dispose();
-                        try { _cts.Cancel(); } catch { /**/ }
-                        _atmbDisposed.SetResult();
-                        _tsMoveNext.SetResult(false);
-                        break;
-
-                    case _sCurrentMutable:
-                    case _sCurrentReadOnly:
-                        _next = default;
-                        _state = _sFinal;
-                        _ctr.Dispose();
-                        try { _cts.Cancel(); } catch { /**/ }
-                        _atmbDisposed.SetResult();
-                        break;
-
-                    case _sNext:
-                        _state = _sLast;
-                        try { _cts.Cancel(); } catch { /**/ }
-                        break;
-
-                    case _sCompleted:
-                        _state = _sFinal;
-                        _atmbDisposed.SetResult();
-                        break;
-
-                    case _sFinal:
-                        _state = state;
-                        break;
-
-                    //case _sLast:
-                    default:
-                        _state = state;
-                        throw new Exception(state + "???");
-                }
-            }
-
-            #region IAsyncEnumerator<T> implementation
-
-            T IAsyncEnumerator<T>.Current
-            {
-                get
-                {
-                    var state = Atomic.Lock(ref _state);
-                    var current = _current;
-                    _state = state == _sCurrentMutable ? _sCurrentReadOnly : state;
-                    return current;
-                }
-            }
-
-            ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync()
-            {
-                _tsMoveNext.Reset();
-
-                var state = Atomic.Lock(ref _state);
-                switch (state)
-                {
-                    case _sInitial:
-                        _state = _sAccepting;
-                        try { _source.Subscribe(this); }
-                        catch (Exception ex) { ((ILinxObserver<T>)this).OnError(ex); }
-                        break;
-
-                    case _sCurrentMutable:
-                    case _sCurrentReadOnly:
-                        _state = _sAccepting;
-                        break;
-
-                    case _sNext:
-                        _current = _next;
-                        _state = _sCurrentMutable;
-                        _tsMoveNext.SetResult(true);
-                        break;
-
-                    case _sLast:
-                        _current = Linx.Clear(ref _next);
-                        _state = _sFinal;
-                        _ctr.Dispose();
-                        _atmbDisposed.SetResult();
-                        _tsMoveNext.SetResult(true);
-                        break;
-
-                    case _sCompleted:
-                    case _sFinal:
                         _current = default;
-                        _state = state;
-                        _tsMoveNext.SetExceptionOrResult(_error, false);
+                        _error = error;
+                        _state = _sError;
+                        _tsAccepting.SetException(error);
                         break;
 
-                    //case _sAccepting:
-                    default:
-                        _state = state;
-                        throw new Exception(state + "???");
-                }
-
-                return _tsMoveNext.Task;
-            }
-
-            async ValueTask IAsyncDisposable.DisposeAsync()
-            {
-                Catch(AsyncEnumeratorDisposedException.Instance);
-                await _atmbDisposed.Task.ConfigureAwait(false);
-                _current = default;
-            }
-
-            #endregion
-
-            #region ILinxObserver<T> implementation
-
-            public CancellationToken Token => _cts.Token;
-
-            bool ILinxObserver<T>.OnNext(T value)
-            {
-                var state = Atomic.Lock(ref _state);
-                switch (state)
-                {
-                    case _sInitial:
-                        _state = _sInitial;
-                        throw new InvalidOperationException();
-
-                    case _sAccepting:
-                        _current = value;
-                        _state = _sCurrentMutable;
-                        _tsMoveNext.SetResult(true);
-                        return true;
-
-                    case _sCurrentMutable:
-                        _current = value;
-                        _state = _sCurrentMutable;
-                        return true;
-
-                    case _sCurrentReadOnly:
-                    case _sNext:
-                        _next = value;
-                        _state = state;
-                        return true;
+                    case _sEmittingCurrentMutable:
+                    case _sEmitting:
+                    case _sEmittingNext:
+                        _next = default;
+                        _error = error;
+                        _state = _sError;
+                        break;
 
                     case _sLast:
-                    case _sCompleted:
-                    case _sFinal:
-                        _state = state;
-                        return false;
+                        _next = default;
+                        _error = error;
+                        _state = _sFinal;
+                        _atmbDisposed.SetResult();
+                        break;
 
-                    default:
+                    default: // Error, Final
                         _state = state;
-                        throw new Exception(state + "???");
+                        break;
                 }
             }
 
-            void ILinxObserver<T>.OnError(Exception error)
+            private sealed class Observer : ILinxObserver<T>
             {
-                Catch(error ?? new ArgumentNullException(nameof(error)));
-                Finally();
+                private readonly LatestOneEnumerator<T> _e;
+                public Observer(LatestOneEnumerator<T> enumerator) => _e = enumerator;
+
+                public CancellationToken Token => _e._token;
+
+                public bool OnNext(T value)
+                {
+                    var state = Atomic.Lock(ref _e._state);
+                    switch (state)
+                    {
+                        case _sAccepting:
+                            _e._current = value;
+                            _e._state = _sEmittingCurrentMutable;
+                            _e._tsAccepting.SetResult(true);
+                            return true;
+
+                        case _sEmittingCurrentMutable:
+                            _e._current = value;
+                            _e._state = _sEmittingCurrentMutable;
+                            return true;
+
+                        case _sEmitting:
+                        case _sEmittingNext:
+                            _e._next = value;
+                            _e._state = _sEmittingNext;
+                            return true;
+
+                        case _sError:
+                        case _sLast:
+                        case _sFinal:
+                            _e._state = state;
+                            return false;
+
+                        default: // Initial???
+                            _e._state = state;
+                            throw new Exception(state + "???");
+                    }
+                }
+
+                public void OnError(Exception error)
+                {
+                    _e.OnError(error);
+                    OnCompleted();
+                }
+
+                public void OnCompleted()
+                {
+                    var state = Atomic.Lock(ref _e._state);
+                    switch (state)
+                    {
+                        case _sAccepting:
+                            _e._current = default;
+                            _e._state = _sFinal;
+                            _e._atmbDisposed.SetResult();
+                            _e._tsAccepting.SetResult(false);
+                            break;
+
+                        case _sEmittingCurrentMutable:
+                        case _sEmitting:
+                            _e._state = _sFinal;
+                            _e._atmbDisposed.SetResult();
+                            break;
+
+                        case _sEmittingNext:
+                            _e._state = _sLast;
+                            break;
+
+                        case _sError:
+                        case _sLast:
+                        case _sFinal:
+                            _e._state = state;
+                            break;
+
+                        default: // Initial
+                            _e._state = state;
+                            throw new Exception(state + "???");
+                    }
+                }
             }
-
-            void ILinxObserver<T>.OnCompleted() => Finally();
-
-            #endregion
         }
     }
 }

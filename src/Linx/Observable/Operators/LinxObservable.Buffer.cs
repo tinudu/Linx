@@ -33,6 +33,7 @@
             private readonly CancellationToken _token;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
             private readonly Queue<T> _queue = new Queue<T>();
+            private readonly Observer _observer;
             private int _state;
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -43,6 +44,7 @@
 
                 _source = source;
                 _token = token;
+                _observer = new Observer(this);
             }
 
             public T Current { get; private set; }
@@ -56,15 +58,7 @@
                 {
                     case _sInitial:
                         _state = _sAccepting;
-                        try
-                        {
-                            _token.ThrowIfCancellationRequested();
-                            _source.Subscribe(new Observer(this));
-                        }
-                        catch (Exception ex)
-                        {
-                            OnError(ex);
-                        }
+                        _source.SafeSubscribe(_observer);
                         break;
 
                     case _sEmitting:

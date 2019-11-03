@@ -16,7 +16,7 @@
                     Index = j - 1,
                     GenArg = "T" + j,
                     Source = "source" + j,
-                    Ae = "_ae" + j
+                    Value = "_value" + j
                 })
                 .ToList()
         })
@@ -94,7 +94,7 @@ namespace Linx.AsyncEnumerable
                 private uint _emittingFlags;
                 private Exception _error;
 <# foreach (var n in arg.Names) { #>
-                private ConfiguredCancelableAsyncEnumerable<<#= n.GenArg #>>.Enumerator <#= n.Ae #>;
+                private <#= n.GenArg #> <#= n.Value #>;
 <# } #>
 
                 public Enumerator(ZipEnumerable<#= arg.GenArgList #> enumerable, CancellationToken token)
@@ -115,7 +115,7 @@ namespace Linx.AsyncEnumerable
                             _state = _sAccepting;
                             _active = _n;
 <# foreach (var n in arg.Names) { #>
-                            Produce(_enumerable._<#= n.Source #>, <#= n.Index #>, (e, ae) => e.<#= n.Ae #> = ae);
+                            Produce(_enumerable._<#= n.Source #>, <#= n.Index #>, (e, v) => e.<#= n.Value #> = v);
 <# } #>
                             break;
 
@@ -157,7 +157,7 @@ namespace Linx.AsyncEnumerable
                             {
                                 try
                                 {
-                                    Current = _enumerable._resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>);
+                                    Current = _enumerable._resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Value)) #>);
                                 }
                                 catch (Exception ex)
                                 {
@@ -268,17 +268,16 @@ namespace Linx.AsyncEnumerable
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
                 {
                     try
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
                         var flag = 1u << index;
-                        await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        setEnumerator(this, ae);
-                        while (await ae.MoveNextAsync())
+                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                         {
+                            setValue(this, item);
                             ts.Reset();
                             OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))

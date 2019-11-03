@@ -125,10 +125,10 @@
                 if (!Equals(nActual, nExpected))
                     throw new Exception($"Position {position}: Received {nActual}, Expected: {nExpected}");
 
-                position++;
-
                 if (notification.Kind != NotificationKind.Next)
                     break;
+
+                position++;
             }
         }
 

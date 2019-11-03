@@ -59,8 +59,8 @@
                 private int _state, _active;
                 private uint _emittingFlags;
                 private Exception _error;
-                private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
-                private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
+                private T1 _value1;
+                private T2 _value2;
 
                 public Enumerator(ZipEnumerable<T1, T2, TResult> enumerable, CancellationToken token)
                 {
@@ -79,8 +79,8 @@
                         case _sInitial:
                             _state = _sAccepting;
                             _active = _n;
-                            Produce(_enumerable._source1, 0, (e, ae) => e._ae1 = ae);
-                            Produce(_enumerable._source2, 1, (e, ae) => e._ae2 = ae);
+                            Produce(_enumerable._source1, 0, (e, v) => e._value1 = v);
+                            Produce(_enumerable._source2, 1, (e, v) => e._value2 = v);
                             break;
 
                         case _sEmitting:
@@ -121,7 +121,7 @@
                             {
                                 try
                                 {
-                                    Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current);
+                                    Current = _enumerable._resultSelector(_value1, _value2);
                                 }
                                 catch (Exception ex)
                                 {
@@ -232,17 +232,16 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
                 {
                     try
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
                         var flag = 1u << index;
-                        await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        setEnumerator(this, ae);
-                        while (await ae.MoveNextAsync())
+                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                         {
+                            setValue(this, item);
                             ts.Reset();
                             OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
@@ -308,9 +307,9 @@
                 private int _state, _active;
                 private uint _emittingFlags;
                 private Exception _error;
-                private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
-                private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
-                private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
+                private T1 _value1;
+                private T2 _value2;
+                private T3 _value3;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, TResult> enumerable, CancellationToken token)
                 {
@@ -329,9 +328,9 @@
                         case _sInitial:
                             _state = _sAccepting;
                             _active = _n;
-                            Produce(_enumerable._source1, 0, (e, ae) => e._ae1 = ae);
-                            Produce(_enumerable._source2, 1, (e, ae) => e._ae2 = ae);
-                            Produce(_enumerable._source3, 2, (e, ae) => e._ae3 = ae);
+                            Produce(_enumerable._source1, 0, (e, v) => e._value1 = v);
+                            Produce(_enumerable._source2, 1, (e, v) => e._value2 = v);
+                            Produce(_enumerable._source3, 2, (e, v) => e._value3 = v);
                             break;
 
                         case _sEmitting:
@@ -372,7 +371,7 @@
                             {
                                 try
                                 {
-                                    Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current);
+                                    Current = _enumerable._resultSelector(_value1, _value2, _value3);
                                 }
                                 catch (Exception ex)
                                 {
@@ -483,17 +482,16 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
                 {
                     try
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
                         var flag = 1u << index;
-                        await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        setEnumerator(this, ae);
-                        while (await ae.MoveNextAsync())
+                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                         {
+                            setValue(this, item);
                             ts.Reset();
                             OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
@@ -563,10 +561,10 @@
                 private int _state, _active;
                 private uint _emittingFlags;
                 private Exception _error;
-                private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
-                private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
-                private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
-                private ConfiguredCancelableAsyncEnumerable<T4>.Enumerator _ae4;
+                private T1 _value1;
+                private T2 _value2;
+                private T3 _value3;
+                private T4 _value4;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, TResult> enumerable, CancellationToken token)
                 {
@@ -585,10 +583,10 @@
                         case _sInitial:
                             _state = _sAccepting;
                             _active = _n;
-                            Produce(_enumerable._source1, 0, (e, ae) => e._ae1 = ae);
-                            Produce(_enumerable._source2, 1, (e, ae) => e._ae2 = ae);
-                            Produce(_enumerable._source3, 2, (e, ae) => e._ae3 = ae);
-                            Produce(_enumerable._source4, 3, (e, ae) => e._ae4 = ae);
+                            Produce(_enumerable._source1, 0, (e, v) => e._value1 = v);
+                            Produce(_enumerable._source2, 1, (e, v) => e._value2 = v);
+                            Produce(_enumerable._source3, 2, (e, v) => e._value3 = v);
+                            Produce(_enumerable._source4, 3, (e, v) => e._value4 = v);
                             break;
 
                         case _sEmitting:
@@ -629,7 +627,7 @@
                             {
                                 try
                                 {
-                                    Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current);
+                                    Current = _enumerable._resultSelector(_value1, _value2, _value3, _value4);
                                 }
                                 catch (Exception ex)
                                 {
@@ -740,17 +738,16 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
                 {
                     try
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
                         var flag = 1u << index;
-                        await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        setEnumerator(this, ae);
-                        while (await ae.MoveNextAsync())
+                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                         {
+                            setValue(this, item);
                             ts.Reset();
                             OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
@@ -824,11 +821,11 @@
                 private int _state, _active;
                 private uint _emittingFlags;
                 private Exception _error;
-                private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
-                private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
-                private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
-                private ConfiguredCancelableAsyncEnumerable<T4>.Enumerator _ae4;
-                private ConfiguredCancelableAsyncEnumerable<T5>.Enumerator _ae5;
+                private T1 _value1;
+                private T2 _value2;
+                private T3 _value3;
+                private T4 _value4;
+                private T5 _value5;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, T5, TResult> enumerable, CancellationToken token)
                 {
@@ -847,11 +844,11 @@
                         case _sInitial:
                             _state = _sAccepting;
                             _active = _n;
-                            Produce(_enumerable._source1, 0, (e, ae) => e._ae1 = ae);
-                            Produce(_enumerable._source2, 1, (e, ae) => e._ae2 = ae);
-                            Produce(_enumerable._source3, 2, (e, ae) => e._ae3 = ae);
-                            Produce(_enumerable._source4, 3, (e, ae) => e._ae4 = ae);
-                            Produce(_enumerable._source5, 4, (e, ae) => e._ae5 = ae);
+                            Produce(_enumerable._source1, 0, (e, v) => e._value1 = v);
+                            Produce(_enumerable._source2, 1, (e, v) => e._value2 = v);
+                            Produce(_enumerable._source3, 2, (e, v) => e._value3 = v);
+                            Produce(_enumerable._source4, 3, (e, v) => e._value4 = v);
+                            Produce(_enumerable._source5, 4, (e, v) => e._value5 = v);
                             break;
 
                         case _sEmitting:
@@ -892,7 +889,7 @@
                             {
                                 try
                                 {
-                                    Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current, _ae5.Current);
+                                    Current = _enumerable._resultSelector(_value1, _value2, _value3, _value4, _value5);
                                 }
                                 catch (Exception ex)
                                 {
@@ -1003,17 +1000,16 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
                 {
                     try
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
                         var flag = 1u << index;
-                        await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        setEnumerator(this, ae);
-                        while (await ae.MoveNextAsync())
+                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                         {
+                            setValue(this, item);
                             ts.Reset();
                             OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
@@ -1091,12 +1087,12 @@
                 private int _state, _active;
                 private uint _emittingFlags;
                 private Exception _error;
-                private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
-                private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
-                private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
-                private ConfiguredCancelableAsyncEnumerable<T4>.Enumerator _ae4;
-                private ConfiguredCancelableAsyncEnumerable<T5>.Enumerator _ae5;
-                private ConfiguredCancelableAsyncEnumerable<T6>.Enumerator _ae6;
+                private T1 _value1;
+                private T2 _value2;
+                private T3 _value3;
+                private T4 _value4;
+                private T5 _value5;
+                private T6 _value6;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, T5, T6, TResult> enumerable, CancellationToken token)
                 {
@@ -1115,12 +1111,12 @@
                         case _sInitial:
                             _state = _sAccepting;
                             _active = _n;
-                            Produce(_enumerable._source1, 0, (e, ae) => e._ae1 = ae);
-                            Produce(_enumerable._source2, 1, (e, ae) => e._ae2 = ae);
-                            Produce(_enumerable._source3, 2, (e, ae) => e._ae3 = ae);
-                            Produce(_enumerable._source4, 3, (e, ae) => e._ae4 = ae);
-                            Produce(_enumerable._source5, 4, (e, ae) => e._ae5 = ae);
-                            Produce(_enumerable._source6, 5, (e, ae) => e._ae6 = ae);
+                            Produce(_enumerable._source1, 0, (e, v) => e._value1 = v);
+                            Produce(_enumerable._source2, 1, (e, v) => e._value2 = v);
+                            Produce(_enumerable._source3, 2, (e, v) => e._value3 = v);
+                            Produce(_enumerable._source4, 3, (e, v) => e._value4 = v);
+                            Produce(_enumerable._source5, 4, (e, v) => e._value5 = v);
+                            Produce(_enumerable._source6, 5, (e, v) => e._value6 = v);
                             break;
 
                         case _sEmitting:
@@ -1161,7 +1157,7 @@
                             {
                                 try
                                 {
-                                    Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current, _ae5.Current, _ae6.Current);
+                                    Current = _enumerable._resultSelector(_value1, _value2, _value3, _value4, _value5, _value6);
                                 }
                                 catch (Exception ex)
                                 {
@@ -1272,17 +1268,16 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
                 {
                     try
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
                         var flag = 1u << index;
-                        await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        setEnumerator(this, ae);
-                        while (await ae.MoveNextAsync())
+                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                         {
+                            setValue(this, item);
                             ts.Reset();
                             OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
@@ -1364,13 +1359,13 @@
                 private int _state, _active;
                 private uint _emittingFlags;
                 private Exception _error;
-                private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
-                private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
-                private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
-                private ConfiguredCancelableAsyncEnumerable<T4>.Enumerator _ae4;
-                private ConfiguredCancelableAsyncEnumerable<T5>.Enumerator _ae5;
-                private ConfiguredCancelableAsyncEnumerable<T6>.Enumerator _ae6;
-                private ConfiguredCancelableAsyncEnumerable<T7>.Enumerator _ae7;
+                private T1 _value1;
+                private T2 _value2;
+                private T3 _value3;
+                private T4 _value4;
+                private T5 _value5;
+                private T6 _value6;
+                private T7 _value7;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, TResult> enumerable, CancellationToken token)
                 {
@@ -1389,13 +1384,13 @@
                         case _sInitial:
                             _state = _sAccepting;
                             _active = _n;
-                            Produce(_enumerable._source1, 0, (e, ae) => e._ae1 = ae);
-                            Produce(_enumerable._source2, 1, (e, ae) => e._ae2 = ae);
-                            Produce(_enumerable._source3, 2, (e, ae) => e._ae3 = ae);
-                            Produce(_enumerable._source4, 3, (e, ae) => e._ae4 = ae);
-                            Produce(_enumerable._source5, 4, (e, ae) => e._ae5 = ae);
-                            Produce(_enumerable._source6, 5, (e, ae) => e._ae6 = ae);
-                            Produce(_enumerable._source7, 6, (e, ae) => e._ae7 = ae);
+                            Produce(_enumerable._source1, 0, (e, v) => e._value1 = v);
+                            Produce(_enumerable._source2, 1, (e, v) => e._value2 = v);
+                            Produce(_enumerable._source3, 2, (e, v) => e._value3 = v);
+                            Produce(_enumerable._source4, 3, (e, v) => e._value4 = v);
+                            Produce(_enumerable._source5, 4, (e, v) => e._value5 = v);
+                            Produce(_enumerable._source6, 5, (e, v) => e._value6 = v);
+                            Produce(_enumerable._source7, 6, (e, v) => e._value7 = v);
                             break;
 
                         case _sEmitting:
@@ -1436,7 +1431,7 @@
                             {
                                 try
                                 {
-                                    Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current, _ae5.Current, _ae6.Current, _ae7.Current);
+                                    Current = _enumerable._resultSelector(_value1, _value2, _value3, _value4, _value5, _value6, _value7);
                                 }
                                 catch (Exception ex)
                                 {
@@ -1547,17 +1542,16 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
                 {
                     try
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
                         var flag = 1u << index;
-                        await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        setEnumerator(this, ae);
-                        while (await ae.MoveNextAsync())
+                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                         {
+                            setValue(this, item);
                             ts.Reset();
                             OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))
@@ -1643,14 +1637,14 @@
                 private int _state, _active;
                 private uint _emittingFlags;
                 private Exception _error;
-                private ConfiguredCancelableAsyncEnumerable<T1>.Enumerator _ae1;
-                private ConfiguredCancelableAsyncEnumerable<T2>.Enumerator _ae2;
-                private ConfiguredCancelableAsyncEnumerable<T3>.Enumerator _ae3;
-                private ConfiguredCancelableAsyncEnumerable<T4>.Enumerator _ae4;
-                private ConfiguredCancelableAsyncEnumerable<T5>.Enumerator _ae5;
-                private ConfiguredCancelableAsyncEnumerable<T6>.Enumerator _ae6;
-                private ConfiguredCancelableAsyncEnumerable<T7>.Enumerator _ae7;
-                private ConfiguredCancelableAsyncEnumerable<T8>.Enumerator _ae8;
+                private T1 _value1;
+                private T2 _value2;
+                private T3 _value3;
+                private T4 _value4;
+                private T5 _value5;
+                private T6 _value6;
+                private T7 _value7;
+                private T8 _value8;
 
                 public Enumerator(ZipEnumerable<T1, T2, T3, T4, T5, T6, T7, T8, TResult> enumerable, CancellationToken token)
                 {
@@ -1669,14 +1663,14 @@
                         case _sInitial:
                             _state = _sAccepting;
                             _active = _n;
-                            Produce(_enumerable._source1, 0, (e, ae) => e._ae1 = ae);
-                            Produce(_enumerable._source2, 1, (e, ae) => e._ae2 = ae);
-                            Produce(_enumerable._source3, 2, (e, ae) => e._ae3 = ae);
-                            Produce(_enumerable._source4, 3, (e, ae) => e._ae4 = ae);
-                            Produce(_enumerable._source5, 4, (e, ae) => e._ae5 = ae);
-                            Produce(_enumerable._source6, 5, (e, ae) => e._ae6 = ae);
-                            Produce(_enumerable._source7, 6, (e, ae) => e._ae7 = ae);
-                            Produce(_enumerable._source8, 7, (e, ae) => e._ae8 = ae);
+                            Produce(_enumerable._source1, 0, (e, v) => e._value1 = v);
+                            Produce(_enumerable._source2, 1, (e, v) => e._value2 = v);
+                            Produce(_enumerable._source3, 2, (e, v) => e._value3 = v);
+                            Produce(_enumerable._source4, 3, (e, v) => e._value4 = v);
+                            Produce(_enumerable._source5, 4, (e, v) => e._value5 = v);
+                            Produce(_enumerable._source6, 5, (e, v) => e._value6 = v);
+                            Produce(_enumerable._source7, 6, (e, v) => e._value7 = v);
+                            Produce(_enumerable._source8, 7, (e, v) => e._value8 = v);
                             break;
 
                         case _sEmitting:
@@ -1717,7 +1711,7 @@
                             {
                                 try
                                 {
-                                    Current = _enumerable._resultSelector(_ae1.Current, _ae2.Current, _ae3.Current, _ae4.Current, _ae5.Current, _ae6.Current, _ae7.Current, _ae8.Current);
+                                    Current = _enumerable._resultSelector(_value1, _value2, _value3, _value4, _value5, _value6, _value7, _value8);
                                 }
                                 catch (Exception ex)
                                 {
@@ -1828,17 +1822,16 @@
                     }
                 }
 
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, ConfiguredCancelableAsyncEnumerable<T>.Enumerator> setEnumerator)
+                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
                 {
                     try
                     {
                         _cts.Token.ThrowIfCancellationRequested();
                         var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
                         var flag = 1u << index;
-                        await using var ae = source.WithCancellation(_cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                        setEnumerator(this, ae);
-                        while (await ae.MoveNextAsync())
+                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                         {
+                            setValue(this, item);
                             ts.Reset();
                             OnNext(flag, ts);
                             if (!await ts.Task.ConfigureAwait(false))

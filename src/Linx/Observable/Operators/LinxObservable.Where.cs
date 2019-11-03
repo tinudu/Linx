@@ -18,18 +18,7 @@
                 if (observer == null) throw new ArgumentNullException(nameof(observer));
 
                 source.SafeSubscribe(
-                    value =>
-                    {
-                        try
-                        {
-                            return !predicate(value) || observer.OnNext(value);
-                        }
-                        catch (Exception ex)
-                        {
-                            observer.OnError(ex);
-                            return false;
-                        }
-                    },
+                    value => !predicate(value) || observer.OnNext(value),
                     observer.OnError,
                     observer.OnCompleted,
                     observer.Token);
@@ -50,18 +39,7 @@
 
                 var i = 0;
                 source.SafeSubscribe(
-                    value =>
-                    {
-                        try
-                        {
-                            return !predicate(value, Interlocked.Increment(ref i)) || observer.OnNext(value);
-                        }
-                        catch (Exception ex)
-                        {
-                            observer.OnError(ex);
-                            return false;
-                        }
-                    },
+                    value => !predicate(value, Interlocked.Increment(ref i)) || observer.OnNext(value),
                     observer.OnError,
                     observer.OnCompleted,
                     observer.Token);
