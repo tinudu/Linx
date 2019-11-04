@@ -115,15 +115,13 @@
             private sealed class FinalState : IState
             {
                 public static FinalState Instance { get; } = new FinalState();
+                private FinalState() { }
+
                 public bool OnNext(T _) => false;
 
-                public void OnError(Exception error)
-                {
-                }
+                public void OnError(Exception error) { }
 
-                public void OnCompleted()
-                {
-                }
+                public void OnCompleted() { }
             }
         }
     }
