@@ -13,10 +13,9 @@
             Names = Enumerable.Range(1, i)
                 .Select(j => new
                 {
-                    Index = j - 1,
                     GenArg = "T" + j,
                     Source = "source" + j,
-                    Value = "_value" + j
+                    Ae = "ae" + j
                 })
                 .ToList()
         })
@@ -31,262 +30,37 @@ namespace Linx.AsyncEnumerable
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskSources;
 
     partial class LinxAsyncEnumerable
     {
 <# foreach(var arg in args) { #>
         /// <summary>
-        /// Merges sequences into one sequence by combining corresponding elements.
+        /// Merges multiple sequences into one sequence by combining corresponding elements.
         /// </summary>
         public static IAsyncEnumerable<TResult> Zip<#= arg.GenArgList #>(this
 <# foreach(var n in arg.Names) { #>
             IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
 <# } #>
             Func<#= arg.GenArgList #> resultSelector)
-            => new ZipEnumerable<#= arg.GenArgList #>(<#= string.Join(", ", arg.Names.Select(n => n.Source)) #>, resultSelector);
-
-        private sealed class ZipEnumerable<#= arg.GenArgList #> : AsyncEnumerableBase<TResult>
         {
-<# foreach (var n in arg.Names) { #>
-            private readonly IAsyncEnumerable<<#= n.GenArg #>> _<#= n.Source #>;
+<# foreach(var n in arg.Names) { #>
+            if (<#= n.Source #> == null) throw new ArgumentNullException(nameof(<#= n.Source #>));
 <# } #>
-            private readonly Func<#= arg.GenArgList #> _resultSelector;
+            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            public ZipEnumerable(
-<# foreach (var n in arg.Names) { #>
-                IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
-<# } #>
-                Func<#= arg.GenArgList #> resultSelector)
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
             {
-<# foreach (var n in arg.Names) { #>
-                _<#= n.Source #> = <#= n.Source #> ?? throw new ArgumentNullException(nameof(<#= n.Source #>));
+                // ReSharper disable PossibleMultipleEnumeration
+<# foreach(var n in arg.Names) { #>
+                await using var <#= n.Ae #> = <#= n.Source #>.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
 <# } #>
-                _resultSelector = resultSelector ?? throw new ArgumentNullException(nameof(resultSelector));
-            }
-
-            public override IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token) => new Enumerator(this, token);
-
-            public override string ToString() => "Zip";
-
-            private sealed class Enumerator : IAsyncEnumerator<TResult>
-            {
-                private const int _n = <#= arg.N #>;
-                private const uint _allFlags = (1U << _n) - 1;
-
-                private const int _sInitial = 0;
-                private const int _sAccepting = 1;
-                private const int _sEmitting = 2;
-                private const int _sCompleted = 3;
-                private const int _sFinal = 4;
-
-                private readonly ZipEnumerable<#= arg.GenArgList #> _enumerable;
-                private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-                private readonly ManualResetValueTaskSource<bool>[] _tssEmitting = new ManualResetValueTaskSource<bool>[_n];
-                private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-                private CancellationTokenRegistration _ctr;
-                private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
-                private int _state, _active;
-                private uint _emittingFlags;
-                private Exception _error;
-<# foreach (var n in arg.Names) { #>
-                private <#= n.GenArg #> <#= n.Value #>;
-<# } #>
-
-                public Enumerator(ZipEnumerable<#= arg.GenArgList #> enumerable, CancellationToken token)
-                {
-                    _enumerable = enumerable;
-                    if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
-                }
-
-                public TResult Current { get; private set; }
-
-                public ValueTask<bool> MoveNextAsync()
-                {
-                    _tsAccepting.Reset();
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                            _state = _sAccepting;
-                            _active = _n;
-<# foreach (var n in arg.Names) { #>
-                            Produce(_enumerable._<#= n.Source #>, <#= n.Index #>, (e, v) => e.<#= n.Value #> = v);
-<# } #>
-                            break;
-
-                        case _sEmitting:
-                            _emittingFlags = 0;
-                            _state = _sAccepting;
-                            foreach (var ts in _tssEmitting)
-                                ts.SetResult(Atomic.CompareExchange(ref _state, _sAccepting, _sAccepting) == _sAccepting);
-                            break;
-
-                        case _sCompleted:
-                        case _sFinal:
-                            _state = state;
-                            _tsAccepting.SetExceptionOrResult(_error, false);
-                            break;
-
-                        default: // Accepting???
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-                    return _tsAccepting.Task;
-                }
-
-                public ValueTask DisposeAsync()
-                {
-                    OnError(AsyncEnumeratorDisposedException.Instance);
-                    return new ValueTask(_atmbDisposed.Task);
-                }
-
-                private void OnNext(uint flag, ManualResetValueTaskSource<bool> ts)
-                {
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sAccepting:
-                            Debug.Assert((_emittingFlags & flag) == 0);
-                            _emittingFlags |= flag;
-                            if (_emittingFlags == _allFlags)
-                            {
-                                try
-                                {
-                                    Current = _enumerable._resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Value)) #>);
-                                }
-                                catch (Exception ex)
-                                {
-                                    _state = _sAccepting;
-                                    OnError(ex);
-                                    return;
-                                }
-
-                                _state = _sEmitting;
-                                _tsAccepting.SetResult(true);
-                            }
-                            else
-                                _state = _sAccepting;
-                            break;
-
-                        case _sCompleted:
-                        case _sFinal:
-                            _state = state;
-                            ts.SetResult(false);
-                            break;
-
-                        default: // Initial, Emitting???
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-                }
-
-                private void OnError(Exception error)
-                {
-                    Debug.Assert(error != null);
-
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                            _error = error;
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            _atmbDisposed.SetResult();
-                            break;
-
-                        case _sAccepting:
-                            Current = default;
-                            _error = error;
-                            var flags = _emittingFlags;
-                            _state = _sCompleted;
-                            _ctr.Dispose();
-                            for (var i = 0; flags != 0; i++, flags >>= 1)
-                                if ((flags & 1U) != 0)
-                                    _tssEmitting[i].SetResult(false);
-                            _cts.TryCancel();
-                            _tsAccepting.SetException(error);
-                            break;
-
-                        case _sEmitting:
-                            _error = error;
-                            _state = _sCompleted;
-                            _ctr.Dispose();
-                            foreach (var ts in _tssEmitting)
-                                ts.SetResult(false);
-                            _cts.TryCancel();
-                            break;
-
-                        case _sCompleted:
-                        case _sFinal:
-                            _state = state;
-                            break;
-
-                        default:
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-                }
-
-                private void OnCompleted()
-                {
-                    var state = Atomic.Lock(ref _state);
-                    Debug.Assert(_active > 0);
-                    _active--;
-                    switch (state)
-                    {
-                        case _sAccepting:
-                            Current = default;
-                            Debug.Assert(_active > 0);
-                            var flags = _emittingFlags;
-                            _state = _sCompleted;
-                            _ctr.Dispose();
-                            for (var i = 0; flags != 0; i++, flags >>= 1)
-                                if ((flags & 1U) != 0)
-                                    _tssEmitting[i].SetResult(false);
-                            _cts.TryCancel();
-                            _tsAccepting.SetResult(false);
-                            break;
-
-                        case _sCompleted:
-                            if (_active == 0)
-                            {
-                                _state = _sFinal;
-                                _atmbDisposed.SetResult();
-                            }
-                            else
-                                _state = _sCompleted;
-                            break;
-
-                        default: // Initial, Emitting, Final???
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
-                }
-
-                private async void Produce<T>(IAsyncEnumerable<T> source, int index, Action<Enumerator, T> setValue)
-                {
-                    try
-                    {
-                        _cts.Token.ThrowIfCancellationRequested();
-                        var ts = _tssEmitting[index] = new ManualResetValueTaskSource<bool>();
-                        var flag = 1u << index;
-                        await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
-                        {
-                            setValue(this, item);
-                            ts.Reset();
-                            OnNext(flag, ts);
-                            if (!await ts.Task.ConfigureAwait(false))
-                                break;
-                        }
-                    }
-                    catch (Exception ex) { OnError(ex); }
-                    finally { OnCompleted(); }
-                }
+                // ReSharper restore PossibleMultipleEnumeration
+                while (<#= string.Join(" && ", arg.Names.Select(n => "await " + n.Ae + ".MoveNextAsync()")) #>)
+                    yield return resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>);
             }
         }
 

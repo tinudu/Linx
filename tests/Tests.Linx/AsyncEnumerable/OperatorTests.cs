@@ -29,9 +29,9 @@
         [Fact]
         public async Task TestZip()
         {
-            var src1 = Marble.Parse("a-  - -bc- -d- -e");
+            var src1 = Marble.Parse("a-  - -bc- -d- ---e");
             var src2 = Marble.Parse(" -fg-h-  -i- -|  ");
-            var expt = Marble.Parse(" -x - -xx- -x-|", default, "af", "bg", "ch", "di");
+            var expt = Marble.Parse(" -x - -xx- -x- ---|", default, "af", "bg", "ch", "di");
             var testee = src1.Zip(src2, (x, y) => $"{x}{y}");
             await expt.AssertEqual(testee);
         }
