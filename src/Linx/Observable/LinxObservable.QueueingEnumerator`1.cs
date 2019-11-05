@@ -61,16 +61,16 @@
 
                     case _sEmitting:
                         if (_queue.IsEmpty)
+                            _state = _sAccepting;
+                        else
                         {
                             Current = _queue.Dequeue();
                             if (_queue.IsEmpty) // consumer now faster than producer
                                 try { _queue.TrimExcess(); }
-                                catch {/**/}
+                                catch{/**/}
                             _state = _sEmitting;
                             _tsAccepting.SetResult(true);
                         }
-                        else
-                            _state = _sAccepting;
                         break;
 
                     case _sError:

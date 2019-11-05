@@ -12,7 +12,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (sampler == null) throw new ArgumentNullException(nameof(sampler));
-            return sampler.Next().Zip(source.Latest(), (_, item) => item);
+            return sampler.Next().Zip(source.Latest(), (_, item) => item).WithName();
         }
 
         /// <summary>
@@ -22,7 +22,7 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             var sampler = Interval(interval);
-            return sampler.Next().Zip(source.Latest(), (_, item) => item);
+            return sampler.Next().Zip(source.Latest(), (_, item) => item).WithName();
         }
     }
 }
