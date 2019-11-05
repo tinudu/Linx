@@ -10,37 +10,37 @@
         [Fact]
         public async Task CompleteWhileIdle()
         {
-            var src = Marble.Parse("-a-b--   -c--|");
-            var smp = Marble.Parse("- - --xxx     ");
-            var exp = Marble.Parse("- - --ab -c--|");
-            await exp.AssertEqual(src.Buffer().Zip(smp, (x, y) => x));
+            var src = Marble.Parse("abcd-  -ef-    ---|");
+            var smp = Marble.Parse("x   -xx-  -xxxx");
+            var exp = Marble.Parse("a   -bc-  -def ---|");
+            await exp.AssertEqual(smp.Zip(src.Buffer(), (_, x) => x));
         }
 
         [Fact]
         public async Task CompleteWhileBuffered()
         {
-            var src = Marble.Parse("-a-b--   -c-def-|");
-            var smp = Marble.Parse("- - --xxx- -   - -x-xx");
-            var exp = Marble.Parse("- - --ab -c-   - -d-ef|");
-            await exp.AssertEqual(src.Buffer().Zip(smp, (x, y) => x));
+            var src = Marble.Parse("abcd-  -ef|");
+            var smp = Marble.Parse("x   -xx-  -xxxx");
+            var exp = Marble.Parse("a   -bc-  -def|");
+            await exp.AssertEqual(smp.Zip(src.Buffer(), (_, x) => x));
         }
 
         [Fact]
         public async Task FailWhileIdle()
         {
-            var src = Marble.Parse("-a-b--   -c--#");
-            var smp = Marble.Parse("- - --xxx     ");
-            var exp = Marble.Parse("- - --ab -c--#");
-            await exp.AssertEqual(src.Buffer().Zip(smp, (x, y) => x));
+            var src = Marble.Parse("abcd-  -ef-    ---#");
+            var smp = Marble.Parse("x   -xx-  -xxxx");
+            var exp = Marble.Parse("a   -bc-  -def ---#");
+            await exp.AssertEqual(smp.Zip(src.Buffer(), (_, x) => x));
         }
 
         [Fact]
         public async Task FailWhileBuffered()
         {
-            var src = Marble.Parse("-a-b--   -c-def-#   ");
-            var smp = Marble.Parse("- - --xxx- -   - -x ");
-            var exp = Marble.Parse("- - --ab -c-   - -d#");
-            await exp.AssertEqual(src.Buffer().Zip(smp, (x, y) => x));
+            var src = Marble.Parse("abcd-  -ef#");
+            var smp = Marble.Parse("x   -xx-   -x");
+            var exp = Marble.Parse("a   -bc-   -#");
+            await exp.AssertEqual(smp.Zip(src.Buffer(), (_, x) => x));
         }
     }
 }

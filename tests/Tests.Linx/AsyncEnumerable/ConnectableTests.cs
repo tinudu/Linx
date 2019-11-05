@@ -3,6 +3,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using global::Linx;
     using global::Linx.AsyncEnumerable;
     using Xunit;
 

@@ -1,6 +1,7 @@
-﻿namespace Linx.AsyncEnumerable
+﻿namespace Linx
 {
     using System;
+    using Observable;
 
     /// <summary>
     /// Exception thrown when <see cref="System.Collections.Generic.IAsyncEnumerator{T}.MoveNextAsync"/> is called after the enumerator was disposed.
@@ -28,4 +29,11 @@
         private AlreadyConnectedException() : base("Already connected.") { }
     }
 
+    /// <summary>
+    /// Exception emitted by <see cref="LinxObservable.Buffer{T}(ILinxObservable{T}, int)"/> when the buffer overflows.
+    /// </summary>
+    public sealed class BufferOverflowException : Exception
+    {
+        internal BufferOverflowException() : base("Buffer overflow.") { }
+    }
 }

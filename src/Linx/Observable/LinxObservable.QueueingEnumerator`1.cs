@@ -6,20 +6,25 @@
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using AsyncEnumerable;
+    using Queueing;
     using TaskSources;
 
     partial class LinxObservable
     {
-        private abstract class BufferEnumeratorBase<T, TQueue> : IAsyncEnumerator<T>
+        /// <summary>
+        /// Queueing <see cref="ILinxObservable{T}"/> to <see cref="IAsyncEnumerable{T}"/> enumerator.
+        /// </summary>
+        private sealed class QueueingEnumerator<T> : IAsyncEnumerator<T>
         {
             private const int _sInitial = 0;
             private const int _sAccepting = 1;
             private const int _sEmitting = 2;
-            private const int _sCompleted = 3;
-            private const int _sFinal = 4;
+            private const int _sError = 3; // but not completed
+            private const int _sCompleted = 4; // but not error
+            private const int _sFinal = 5;
 
             private readonly ILinxObservable<T> _source;
+            private readonly IQueue<T> _queue;
             private readonly CancellationToken _token;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
             private readonly Observer _observer;
@@ -28,9 +33,13 @@
             private Exception _error;
             private AsyncTaskMethodBuilder _atmbDisposed = default;
 
-            protected BufferEnumeratorBase(ILinxObservable<T> source, CancellationToken token)
+            public QueueingEnumerator(ILinxObservable<T> source, IQueue<T> queue, CancellationToken token)
             {
+                Debug.Assert(source != null);
+                Debug.Assert(queue != null);
+
                 _source = source;
+                _queue = queue;
                 _token = token;
                 _observer = new Observer(this);
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
@@ -51,12 +60,11 @@
                         break;
 
                     case _sEmitting:
-                        Prune();
-                        if (Queue.Count > 0)
+                        if (_queue.IsEmpty)
                         {
-                            Current = Dequeue();
-                            if (Queue.Count == 0) // consumer now faster than producer
-                                try { Queue.TrimExcess(); }
+                            Current = _queue.Dequeue();
+                            if (_queue.IsEmpty) // consumer now faster than producer
+                                try { _queue.TrimExcess(); }
                                 catch {/**/}
                             _state = _sEmitting;
                             _tsAccepting.SetResult(true);
@@ -65,21 +73,23 @@
                             _state = _sAccepting;
                         break;
 
+                    case _sError:
+                        _state = _sError;
+                        _tsAccepting.SetException(_error);
+                        break;
+
                     case _sCompleted:
-                        Prune();
-                        if (Queue.Count > 0)
+                        if (_queue.IsEmpty)
                         {
-                            Current = Dequeue();
+                            Current = default;
                             _state = _sCompleted;
-                            _tsAccepting.SetResult(true);
+                            _tsAccepting.SetExceptionOrResult(_error, false);
                         }
                         else
                         {
-                            Current = default;
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            _atmbDisposed.SetResult();
-                            _tsAccepting.SetExceptionOrResult(_error, false);
+                            Current = _queue.Dequeue();
+                            _state = _sCompleted;
+                            _tsAccepting.SetResult(true);
                         }
                         break;
 
@@ -89,7 +99,7 @@
                         _tsAccepting.SetExceptionOrResult(_error, false);
                         break;
 
-                    default:
+                    default: // Accepting???
                         _state = state;
                         throw new Exception(state + "???");
                 }
@@ -102,11 +112,6 @@
                 OnError(AsyncEnumeratorDisposedException.Instance);
                 return new ValueTask(_atmbDisposed.Task);
             }
-
-            protected Queue<TQueue> Queue { get; } = new Queue<TQueue>();
-            protected abstract void Enqueue(T item);
-            protected abstract T Dequeue();
-            protected abstract void Prune();
 
             private void OnError(Exception error)
             {
@@ -125,23 +130,26 @@
                     case _sAccepting:
                         Current = default;
                         _error = error;
-                        _state = _sCompleted;
-                        Debug.Assert(Queue.Count == 0);
+                        _state = _sError;
                         _ctr.Dispose();
+                        Debug.Assert(_queue.IsEmpty);
                         _tsAccepting.SetException(error);
                         break;
 
                     case _sEmitting:
                         _error = error;
-                        _state = _sCompleted;
+                        _state = _sError;
                         _ctr.Dispose();
-                        Queue.Clear();
+                        _queue.Clear();
                         break;
 
-                    case _sCompleted when (Queue.Count > 0):
-                        Debug.Assert(_error == null);
-                        _error = error;
-                        _state = _sFinal; 
+                    case _sCompleted:
+                        if (_queue.IsEmpty)
+                        {
+                            _error = error;
+                            _queue.Clear();
+                        }
+                        _state = _sFinal;
                         _ctr.Dispose();
                         _atmbDisposed.SetResult();
                         break;
@@ -154,8 +162,8 @@
 
             private sealed class Observer : ILinxObserver<T>
             {
-                private readonly BufferEnumeratorBase<T, TQueue> _e;
-                public Observer(BufferEnumeratorBase<T, TQueue> enumerator) => _e = enumerator;
+                private readonly QueueingEnumerator<T> _e;
+                public Observer(QueueingEnumerator<T> enumerator) => _e = enumerator;
 
                 public CancellationToken Token => _e._token;
 
@@ -173,9 +181,9 @@
                         case _sEmitting:
                             try
                             {
-                                _e.Prune();
-                                _e.Enqueue(value);
+                                _e._queue.Enqueue(value);
                                 _e._state = _sEmitting;
+                                return true;
                             }
                             catch (Exception ex)
                             {
@@ -183,7 +191,6 @@
                                 _e.OnError(ex);
                                 return false;
                             }
-                            return true;
 
                         default:
                             _e._state = state;
@@ -193,7 +200,7 @@
 
                 public void OnError(Exception error)
                 {
-                    _e.OnError(error);
+                    _e.OnError(error ?? new ArgumentNullException(nameof(error)));
                     OnCompleted();
                 }
 
@@ -203,7 +210,7 @@
                     switch (state)
                     {
                         case _sAccepting:
-                            Debug.Assert(_e.Queue.Count == 0);
+                            Debug.Assert(_e._queue.IsEmpty && _e._error == null);
                             _e.Current = default;
                             _e._state = _sFinal;
                             _e._ctr.Dispose();
@@ -212,7 +219,19 @@
                             break;
 
                         case _sEmitting:
-                            _e._state = _sCompleted;
+                            if (_e._queue.IsEmpty)
+                            {
+                                _e._state = _sFinal;
+                                _e._ctr.Dispose();
+                                _e._atmbDisposed.SetResult();
+                            }
+                            else
+                                _e._state = _sCompleted;
+                            break;
+
+                        case _sError:
+                            _e._state = _sFinal;
+                            _e._atmbDisposed.SetResult();
                             break;
 
                         default:

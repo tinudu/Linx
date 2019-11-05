@@ -1,30 +1,39 @@
 ﻿namespace Linx.Observable
 {
-    using AsyncEnumerable;
     using System;
     using System.Collections.Generic;
-    using System.Threading;
+    using AsyncEnumerable;
+    using Queueing;
 
     partial class LinxObservable
     {
         /// <summary>
-        /// Buffers items in case the consumer is slower than the generator.
+        /// Buffers all elements if the consumer is slower than the producer.
         /// </summary>
         public static IAsyncEnumerable<T> Buffer<T>(this ILinxObservable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return LinxAsyncEnumerable.Create(token => new BufferAllEnumerator<T>(source, token));
+            return LinxAsyncEnumerable.Create(token => new QueueingEnumerator<T>(source, new BufferAllQueue<T>(), token));
         }
 
-        private sealed class BufferAllEnumerator<T> : BufferEnumeratorBase<T, T>
+        /// <summary>
+        /// Buffers up to <paramref name="maxCount"/> elements if the consumer is slower than the producer.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxCount"/> is negative.</exception>
+        /// <remarks>
+        /// When the buffer is full and another element is notified, the sequence completes with a <see cref="BufferOverflowException"/>.
+        /// </remarks>
+        public static IAsyncEnumerable<T> Buffer<T>(this ILinxObservable<T> source, int maxCount)
         {
-            public BufferAllEnumerator(ILinxObservable<T> source, CancellationToken token) : base(source, token)
-            {
-            }
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (maxCount < 0) throw new ArgumentOutOfRangeException(nameof(maxCount));
 
-            protected override void Enqueue(T item) => Queue.Enqueue(item);
-            protected override T Dequeue() => Queue.Dequeue();
-            protected override void Prune() { }
+            return maxCount switch
+            {
+                0 => LinxAsyncEnumerable.Create(token => new QueueingEnumerator<T>(source, BufferNoneQueue<T>.Instance, token)),
+                int.MaxValue => LinxAsyncEnumerable.Create(token => new QueueingEnumerator<T>(source, new BufferAllQueue<T>(), token)),
+                _ => LinxAsyncEnumerable.Create(token => new QueueingEnumerator<T>(source, new BufferMaxQueue<T>(maxCount), token))
+            };
         }
     }
 }
