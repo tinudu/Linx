@@ -1,6 +1,7 @@
 ﻿namespace Linx.Observable
 {
     using System;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -9,99 +10,80 @@
         /// <summary>
         /// Convert a <see cref="IObservable{T}"/> to a <see cref="ILinxObservable{T}"/>.
         /// </summary>
-        /// <remarks>Blocking, subscribed on the task pool, best effort disposal.</remarks>
+        /// <remarks>
+        /// Because <see cref="IObservable{T}"/>s do not support asynchronous disposal,
+        /// all that can be done in case of a cancellation request from the <see cref="ILinxObserver{T}"/>
+        /// is to dispose of the subscription (as soon as available) and acknowlede disposable immediately.
+        /// </remarks>
         public static ILinxObservable<T> ToLinxObservable<T>(this IObservable<T> source)
-            => new ObservableLinxObservable<T>(source);
-
-        private sealed class ObservableLinxObservable<T> : ILinxObservable<T>
         {
-            private readonly IObservable<T> _source;
-            public ObservableLinxObservable(IObservable<T> source) => _source = source ?? throw new ArgumentNullException(nameof(source));
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            return Create<T>(Subscribe);
 
-            public void Subscribe(ILinxObserver<T> observer)
+            void Subscribe(ILinxObserver<T> observer)
             {
                 if (observer == null) throw new ArgumentNullException(nameof(observer));
 
+                var anobs = new AnonymousObserver<T>(observer);
                 try
                 {
-                    observer.Token.ThrowIfCancellationRequested();
-                    var subscription = new Subscription(observer);
-                    Task.Run(() =>
-                    {
-                        try { subscription.SetDisposable(_source.Subscribe(subscription)); }
-                        catch (Exception ex)
-                        {
-                            subscription.SetDisposable(EmptyDisposable.Default);
-                            subscription.OnError(ex);
-                        }
-                    });
+                    var subscription = source.Subscribe(anobs);
+
+                    var awaiter = anobs.Completed.ConfigureAwait(false).GetAwaiter();
+                    if (awaiter.IsCompleted)
+                        subscription.Dispose();
+                    else awaiter.OnCompleted(() =>
+                        subscription.Dispose());
                 }
-                catch (Exception ex) { observer.OnError(ex); }
+                catch (Exception ex) { anobs.OnError(ex); }
+            }
+        }
+
+        private sealed class AnonymousObserver<T> : IObserver<T>
+        {
+            private ILinxObserver<T> _observer;
+            private AsyncTaskMethodBuilder _atmbCompleted = new AsyncTaskMethodBuilder();
+            private CancellationTokenRegistration _ctr;
+
+            public AnonymousObserver(ILinxObserver<T> observer)
+            {
+                _observer = observer;
+                if (!observer.Token.CanBeCanceled) return;
+                var token = observer.Token;
+                _ctr = token.Register(() => Complete(new OperationCanceledException(token)));
             }
 
-            private sealed class Subscription : IObserver<T>
+            public Task Completed => _atmbCompleted.Task;
+
+            void IObserver<T>.OnNext(T value)
             {
-                private readonly object _gate = new object();
-                private readonly ILinxObserver<T> _observer;
-                private CancellationTokenRegistration _ctr;
-                private IDisposable _disposable;
-                private bool _isCompleted;
-                private Exception _error;
-
-                public Subscription(ILinxObserver<T> observer)
+                var lobs = _observer;
+                if (lobs == null) return;
+                Exception error;
+                try
                 {
-                    _observer = observer;
-                    var token = observer.Token;
-                    if (token.CanBeCanceled) _ctr = token.Register(() => Complete(new OperationCanceledException(token)));
+                    if (lobs.OnNext(value)) return;
+                    error = null;
                 }
-
-                public void OnNext(T value)
-                {
-                    lock (_gate)
-                    {
-                        if (_isCompleted) return;
-                        try { if (!_observer.OnNext(value)) Complete(null); }
-                        catch (Exception ex) { Complete(ex); }
-                    }
-                }
-
-                public void OnError(Exception error) => Complete(error);
-                public void OnCompleted() => Complete(null);
-
-                public void SetDisposable(IDisposable disposable)
-                {
-                    lock (_gate)
-                    {
-                        if (_disposable != null) throw new InvalidOperationException();
-                        _disposable = disposable ?? EmptyDisposable.Default;
-                        if (!_isCompleted) return;
-                    }
-                    try { _disposable.Dispose(); } catch {/**/}
-                    if (_error == null) _observer.OnCompleted();
-                    else _observer.OnError(_error);
-                }
-
-                private void Complete(Exception error)
-                {
-                    IDisposable disposable;
-                    lock (_gate)
-                    {
-                        if (Linx.Exchange(ref _isCompleted, true)) return;
-                        _error = error;
-                        _ctr.Dispose();
-                        if ((disposable = _disposable) == null) return;
-                    }
-                    try { disposable.Dispose(); } catch {/**/}
-                    if (_error == null) _observer.OnCompleted();
-                    else _observer.OnError(_error);
-                }
+                catch (Exception ex) { error = ex; }
+                Complete(error);
             }
 
-            private sealed class EmptyDisposable : IDisposable
+            public void OnError(Exception error) => Complete(error);
+
+            void IObserver<T>.OnCompleted() => Complete(null);
+
+            private void Complete(Exception errorOpt)
             {
-                public static EmptyDisposable Default { get; } = new EmptyDisposable();
-                private EmptyDisposable() { }
-                void IDisposable.Dispose() { }
+                var lobs = Interlocked.Exchange(ref _observer, null);
+                if (lobs == null) return;
+
+                _ctr.Dispose();
+                _atmbCompleted.SetResult();
+                if (errorOpt == null)
+                    lobs.OnCompleted();
+                else
+                    lobs.OnError(errorOpt);
             }
         }
     }
