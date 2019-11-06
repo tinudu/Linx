@@ -254,6 +254,8 @@
                 if (_token.CanBeCanceled) _ctr = token.Register(TokenCanceled);
             }
 
+            public ITime Time => _time;
+
             public bool IsWaiting() => Atomic.CompareExchange(ref _state, _tWaiting, _tWaiting) == _tWaiting;
 
             public ValueTask Delay(TimeSpan due) => Delay(_time.Now + due);

@@ -16,22 +16,22 @@
         /// <inheritdoc />
         public override async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
         {
-            var time = Time.Current;
-            var t = time.Now;
-            using var timer = time.GetTimer(token);
+            using var timer = Time.Current.GetTimer(token);
+            var t = timer.Time.Now;
             foreach (var ti in Marbles)
             {
                 t += ti.Interval;
+                var n = ti.Value;
                 await timer.Delay(t).ConfigureAwait(false);
-                switch (ti.Value.Kind)
+                switch (n.Kind)
                 {
                     case NotificationKind.Next:
-                        yield return ti.Value.Value;
+                        yield return n.Value;
                         break;
                     case NotificationKind.Completed:
                         yield break;
                     case NotificationKind.Error:
-                        throw ti.Value.Error;
+                        throw n.Error;
                     default:
                         throw new Exception(ti.Value.Kind + "???");
                 }

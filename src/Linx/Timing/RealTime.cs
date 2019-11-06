@@ -51,6 +51,8 @@
                 if (_token.CanBeCanceled) _ctr = token.Register(TokenCanceled);
             }
 
+            public ITime Time => RealTime.Instance;
+
             public ValueTask Delay(TimeSpan due)
             {
                 _ts.Reset();
