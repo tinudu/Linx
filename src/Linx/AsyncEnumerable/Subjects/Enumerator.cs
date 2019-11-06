@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    using TaskSources;
+    using Tasks;
 
     internal sealed class Enumerator<T> : IAsyncEnumerator<T>
     {

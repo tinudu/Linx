@@ -7,7 +7,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Queueing;
-    using TaskSources;
+    using Tasks;
 
     partial class LinxObservable
     {

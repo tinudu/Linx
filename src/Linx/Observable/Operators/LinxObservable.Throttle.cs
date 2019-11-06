@@ -3,7 +3,7 @@
     using System;
     using System.Diagnostics;
     using System.Threading;
-    using TaskSources;
+    using Tasks;
     using Timing;
 
     partial class LinxObservable

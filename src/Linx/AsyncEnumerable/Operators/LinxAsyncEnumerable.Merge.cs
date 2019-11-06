@@ -7,7 +7,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Observable;
-    using TaskSources;
+    using Tasks;
 
     partial class LinxAsyncEnumerable
     {

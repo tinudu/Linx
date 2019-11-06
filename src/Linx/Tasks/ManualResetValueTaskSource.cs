@@ -1,4 +1,4 @@
-﻿namespace Linx.TaskSources
+﻿namespace Linx.Tasks
 {
     // NOTE: expected to exist similarly in future framework/core versions, when it will be replaced.
     using System;
