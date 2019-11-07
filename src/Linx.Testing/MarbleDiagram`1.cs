@@ -1,20 +1,19 @@
 ﻿namespace Linx.Testing
 {
-    using AsyncEnumerable;
-    using Notifications;
     using System;
     using System.Collections.Generic;
     using System.Threading;
+    using Notifications;
     using Timing;
 
-    internal sealed class MarbleDiagram<T> : AsyncEnumerableBase<T>, IMarbleDiagram<T>
+    internal sealed class MarbleDiagram<T> : IMarbleDiagram<T>
     {
         public IEnumerable<TimeInterval<Notification<T>>> Marbles { get; }
 
         public MarbleDiagram(IEnumerable<TimeInterval<Notification<T>>> marbles) => Marbles = marbles;
 
         /// <inheritdoc />
-        public override async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
+        public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
         {
             using var timer = Time.Current.GetTimer(token);
             var t = timer.Time.Now;

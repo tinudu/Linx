@@ -18,12 +18,12 @@
         /// </summary>
         public static IAsyncEnumerable<T> Never<T>(T _) => NeverAsyncEnumerable<T>.Singleton;
 
-        private sealed class NeverAsyncEnumerable<T> : AsyncEnumerableBase<T>
+        private sealed class NeverAsyncEnumerable<T> : IAsyncEnumerable<T>
         {
             public static NeverAsyncEnumerable<T> Singleton { get; } = new NeverAsyncEnumerable<T>();
             private NeverAsyncEnumerable() { }
 
-            public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(token);
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(token);
 
             public override string ToString() => "Never";
 

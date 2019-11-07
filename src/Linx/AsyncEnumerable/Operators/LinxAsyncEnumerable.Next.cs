@@ -12,7 +12,7 @@
         public static IAsyncEnumerable<T> Next<T>(this IAsyncEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return Create(token => new QueueingEnumerator<T>(source, NextQueue<T>.Instance, token));
+            return Create(token => new LatestEnumerator<T>(source, 0, token));
         }
     }
 }

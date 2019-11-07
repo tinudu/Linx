@@ -38,8 +38,8 @@
         public async Task FailWhileBuffered()
         {
             var src = Marble.Parse("abcd-  -ef#");
-            var smp = Marble.Parse("x   -xx-   -x");
-            var exp = Marble.Parse("a   -bc-   -#");
+            var smp = Marble.Parse("x   -xx-   -xxx");
+            var exp = Marble.Parse("a   -bc-   -def#");
             await exp.AssertEqual(smp.Zip(src.Buffer(), (_, x) => x));
         }
     }

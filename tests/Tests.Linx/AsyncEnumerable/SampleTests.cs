@@ -10,9 +10,9 @@
         [Fact]
         public async Task Success()
         {
-            var source = Marble.Parse(" -abc- - - - -def- - -efg- - -|");
-            var sample = Marble.Parse("x-   -x-x-x-x-   -x-x-   -x-x- x*-x", (x, i) => i);
-            var expect = Marble.Parse(" -a  -c- - - -d  -f- -e  -g- -|");
+            var source = Marble.Parse(" -abc- - - - -def- - -ghi- - -|");
+            var sample = Marble.Parse("x-   -x-x-x-x-   -x-x-   -x-x- -x*-x", (x, i) => i);
+            var expect = Marble.Parse(" -a  -c- - - -d  -f- -g  -i- -|");
             var testee = source.Sample(sample);
             await expect.AssertEqual(testee);
         }

@@ -10,9 +10,9 @@
         [Fact]
         public async Task LatestOneSuccess()
         {
-            var src = Marble.Parse("abc- - -def-  -ghi-|");
-            var smp = Marble.Parse("   -x-x-   -xx-   --x--x*--x");
-            var exp = Marble.Parse("   -a-c-   -df-   --g--i|");
+            var src = Marble.Parse("abc- -def- -ghi- -|");
+            var smp = Marble.Parse("   -x-   -x-x  -x-x*-x");
+            var exp = Marble.Parse("   -c-   -f-g  -i-|");
             var testee = src.Latest().Zip(smp, (x, y) => x);
             await exp.AssertEqual(testee);
         }
@@ -20,21 +20,21 @@
         [Fact]
         public async Task LatestOneDispose()
         {
-            var src = Marble.Parse("abc- - -def-  -ghi-|");
-            var smp = Marble.Parse("   -x-x-   -xx-   --x --x*--x");
-            var exp = Marble.Parse("   -a-c-   -df-   --g|");
-            var testee = src.Latest().Take(5).Zip(smp, (x, y) => x);
+            var src = Marble.Parse("abc- -def-   -ghi- -|");
+            var smp = Marble.Parse("   -x-   -x|");
+            var exp = Marble.Parse("   -c-   -f|");
+            var testee = src.Latest().Zip(smp, (x, _) => x);
             await exp.AssertEqual(testee);
         }
 
         [Fact]
         public async Task LatestOneCancel()
         {
-            var src = Marble.Parse("abc- - -def-  -geh");
-            var smp = Marble.Parse("   -x-x-   -xx");
-            var exp = Marble.Parse("   -a-c-   -df");
+            var src = Marble.Parse("abc- -def- -ghi- -|");
+            var smp = Marble.Parse("   -x-   -x-x  --x-x*-x");
+            var exp = Marble.Parse("   -c-   -f-g  --i-|");
             var testee = src.Latest().Zip(smp, (x, y) => x);
-            await exp.AssertEqualCancel(testee, 8 * MarbleSettings.DefaultFrameSize);
+            await exp.AssertEqualCancel(testee, 5 * MarbleSettings.DefaultFrameSize);
         }
     }
 }

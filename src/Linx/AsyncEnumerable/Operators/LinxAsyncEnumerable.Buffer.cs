@@ -2,6 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Queueing;
 
     partial class LinxAsyncEnumerable
@@ -12,7 +14,7 @@
         public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return Create(token => new QueueingEnumerator<T>(source, new BufferAllQueue<T>(), token));
+            return Create(token => new BufferEnumerator<T>(source, new AllQueue<T>(), token));
         }
 
         /// <summary>
@@ -30,9 +32,22 @@
             return maxCount switch
             {
                 0 => source,
-                int.MaxValue => Create(token => new QueueingEnumerator<T>(source, new BufferAllQueue<T>(), token)),
-                _ => Create(token => new QueueingEnumerator<T>(source, new BufferMaxQueue<T>(maxCount), token))
+                1 => Create(token=>new BufferEnumerator<T>(source,new OneQueue<T>(),token)),
+                int.MaxValue => Create(token => new BufferEnumerator<T>(source, new AllQueue<T>(), token)),
+                _ => Create(token => new BufferEnumerator<T>(source, new MaxQueue<T>(maxCount), token))
             };
+        }
+
+        private sealed class BufferEnumerator<T> : IAsyncEnumerator<T>
+        {
+            public BufferEnumerator(IAsyncEnumerable<T> source, IQueue<T> queue, CancellationToken token)
+            {
+                throw new NotImplementedException();
+            }
+
+            public T Current => throw new NotImplementedException();
+            public ValueTask<bool> MoveNextAsync() => throw new NotImplementedException();
+            public ValueTask DisposeAsync() => throw new NotImplementedException();
         }
     }
 }

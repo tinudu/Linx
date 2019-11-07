@@ -4,24 +4,53 @@
     using System.Collections.Generic;
     using System.Diagnostics;
 
-    internal sealed class BufferNoneQueue<T> : IQueue<T>
+    internal sealed class ZeroQueue<T> : IQueue<T>
     {
-        public static BufferNoneQueue<T> Instance { get; } = new BufferNoneQueue<T>();
-        private BufferNoneQueue() { }
+        public static ZeroQueue<T> Instance { get; } = new ZeroQueue<T>();
+        private ZeroQueue() { }
 
         bool IQueue<T>.IsEmpty => true;
         bool IQueue<T>.IsFull => true;
-        void IQueue<T>.Enqueue(T item) => throw new BufferOverflowException();
+        void IQueue<T>.Enqueue(T item) => throw new InvalidOperationException();
         T IQueue<T>.Dequeue() => throw new InvalidOperationException("Queue is empty.");
         void IQueue<T>.Clear() { }
         void IQueue<T>.TrimExcess() { }
     }
 
-    internal sealed class BufferMaxQueue<T> : Queue<T>, IQueue<T>
+    internal sealed class OneQueue<T> : IQueue<T>
+    {
+        private (bool HasValue, T Value) _q;
+
+        public bool IsEmpty => !_q.HasValue;
+        public bool IsFull => _q.HasValue;
+
+        public void Enqueue(T item)
+        {
+            if (_q.HasValue) throw new InvalidOperationException();
+            _q = (true, item);
+        }
+
+        public T Dequeue()
+        {
+            if (!_q.HasValue) throw new InvalidOperationException();
+            return Linx.Clear(ref _q).Value;
+        }
+
+        public void Clear() => _q = default;
+        void IQueue<T>.TrimExcess() { }
+    }
+
+    internal sealed class AllQueue<T> : Queue<T>, IQueue<T>
+    {
+        public bool IsEmpty => Count == 0;
+        bool IQueue<T>.IsFull => false;
+    }
+
+    internal sealed class MaxQueue<T> : Queue<T>, IQueue<T>
     {
         private readonly int _maxCount;
 
-        public BufferMaxQueue(int maxCount)
+        public MaxQueue(int maxCount)
         {
             Debug.Assert(maxCount > 0 && maxCount < int.MaxValue, "use a specialized implementation");
             _maxCount = maxCount;
@@ -32,58 +61,7 @@
 
         void IQueue<T>.Enqueue(T item)
         {
-            if (Count == _maxCount) throw new BufferOverflowException();
-            Enqueue(item);
-        }
-    }
-
-    internal sealed class BufferAllQueue<T> : Queue<T>, IQueue<T>
-    {
-        public bool IsEmpty => Count == 0;
-        bool IQueue<T>.IsFull => false;
-    }
-
-    internal sealed class NextQueue<T> : IQueue<T>
-    {
-        public static NextQueue<T> Instance { get; } = new NextQueue<T>();
-        private NextQueue() { }
-
-        bool IQueue<T>.IsEmpty => true;
-        bool IQueue<T>.IsFull => false;
-        void IQueue<T>.Enqueue(T item) { }
-        T IQueue<T>.Dequeue() => throw new InvalidOperationException("Queue is empty.");
-        void IQueue<T>.Clear() { }
-        void IQueue<T>.TrimExcess() { }
-    }
-
-    internal sealed class LatestOneQueue<T> : IQueue<T>
-    {
-        private (bool HasValue, T Single) _item;
-
-        public bool IsEmpty => !_item.HasValue;
-        bool IQueue<T>.IsFull => false;
-        void IQueue<T>.Enqueue(T item) => _item = (true, item);
-        public T Dequeue() => _item.HasValue ? Linx.Clear(ref _item).Single : throw new InvalidOperationException("Queue is empty.");
-        public void Clear() => _item = default;
-        void IQueue<T>.TrimExcess() { }
-    }
-
-    internal sealed class LatestMaxQueue<T> : Queue<T>, IQueue<T>
-    {
-        private readonly int _maxCount;
-
-        public LatestMaxQueue(int maxCount)
-        {
-            Debug.Assert(maxCount >= 2 && maxCount < int.MaxValue, "use a specialized implementation");
-            _maxCount = maxCount;
-        }
-
-        public bool IsEmpty => Count == 0;
-        bool IQueue<T>.IsFull => false;
-        void IQueue<T>.Enqueue(T item)
-        {
-            while (Count >= _maxCount)
-                Dequeue();
+            if (Count == _maxCount) throw new InvalidOperationException();
             Enqueue(item);
         }
     }

@@ -107,7 +107,6 @@
             }
 
             var time = Time.Current;
-            var position = 1;
             // ReSharper disable once GenericEnumeratorNotDisposed
             using var e = expected.GetEnumerator();
             await using var ae = actual.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -119,16 +118,14 @@
                 var nActual = new Timestamped<Notification<T>>(time.Now, notification);
 
                 if (!e.MoveNext())
-                    throw new Exception($"Position {position}: Received {nActual}, Expected: EOS");
+                    throw new Exception($"Received {nActual}, Expected: EOS");
 
                 var nExpected = e.Current;
                 if (!Equals(nActual, nExpected))
-                    throw new Exception($"Position {position}: Received {nActual}, Expected: {nExpected}");
+                    throw new Exception($"Received {nActual}, Expected: {nExpected}");
 
                 if (notification.Kind != NotificationKind.Next)
                     break;
-
-                position++;
             }
         }
 

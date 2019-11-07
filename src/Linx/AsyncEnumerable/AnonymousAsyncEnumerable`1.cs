@@ -5,7 +5,7 @@
     using System.Diagnostics;
     using System.Threading;
 
-    internal sealed class AnonymousAsyncEnumerable<T> : AsyncEnumerableBase<T>
+    internal sealed class AnonymousAsyncEnumerable<T> : IAsyncEnumerable<T>
     {
         private readonly Func<CancellationToken, IAsyncEnumerator<T>> _getEnumerator;
         private readonly string _name;
@@ -17,7 +17,7 @@
             _name = name ?? typeof(AnonymousAsyncEnumerable<T>).Name;
         }
 
-        public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => _getEnumerator(token);
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => _getEnumerator(token);
 
         public override string ToString() => _name;
 

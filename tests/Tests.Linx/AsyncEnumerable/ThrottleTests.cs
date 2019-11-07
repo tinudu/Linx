@@ -1,10 +1,8 @@
 ﻿namespace Tests.Linx.AsyncEnumerable
 {
-    using global::Linx.AsyncEnumerable;
-    using global::Linx.Observable;
-    using global::Linx.Testing;
-    using System;
     using System.Threading.Tasks;
+    using global::Linx.AsyncEnumerable;
+    using global::Linx.Testing;
     using Xunit;
 
     public sealed class ThrottleTests
@@ -14,7 +12,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-- -|");
             var expect = Marble.Parse("- -  - --d- -  --g-|");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
             await expect.AssertEqual(testee);
         }
 
