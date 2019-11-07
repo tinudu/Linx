@@ -54,12 +54,18 @@ namespace Linx.AsyncEnumerable
 
             async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
+                using var cts = new CancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
 <# foreach(var n in arg.Names) { #>
-                await using var <#= n.Ae #> = <#= n.Source #>.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+                await using var <#= n.Ae #> = <#= n.Source #>.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
 <# } #>
                 // ReSharper restore PossibleMultipleEnumeration
-                while (<#= string.Join(" && ", arg.Names.Select(n => "await " + n.Ae + ".MoveNextAsync()")) #>)
+                var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
+                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
+
+                while (await ctx.MoveNextAsync().ConfigureAwait(false))
                     yield return resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>);
             }
         }
