@@ -22,12 +22,13 @@
         /// <summary>
         /// Ignores but the latest <paramref name="maxCount"/> elements if the consumer is slower than the producer.
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxCount"/> is negative.</exception>
         public static IAsyncEnumerable<T> Latest<T>(this IAsyncEnumerable<T> source, int maxCount)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            if (maxCount < 0) throw new ArgumentOutOfRangeException(nameof(maxCount));
-            return Create(token => new LatestEnumerator<T>(source, maxCount, token), maxCount == 0 ? nameof(Next) : nameof(Latest));
+
+            return maxCount <= 0 ?
+                source.Next() :
+                Create(token => new LatestEnumerator<T>(source, maxCount, token));
         }
 
         private sealed class LatestEnumerator<T> : IAsyncEnumerator<T>
@@ -52,6 +53,9 @@
 
             public LatestEnumerator(IAsyncEnumerable<T> source, int maxCount, CancellationToken token)
             {
+                Debug.Assert(source != null);
+                Debug.Assert(maxCount >= 0);
+
                 _source = source;
                 _token = token;
                 _queue = maxCount switch
@@ -61,6 +65,8 @@
                     int.MaxValue => new InfiniteQueue(),
                     _ => new MaxQueue(maxCount)
                 };
+
+                if (token.CanBeCanceled) _ctr = token.Register(() => Dispose(new OperationCanceledException(token)));
             }
 
             public T Current
@@ -302,7 +308,7 @@
                 }
 
                 public void Clear() => IsEmpty = true;
-                public void TrimExcess (){ }
+                public void TrimExcess() { }
             }
 
             private sealed class InfiniteQueue : Queue<T>, IQueue
