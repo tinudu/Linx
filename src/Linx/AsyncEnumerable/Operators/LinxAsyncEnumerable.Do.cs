@@ -25,6 +25,8 @@
             {
                 try
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                     try
                     {

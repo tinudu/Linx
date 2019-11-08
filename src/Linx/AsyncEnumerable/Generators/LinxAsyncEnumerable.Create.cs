@@ -39,7 +39,7 @@
             private const int _sInitial = 0;
             private const int _sAccepting = 1;
             private const int _sEmitting = 2;
-            private const int _sCompleted = 3;
+            private const int _sDisposed = 3;
             private const int _sFinal = 4;
 
             private readonly GeneratorDelegate<T> _generator;
@@ -47,6 +47,7 @@
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
             private readonly ManualResetValueTaskSource<bool> _tsEmitting = new ManualResetValueTaskSource<bool>();
             private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+            private CancellationTokenRegistration _ctr;
             private int _state;
             private Exception _error;
 
@@ -55,6 +56,9 @@
                 Debug.Assert(generator != null);
                 _generator = generator;
                 _token = token;
+
+                if (token.CanBeCanceled)
+                    _ctr = token.Register(() => Dispose(new OperationCanceledException(token)));
             }
 
             public T Current { get; private set; }
@@ -76,7 +80,7 @@
                         _tsEmitting.SetResult(true);
                         break;
 
-                    case _sCompleted:
+                    case _sDisposed:
                     case _sFinal:
                         Current = default;
                         _state = state;
@@ -85,7 +89,8 @@
 
                     default: // Accepting???
                         _state = state;
-                        throw new Exception(state + "???");
+                        Debug.Fail(state + "???");
+                        break;
                 }
 
                 return _tsAccepting.Task;
@@ -93,38 +98,43 @@
 
             public ValueTask DisposeAsync()
             {
+                Dispose(AsyncEnumeratorDisposedException.Instance);
+                return new ValueTask(_atmbDisposed.Task);
+            }
+
+            private void Dispose(Exception error)
+            {
+                Debug.Assert(error != null);
+
                 var state = Atomic.Lock(ref _state);
                 switch (state)
                 {
                     case _sInitial:
-                        _error = AsyncEnumeratorDisposedException.Instance;
+                        _error = error;
                         _state = _sFinal;
+                        _ctr.Dispose();
                         _atmbDisposed.SetResult();
                         break;
 
                     case _sAccepting:
-                        _error = AsyncEnumeratorDisposedException.Instance;
-                        _state = _sCompleted;
-                        _tsAccepting.SetException(_error);
+                        _error = error;
+                        _state = _sDisposed;
+                        _ctr.Dispose();
+                        _tsAccepting.SetException(error);
                         break;
 
                     case _sEmitting:
-                        _error = AsyncEnumeratorDisposedException.Instance;
-                        _state = _sCompleted;
+                        _error = error;
+                        _state = _sDisposed;
+                        _ctr.Dispose();
                         _tsEmitting.SetResult(false);
                         break;
 
-                    case _sCompleted:
-                    case _sFinal:
+                    default:
+                        Debug.Assert(state == _sDisposed || state == _sFinal);
                         _state = state;
                         break;
-
-                    default:
-                        _state = state;
-                        throw new Exception(state + "???");
                 }
-
-                return new ValueTask(_atmbDisposed.Task);
             }
 
             private ValueTask<bool> Yield(T value)
@@ -140,15 +150,11 @@
                         _tsAccepting.SetResult(true);
                         break;
 
-                    case _sCompleted:
-                    case _sFinal:
+                    default:
+                        Debug.Assert(state == _sDisposed || state == _sFinal);
                         _state = state;
                         _tsEmitting.SetResult(false);
                         break;
-
-                    default: // initial, emitting???
-                        _state = state;
-                        throw new Exception(state + "???");
                 }
 
                 return _tsEmitting.Task;
@@ -157,11 +163,7 @@
             private async void Produce()
             {
                 Exception error = null;
-                try
-                {
-                    _token.ThrowIfCancellationRequested();
-                    await _generator(Yield, _token).ConfigureAwait(false);
-                }
+                try { await _generator(Yield, _token).ConfigureAwait(false); }
                 catch (Exception ex) { error = ex; }
 
                 var state = Atomic.Lock(ref _state);
@@ -171,25 +173,24 @@
                         _error = error;
                         Current = default;
                         _state = _sFinal;
-                        _tsAccepting.SetExceptionOrResult(error, false);
+                        _ctr.Dispose();
                         _atmbDisposed.SetResult();
+                        _tsAccepting.SetExceptionOrResult(error, false);
                         break;
 
                     case _sEmitting:
                         _error = error;
                         _state = _sFinal;
-                        _tsEmitting.SetResult(false);
+                        _ctr.Dispose();
                         _atmbDisposed.SetResult();
+                        _tsEmitting.SetResult(false);
                         break;
 
-                    case _sCompleted:
+                    default:
+                        Debug.Assert(state == _sDisposed);
                         _state = _sFinal;
                         _atmbDisposed.SetResult();
                         break;
-
-                    default: // Initial, Final???
-                        _state = state;
-                        throw new Exception(state + "???");
                 }
             }
         }

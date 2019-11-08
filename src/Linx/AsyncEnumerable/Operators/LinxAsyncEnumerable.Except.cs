@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -15,22 +16,20 @@
             if (second == null) throw new ArgumentNullException(nameof(second));
             if (comparer == null) comparer = EqualityComparer<T>.Default;
 
-            return Create<T>(async (yield, token) =>
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                var excluded = second as ISet<T> ?? new HashSet<T>(second, comparer);
+                token.ThrowIfCancellationRequested();
+
+                // ReSharper disable once PossibleMultipleEnumeration
+                var excluded = second is HashSet<T> h && h.Comparer == comparer ? h : new HashSet<T>(second, comparer);
                 var included = new HashSet<T>(comparer);
-                var ae = first.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
-                    {
-                        var current = ae.Current;
-                        if (excluded.Contains(current) || !included.Add(current)) continue;
-                        if (!await yield(current).ConfigureAwait(false)) return;
-                    }
-                }
-                finally { await ae.DisposeAsync(); }
-            });
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach(var item in first.WithCancellation(token).ConfigureAwait(false))
+                    if (!excluded.Contains(item) && included.Add(item))
+                        yield return item;
+            }
         }
     }
 }

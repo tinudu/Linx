@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -12,23 +13,19 @@
         public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T> comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            if (comparer == null) comparer = EqualityComparer<T>.Default;
 
-            return Create<T>(async (yield, token) =>
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
+
                 var distinct = new HashSet<T>(comparer);
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    while (await ae.MoveNextAsync())
-                    {
-                        var current = ae.Current;
-                        if (!distinct.Add(current)) continue;
-                        if (!await yield(current).ConfigureAwait(false)) return;
-                    }
-                }
-                finally { await ae.DisposeAsync(); }
-            });
+                // ReSharper disable once PossibleMultipleEnumeration
+                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                    if (distinct.Add(item))
+                        yield return item;
+            }
         }
     }
 }

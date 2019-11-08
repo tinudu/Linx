@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
@@ -14,25 +15,26 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = EqualityComparer<T>.Default;
 
-            return Create<T>(async (yield, token) =>
-            {
-                var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                try
-                {
-                    if (!await ae.MoveNextAsync()) return;
-                    var prev = ae.Current;
-                    if (!await yield(prev).ConfigureAwait(false)) return;
+            return Create(GetEnumerator);
 
-                    while (await ae.MoveNextAsync())
-                    {
-                        var current = ae.Current;
-                        if (comparer.Equals(current, prev)) continue;
-                        prev = current;
-                        if (!await yield(prev).ConfigureAwait(false)) return;
-                    }
+            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            {
+                token.ThrowIfCancellationRequested();
+
+                // ReSharper disable once PossibleMultipleEnumeration
+                await using var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+                if (!await ae.MoveNextAsync())
+                    yield break;
+                var prev = ae.Current;
+                yield return prev;
+                while (await ae.MoveNextAsync())
+                {
+                    var current = ae.Current;
+                    if(comparer.Equals(current,prev))
+                        continue;
+                    prev = current;
                 }
-                finally { await ae.DisposeAsync(); }
-            });
+            }
         }
     }
 }
