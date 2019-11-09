@@ -87,9 +87,6 @@
                         {
                             var tsQueueFull = Linx.Clear(ref _tsQueueFull);
                             Current = _queue.Dequeue();
-                            if (_queue.IsEmpty)
-                                try { _queue.TrimExcess(); }
-                                catch {/**/}
                             _state = _sEmitting;
                             _tsAccepting.SetResult(true);
                             tsQueueFull?.SetResult(true);
@@ -258,7 +255,6 @@
                 void Enqueue(T item);
                 T Dequeue();
                 void Clear();
-                void TrimExcess();
             }
 
             private sealed class InfiniteQueue : Queue<T>, IQueue

@@ -97,9 +97,6 @@
                         else
                         {
                             _current = _queue.Dequeue();
-                            if (_queue.IsEmpty)
-                                try { _queue.TrimExcess(); }
-                                catch {/**/}
                             _state = _sEmittingMutable;
                             _tsAccepting.SetResult(true);
                         }
@@ -254,7 +251,6 @@
                 void Enqueue(T item, out int state);
                 T Dequeue();
                 void Clear();
-                void TrimExcess();
             }
 
             private sealed class ZeroQueue : IQueue
@@ -276,7 +272,6 @@
                 public T Dequeue() => throw new InvalidOperationException();
 
                 public void Clear() { }
-                public void TrimExcess() { }
             }
 
             private sealed class OneQueue : IQueue
@@ -308,7 +303,6 @@
                 }
 
                 public void Clear() => IsEmpty = true;
-                public void TrimExcess() { }
             }
 
             private sealed class InfiniteQueue : Queue<T>, IQueue
