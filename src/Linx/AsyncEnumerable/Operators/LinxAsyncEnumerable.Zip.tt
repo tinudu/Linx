@@ -63,10 +63,10 @@ namespace Linx.AsyncEnumerable
 <# } #>
                 // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
-
-                while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                    yield return resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>);
+                // ReSharper disable once UseAwaitUsing
+                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
+                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
+                        yield return resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>);
             }
         }
 

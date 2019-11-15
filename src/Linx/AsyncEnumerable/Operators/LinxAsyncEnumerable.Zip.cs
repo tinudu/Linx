@@ -31,10 +31,10 @@
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
-
-                while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                    yield return resultSelector(ae1.Current, ae2.Current);
+                // ReSharper disable once UseAwaitUsing
+                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
+                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
+                        yield return resultSelector(ae1.Current, ae2.Current);
             }
         }
 
@@ -65,10 +65,10 @@
                 await using var ae3 = source3.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
-
-                while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                    yield return resultSelector(ae1.Current, ae2.Current, ae3.Current);
+                // ReSharper disable once UseAwaitUsing
+                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
+                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
+                        yield return resultSelector(ae1.Current, ae2.Current, ae3.Current);
             }
         }
 
@@ -102,10 +102,10 @@
                 await using var ae4 = source4.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
-
-                while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                    yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current);
+                // ReSharper disable once UseAwaitUsing
+                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
+                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
+                        yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current);
             }
         }
 
@@ -142,10 +142,10 @@
                 await using var ae5 = source5.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
-
-                while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                    yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current);
+                // ReSharper disable once UseAwaitUsing
+                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
+                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
+                        yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current);
             }
         }
 
@@ -185,10 +185,10 @@
                 await using var ae6 = source6.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
-
-                while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                    yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current);
+                // ReSharper disable once UseAwaitUsing
+                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
+                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
+                        yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current);
             }
         }
 
@@ -231,10 +231,10 @@
                 await using var ae7 = source7.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
-
-                while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                    yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current, ae7.Current);
+                // ReSharper disable once UseAwaitUsing
+                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
+                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
+                        yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current, ae7.Current);
             }
         }
 
@@ -280,10 +280,10 @@
                 await using var ae8 = source8.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using var _ = token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default;
-
-                while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                    yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current, ae7.Current, ae8.Current);
+                // ReSharper disable once UseAwaitUsing
+                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
+                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
+                        yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current, ae7.Current, ae8.Current);
             }
         }
 

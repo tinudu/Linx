@@ -20,8 +20,8 @@
         public async Task CompleteWhileThrottling()
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-|");
-            var expect = Marble.Parse("- -  - --d- -  -|");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
+            var expect = Marble.Parse("- -  - --d- -  -g|");
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
             await expect.AssertEqual(testee);
         }
 
@@ -30,7 +30,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-- -#");
             var expect = Marble.Parse("- -  - --d- -  --g-#");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
             await expect.AssertEqual(testee);
         }
 
@@ -39,7 +39,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg-#");
             var expect = Marble.Parse("- -  - --d- -  -#");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
             await expect.AssertEqual(testee);
         }
 
@@ -48,7 +48,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg");
             var expect = Marble.Parse("- -  - --d- -  --g-#");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize);
             await expect.AssertEqualCancel(testee, 10 * MarbleSettings.DefaultFrameSize);
         }
 
