@@ -215,6 +215,8 @@
             {
                 try
                 {
+                    if (_cts.IsCancellationRequested) return;
+
                     await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
                     {
                         var state = Atomic.Lock(ref _state);

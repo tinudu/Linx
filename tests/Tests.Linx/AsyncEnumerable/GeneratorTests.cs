@@ -31,12 +31,8 @@
         [Fact]
         public async Task TestThrows()
         {
-            try
-            {
-                await LinxAsyncEnumerable.Throw<int>(new Exception("Boom!")).Sum(default);
-                throw new Exception();
-            }
-            catch (Exception ex) when (ex.Message == "Boom!") { }
+            var ex = await Assert.ThrowsAsync<Exception>(() => LinxAsyncEnumerable.Throw<int>(new Exception("Boom!")).Any(default));
+            Assert.Equal("Boom!", ex.Message);
         }
     }
 }
