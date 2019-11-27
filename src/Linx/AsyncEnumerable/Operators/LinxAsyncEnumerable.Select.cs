@@ -129,5 +129,26 @@
                     yield return await selector(item, i++, token).ConfigureAwait(false);
             }
         }
+
+        /// <summary>
+        /// Projects each element of a sequence into the corresponding element of another sequence.
+        /// </summary>
+        public static IAsyncEnumerable<T2> Select<T1, T2>(this IAsyncEnumerable<T1> first, IAsyncEnumerable<T2> second)
+        {
+            if (first == null) throw new ArgumentNullException(nameof(first));
+            if (second == null) throw new ArgumentNullException(nameof(second));
+
+            return Create(GetEnumerator);
+
+            async IAsyncEnumerator<T2> GetEnumerator(CancellationToken token)
+            {
+                // ReSharper disable PossibleMultipleEnumeration
+                await using var ae1 = first.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+                await using var ae2 = second.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
+                // ReSharper restore PossibleMultipleEnumeration
+                while (await ae1.MoveNextAsync() && await ae2.MoveNextAsync())
+                    yield return ae2.Current;
+            }
+        }
     }
 }

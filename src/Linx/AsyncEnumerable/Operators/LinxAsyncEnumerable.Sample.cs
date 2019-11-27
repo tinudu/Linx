@@ -61,7 +61,7 @@
                 _source = source;
                 _sampler = sampler;
                 if (token.CanBeCanceled)
-                    _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
+                    _ctr = token.Register(() => Dispose(new OperationCanceledException(token)));
             }
 
             public TSource Current { get; private set; }
@@ -118,11 +118,11 @@
 
             public ValueTask DisposeAsync()
             {
-                OnError(AsyncEnumeratorDisposedException.Instance);
+                Dispose(AsyncEnumeratorDisposedException.Instance);
                 return new ValueTask(_atmbDisposed.Task);
             }
 
-            private void OnError(Exception error)
+            private void Dispose(Exception error)
             {
                 Debug.Assert(error != null);
 
@@ -172,8 +172,11 @@
                 }
             }
 
-            private void OnCompeted()
+            private void Complete(Exception errorOpt)
             {
+                if (Interlocked.Decrement(ref _active) == 0)
+                    _atmbDisposed.SetResult();
+
                 var state = Atomic.Lock(ref _state);
                 switch (state)
                 {
@@ -181,22 +184,25 @@
                     case _sSourceAccepting:
                     case _sSampleAccepting:
                         Current = _next = default;
+                        _error = errorOpt;
                         _state = _sFinal;
                         _ctr.Dispose();
                         _cts.TryCancel();
-                        _tsAccepting.SetResult(false);
+                        _tsAccepting.SetExceptionOrResult(errorOpt, false);
                         break;
 
                     case _sEmitting:
                     case _sSourceEmitting:
                     case _sSampleEmitting:
                         _next = default;
+                        _error = errorOpt;
                         _state = _sFinal;
                         _ctr.Dispose();
                         _cts.TryCancel();
                         break;
 
                     case _sNextEmitting:
+                        _error = errorOpt;
                         _state = _sLastEmitting;
                         _cts.TryCancel();
                         break;
@@ -206,17 +212,13 @@
                         _state = state;
                         break;
                 }
-
-                if (Interlocked.Decrement(ref _active) == 0)
-                    _atmbDisposed.SetResult();
             }
 
             private async void ProduceSource()
             {
+                Exception error = null;
                 try
                 {
-                    if (_cts.IsCancellationRequested) return;
-
                     await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
                     {
                         var state = Atomic.Lock(ref _state);
@@ -249,21 +251,23 @@
                                 break;
 
                             default:
-                                Debug.Assert(state == _sFinal);
-                                _state = _sFinal;
+                                Debug.Assert(state == _sLastEmitting || state == _sFinal);
+                                _state = state;
                                 return;
                         }
                     }
                 }
-                catch (Exception ex) { OnError(ex); }
-                finally { OnCompeted(); }
+                catch (Exception ex) { error = ex; }
+                finally { Complete(error); }
             }
 
             private async void ProduceSample()
             {
+                Exception error = null;
                 try
                 {
-                    if (_cts.IsCancellationRequested) return;
+                    if (_cts.IsCancellationRequested)
+                        return;
 
                     await foreach (var _ in _sampler.WithCancellation(_cts.Token).ConfigureAwait(false))
                     {
@@ -294,14 +298,14 @@
                                 break;
 
                             default:
-                                Debug.Assert(state == _sFinal);
-                                _state = _sFinal;
+                                Debug.Assert(state == _sLastEmitting || state == _sFinal);
+                                _state = state;
                                 return;
                         }
                     }
                 }
-                catch (Exception ex) { OnError(ex); }
-                finally { OnCompeted(); }
+                catch (Exception ex) { error = ex; }
+                finally { Complete(error); }
             }
         }
     }

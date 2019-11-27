@@ -1,16 +1,50 @@
 ﻿namespace Linx.Testing
 {
-    using Notifications;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Notifications;
     using Timing;
+    using Xunit;
 
     public static partial class Marble
     {
+        /// <summary>
+        /// Dispose/Cancel before first call to <see cref="IAsyncEnumerator{T}.MoveNextAsync"/>.
+        /// </summary>
+        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
+        public static async Task AssertThrowsInitial<T>(this IAsyncEnumerable<T> sequence)
+        {
+            // Dispose before MoveNextAsync
+            {
+                var ae = sequence.ConfigureAwait(false).GetAsyncEnumerator();
+                await ae.DisposeAsync();
+                await Assert.ThrowsAsync<AsyncEnumeratorDisposedException>(async () => await ae.MoveNextAsync());
+            }
+
+            // Cancel before MoveNextAsync
+            {
+                using var cts = new CancellationTokenSource();
+                await using var ae = sequence.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
+                cts.Cancel();
+                var oce = await Assert.ThrowsAsync<OperationCanceledException>(async () => await ae.MoveNextAsync());
+                Assert.Equal(cts.Token, oce.CancellationToken);
+            }
+
+            // Cancel before GetEnumerator
+            {
+                using var cts = new CancellationTokenSource();
+                cts.Cancel();
+                await using var ae = sequence.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
+                var oce = await Assert.ThrowsAsync<OperationCanceledException>(async () => await ae.MoveNextAsync());
+                Assert.Equal(cts.Token, oce.CancellationToken);
+            }
+        }
+
         /// <summary>
         /// Assert that <paramref name="actual"/> represents the same sequence as <paramref name="expected"/>.
         /// </summary>
@@ -26,18 +60,17 @@
             if (actual == null) throw new ArgumentNullException(nameof(actual));
 
             var cancelAt = now + cancelAfter;
-#pragma warning disable IDE0067 // Dispose objects before losing scope
-            var cts = new CancellationTokenSource();
-#pragma warning restore IDE0067 // Dispose objects before losing scope
+            using var cts = new CancellationTokenSource();
             var exp = expected
                 .Absolute(now)
                 .TakeWhile(ts => ts.Timestamp < cancelAt)
                 .Append(new Timestamped<Notification<T>>(cancelAt, Notification.Error<T>(new OperationCanceledException(cts.Token))));
             await VirtualTime.Run(async () =>
             {
-                var time = Time.Current;
-                time.Schedule(cts.Cancel, cancelAt, default);
+                // ReSharper disable AccessToDisposedClosure
+                Time.Current.Schedule(cts.Cancel, cancelAt, default);
                 await AssetEqualCore(exp, actual, cts.Token, elementComparer).ConfigureAwait(false);
+                // ReSharper restore AccessToDisposedClosure
             }, now).ConfigureAwait(false);
         }
 
@@ -49,19 +82,18 @@
             if (consumer == null) throw new ArgumentNullException(nameof(consumer));
 
             var cancelAt = now + cancelAfter;
-#pragma warning disable IDE0067 // Dispose objects before losing scope
-            var cts = new CancellationTokenSource();
-#pragma warning restore IDE0067 // Dispose objects before losing scope
+            using var cts = new CancellationTokenSource();
             var tsEx = await VirtualTime.Run(async () =>
             {
-                var time = Time.Current;
-                time.Schedule(cts.Cancel, cancelAt, default);
+                // ReSharper disable AccessToDisposedClosure
+                Time.Current.Schedule(cts.Cancel, cancelAt, default);
                 try
                 {
                     await consumer(cts.Token).ConfigureAwait(false);
                     return null;
                 }
                 catch (Exception ex) { return ex; }
+                // ReSharper restore AccessToDisposedClosure
             }, now).ConfigureAwait(false);
 
             if (tsEx.Value == null)

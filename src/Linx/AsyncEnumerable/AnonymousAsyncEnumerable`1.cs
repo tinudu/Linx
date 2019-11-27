@@ -17,7 +17,10 @@
             _name = name ?? typeof(AnonymousAsyncEnumerable<T>).Name;
         }
 
-        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => _getEnumerator(token);
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
+            => token.IsCancellationRequested ?
+                new LinxAsyncEnumerable.ThrowIterator<T>(new OperationCanceledException(token)) :
+                _getEnumerator(token);
 
         public override string ToString() => _name;
 
