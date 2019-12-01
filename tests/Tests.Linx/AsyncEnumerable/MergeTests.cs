@@ -9,15 +9,6 @@
     public sealed class MergeTests
     {
         [Fact]
-        public async Task Bla()
-        {
-            var s1 = Marble.Parse("abc|");
-            var s2 = Marble.Parse("de|");
-            var ex = Marble.Parse("abcde");
-            await ex.AssertEqual(s1.Merge(s2));
-        }
-
-        [Fact]
         public async Task Success()
         {
             var s1 = Marble.Parse("-a- -c- -e|");
