@@ -8,7 +8,7 @@
         /// <summary>
         /// Wraps a synchronous <see cref="IEnumerable{T}"/> into an <see cref="IAsyncEnumerable{T}"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Async<T>(this IEnumerable<T> source)
+        public static IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

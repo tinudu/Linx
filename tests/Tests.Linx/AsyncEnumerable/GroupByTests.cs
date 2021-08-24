@@ -28,7 +28,7 @@
         [Fact]
         public async Task Success()
         {
-            var source = "Abracadabra".Async().GroupBy(char.ToUpperInvariant);
+            var source = "Abracadabra".ToAsyncEnumerable().GroupBy(char.ToUpperInvariant);
 
             // run to end
             var r = await Stringify(source.Parallel(async (g, t) => (g.Key, Count: await g.Count(t)), true), default);
@@ -75,7 +75,7 @@
         [Fact]
         public async Task WhileEnumerated()
         {
-            var result = await "ABabABababABababab".Async()
+            var result = await "ABabABababABababab".ToAsyncEnumerable()
                 .GroupByWhileEnumerated(char.ToUpper)
                 .Parallel(async (g, t) => new string(await g.TakeUntil(char.IsUpper).ToArray(t).ConfigureAwait(false)), true)
                 .ToList(default);

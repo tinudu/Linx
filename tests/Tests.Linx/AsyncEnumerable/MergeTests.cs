@@ -35,7 +35,7 @@
             var s2 = Marble.Parse("- -b- -d- -f|");
             var s3 = Marble.Parse("          - -g|");
             var ex = Marble.Parse("-a-b-c-d-e-f-g|");
-            var testee = new[] { s1, s2, s3 }.Async().Merge(2);
+            var testee = new[] { s1, s2, s3 }.ToAsyncEnumerable().Merge(2);
             await ex.AssertEqual(testee);
         }
     }

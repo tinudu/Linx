@@ -16,20 +16,20 @@
         [Fact]
         public async Task TestAggregate()
         {
-            var result = await new[] { 1, 2, 3 }.Async().Aggregate(1, (a, c) => a * c, default);
+            var result = await new[] { 1, 2, 3 }.ToAsyncEnumerable().Aggregate(1, (a, c) => a * c, default);
             Assert.Equal(6, result);
 
-            result = await new[] { 1, 2, 3 }.Async().Aggregate(1, (a, c) => a * c, a => -a, default);
+            result = await new[] { 1, 2, 3 }.ToAsyncEnumerable().Aggregate(1, (a, c) => a * c, a => -a, default);
             Assert.Equal(-6, result);
         }
 
         [Fact]
         public async Task TestAll()
         {
-            var result = await new[] { 1, 2, 3 }.Async().All(x => x < 10, CancellationToken.None);
+            var result = await new[] { 1, 2, 3 }.ToAsyncEnumerable().All(x => x < 10, CancellationToken.None);
             Assert.True(result);
 
-            result = await new[] { 1, 2, 3 }.Async().All(x => x < 2, CancellationToken.None);
+            result = await new[] { 1, 2, 3 }.ToAsyncEnumerable().All(x => x < 2, CancellationToken.None);
             Assert.False(result);
 
             result = await LinxAsyncEnumerable.Empty<int>().All(x => x == 0, CancellationToken.None);
@@ -39,62 +39,62 @@
         [Fact]
         public async Task TestAny()
         {
-            var result = await new[] { 1, 2, 3 }.Async().Any(CancellationToken.None);
+            var result = await new[] { 1, 2, 3 }.ToAsyncEnumerable().Any(CancellationToken.None);
             Assert.True(result);
 
             result = await LinxAsyncEnumerable.Empty<int>().Any(CancellationToken.None);
             Assert.False(result);
 
-            result = await new[] { 1, 2, 3 }.Async().Any(x => x < 2, CancellationToken.None);
+            result = await new[] { 1, 2, 3 }.ToAsyncEnumerable().Any(x => x < 2, CancellationToken.None);
             Assert.True(result);
         }
 
         [Fact]
         public async Task TestAverage()
         {
-            Assert.Equal(5.5, await Enumerable.Range(1, 10).Async().Average(default));
-            Assert.Equal(5.5, await Enumerable.Range(1, 10).Select(x => (long)x).Async().Average(default));
-            Assert.Equal(5.5f, await Enumerable.Range(1, 10).Select(x => (float)x).Async().Average(default));
-            Assert.Equal(5.5, await Enumerable.Range(1, 10).Select(x => (double)x).Async().Average(default));
-            Assert.Equal(5.5m, await Enumerable.Range(1, 10).Select(x => (decimal)x).Async().Average(default));
+            Assert.Equal(5.5, await Enumerable.Range(1, 10).ToAsyncEnumerable().Average(default));
+            Assert.Equal(5.5, await Enumerable.Range(1, 10).Select(x => (long)x).ToAsyncEnumerable().Average(default));
+            Assert.Equal(5.5f, await Enumerable.Range(1, 10).Select(x => (float)x).ToAsyncEnumerable().Average(default));
+            Assert.Equal(5.5, await Enumerable.Range(1, 10).Select(x => (double)x).ToAsyncEnumerable().Average(default));
+            Assert.Equal(5.5m, await Enumerable.Range(1, 10).Select(x => (decimal)x).ToAsyncEnumerable().Average(default));
 
-            Assert.Equal(5.5, await Enumerable.Range(1, 10).Select(x => new Int64Ratio(2 * x, 2)).Async().Average(default));
-            Assert.Equal(5.5f, await Enumerable.Range(1, 10).Select(x => new FloatRatio(2 * x, 2)).Async().Average(default));
-            Assert.Equal(5.5f, await Enumerable.Range(1, 10).Select(x => new DoubleRatio(2 * x, 2)).Async().Average(default));
-            Assert.Equal(5.5m, await Enumerable.Range(1, 10).Select(x => new DecimalRatio(2 * x, 2)).Async().Average(default));
+            Assert.Equal(5.5, await Enumerable.Range(1, 10).Select(x => new Int64Ratio(2 * x, 2)).ToAsyncEnumerable().Average(default));
+            Assert.Equal(5.5f, await Enumerable.Range(1, 10).Select(x => new FloatRatio(2 * x, 2)).ToAsyncEnumerable().Average(default));
+            Assert.Equal(5.5f, await Enumerable.Range(1, 10).Select(x => new DoubleRatio(2 * x, 2)).ToAsyncEnumerable().Average(default));
+            Assert.Equal(5.5m, await Enumerable.Range(1, 10).Select(x => new DecimalRatio(2 * x, 2)).ToAsyncEnumerable().Average(default));
         }
 
         [Fact]
         public async Task TestContains()
         {
-            Assert.True(await Enumerable.Range(1, 10).Async().Contains(5, default));
-            Assert.False(await Enumerable.Range(1, 10).Async().Contains(11, default));
+            Assert.True(await Enumerable.Range(1, 10).ToAsyncEnumerable().Contains(5, default));
+            Assert.False(await Enumerable.Range(1, 10).ToAsyncEnumerable().Contains(11, default));
         }
 
         [Fact]
         public async Task TestCount()
         {
-            Assert.Equal(10, await Enumerable.Range(1, 10).Async().Count(default));
-            Assert.Equal(5, await Enumerable.Range(1, 10).Async().Count(x => (x & 1) == 0, default));
+            Assert.Equal(10, await Enumerable.Range(1, 10).ToAsyncEnumerable().Count(default));
+            Assert.Equal(5, await Enumerable.Range(1, 10).ToAsyncEnumerable().Count(x => (x & 1) == 0, default));
         }
 
         [Fact]
         public async Task TestElementAt()
         {
-            Assert.Equal(5, await Enumerable.Range(1, 10).Async().ElementAt(4, default));
-            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Enumerable.Range(1, 10).Async().ElementAt(-1, default));
+            Assert.Equal(5, await Enumerable.Range(1, 10).ToAsyncEnumerable().ElementAt(4, default));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Enumerable.Range(1, 10).ToAsyncEnumerable().ElementAt(-1, default));
 
-            Assert.Equal(5, await Enumerable.Range(1, 10).Async().ElementAtOrDefault(4, default));
-            Assert.Equal(0, await Enumerable.Range(1, 10).Async().ElementAtOrDefault(-1, default));
+            Assert.Equal(5, await Enumerable.Range(1, 10).ToAsyncEnumerable().ElementAtOrDefault(4, default));
+            Assert.Equal(0, await Enumerable.Range(1, 10).ToAsyncEnumerable().ElementAtOrDefault(-1, default));
 
-            Assert.Equal(5, await Enumerable.Range(1, 10).Async().ElementAtOrNull(4, default));
-            Assert.Null(await Enumerable.Range(1, 10).Async().ElementAtOrNull(-1, default));
+            Assert.Equal(5, await Enumerable.Range(1, 10).ToAsyncEnumerable().ElementAtOrNull(4, default));
+            Assert.Null(await Enumerable.Range(1, 10).ToAsyncEnumerable().ElementAtOrNull(-1, default));
         }
 
         [Fact]
         public async Task TestFirst()
         {
-            var src = new[] { 1, 2, 3 }.Async();
+            var src = new[] { 1, 2, 3 }.ToAsyncEnumerable();
 
             // ReSharper disable PossibleMultipleEnumeration
             Assert.Equal(1, await src.First(default));
@@ -114,7 +114,7 @@
         [Fact]
         public async Task TestLast()
         {
-            var src = new[] { 1, 2, 3 }.Async();
+            var src = new[] { 1, 2, 3 }.ToAsyncEnumerable();
 
             // ReSharper disable PossibleMultipleEnumeration
             Assert.Equal(3, await src.Last(default));
@@ -134,20 +134,20 @@
         [Fact]
         public async Task TestIgnoreElements()
         {
-            await new[] { 1, 2, 3 }.Async().IgnoreElements(default);
+            await new[] { 1, 2, 3 }.ToAsyncEnumerable().IgnoreElements(default);
         }
 
         [Fact]
         public async Task TestLongCount()
         {
-            Assert.Equal(10L, await Enumerable.Range(1, 10).Async().LongCount(default));
-            Assert.Equal(5L, await Enumerable.Range(1, 10).Async().LongCount(x => (x & 1) == 0, default));
+            Assert.Equal(10L, await Enumerable.Range(1, 10).ToAsyncEnumerable().LongCount(default));
+            Assert.Equal(5L, await Enumerable.Range(1, 10).ToAsyncEnumerable().LongCount(x => (x & 1) == 0, default));
         }
 
         [Fact]
         public async Task TestMax()
         {
-            var src = new[] { 1, 2, 3 }.Async();
+            var src = new[] { 1, 2, 3 }.ToAsyncEnumerable();
 
             // ReSharper disable PossibleMultipleEnumeration
             Assert.Equal(3, await src.Max(default));
@@ -167,7 +167,7 @@
         [Fact]
         public async Task TestMaxBy()
         {
-            var src = new[] { 1, 2, 3, 1, 2, 3 }.Async();
+            var src = new[] { 1, 2, 3, 1, 2, 3 }.ToAsyncEnumerable();
             Assert.True(new[] { 3, 3 }.SequenceEqual(await src.MaxBy(x => x + 1, default)));
             Assert.False((await LinxAsyncEnumerable.Empty<int>().MaxBy(x => x + 1, default)).Any());
         }
@@ -175,7 +175,7 @@
         [Fact]
         public async Task TestMin()
         {
-            var src = new[] { 1, 2, 3 }.Async();
+            var src = new[] { 1, 2, 3 }.ToAsyncEnumerable();
 
             // ReSharper disable PossibleMultipleEnumeration
             Assert.Equal(1, await src.Min(default));
@@ -195,7 +195,7 @@
         [Fact]
         public async Task TestMinBy()
         {
-            var src = new[] { 1, 2, 3, 1, 2, 3 }.Async();
+            var src = new[] { 1, 2, 3, 1, 2, 3 }.ToAsyncEnumerable();
             Assert.True(new[] { 1, 1 }.SequenceEqual(await src.MinBy(x => x + 1, default)));
             Assert.False((await LinxAsyncEnumerable.Empty<int>().MinBy(x => x + 1, default)).Any());
         }
@@ -203,7 +203,7 @@
         [Fact]
         public async Task TestMultiAggregate()
         {
-            var result = await Enumerable.Range(1, 3).Async().MultiAggregate(
+            var result = await Enumerable.Range(1, 3).ToAsyncEnumerable().MultiAggregate(
                 (s, t) => s.Sum(t),
                 (s, t) => s.First(t),
                 (s, t) => s.ElementAt(1, t),
@@ -217,7 +217,7 @@
         [Fact]
         public async Task TestMultiAggregateFail()
         {
-            var tResult = new[] { 2, 0, 1 }.Async().MultiAggregate((s, t) => s.First(t),
+            var tResult = new[] { 2, 0, 1 }.ToAsyncEnumerable().MultiAggregate((s, t) => s.First(t),
                 (s, t) => s.ToList(t),
                 (s, t) => s.Select(i => 1 / i).Sum(t),
                 (first, all, sumInv) => new { first, all, sumInv },
@@ -242,14 +242,14 @@
         {
             static Task Good(IAsyncEnumerable<int> xs, CancellationToken t) => xs.IgnoreElements(t);
             static Task Bad(IAsyncEnumerable<int> xs, CancellationToken t) => xs.Select((x, i) => i < 2 ? i.ToString() : throw new Exception("Boom!")).IgnoreElements(t);
-            await new[] { 1, 2, 3 }.Async().MultiConsume(default, Good, Good);
-            await Assert.ThrowsAsync<Exception>(() => new[] { 1, 2, 3 }.Async().MultiConsume(default, Good, Bad));
+            await new[] { 1, 2, 3 }.ToAsyncEnumerable().MultiConsume(default, Good, Good);
+            await Assert.ThrowsAsync<Exception>(() => new[] { 1, 2, 3 }.ToAsyncEnumerable().MultiConsume(default, Good, Bad));
         }
 
         [Fact]
         public async Task TestSingle()
         {
-            var src = new[] { 1, 2, 3 }.Async();
+            var src = new[] { 1, 2, 3 }.ToAsyncEnumerable();
 
             // ReSharper disable PossibleMultipleEnumeration
             await Assert.ThrowsAsync<InvalidOperationException>(() => LinxAsyncEnumerable.Empty<int>().Single(CancellationToken.None));
@@ -269,7 +269,7 @@
         [Fact]
         public async Task TestToList()
         {
-            var source = new[] { 1, 2, 3 }.Async();
+            var source = new[] { 1, 2, 3 }.ToAsyncEnumerable();
             var result = await source.ToList(CancellationToken.None);
             Assert.True(new[] { 1, 2, 3 }.SequenceEqual(result));
         }

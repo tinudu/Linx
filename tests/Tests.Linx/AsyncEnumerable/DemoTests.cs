@@ -12,7 +12,7 @@
         public async Task GroupMerge()
         {
             const string colors = "grrbrggbr";
-            var src = colors.Async().GroupBy(c => c).Merge();
+            var src = colors.ToAsyncEnumerable().GroupBy(c => c).Merge();
             var result = new string(await src.ToArray(default));
             Assert.Equal(colors, result);
         }
@@ -21,7 +21,7 @@
         public async Task GroupIndexMerge()
         {
             const string colors = "grrbrggbr";
-            var src = colors.Async().GroupBy(c => c).Select(g => g.Select((_, i) => $"{g.Key}{i + 1}")).Merge();
+            var src = colors.ToAsyncEnumerable().GroupBy(c => c).Select(g => g.Select((_, i) => $"{g.Key}{i + 1}")).Merge();
             var result = await src.ToList(default);
             Assert.True(new[] { "g1", "r1", "r2", "b1", "r3", "g2", "g3", "b2", "r4" }.SequenceEqual(result));
         }
@@ -30,7 +30,7 @@
         public async Task GroupAggregate()
         {
             const string colors = "grrbrggbr";
-            var src = colors.Async()
+            var src = colors.ToAsyncEnumerable()
                 .GroupBy(c => c)
                 .Parallel(async (g, t) => (g.Key, Value: await g.Count(t)));
 
@@ -45,7 +45,7 @@
         {
             //                     112311231231222331122
             const string colors = "grrrrbrrrggggbrgrgrrg";
-            var src = colors.Async()
+            var src = colors.ToAsyncEnumerable()
                 .GroupByWhileEnumerated(c => c)
                 .Parallel(async (g, t) => $"{g.Key}{await g.Take(3).Count(default)}", true);
 
@@ -73,7 +73,7 @@
         {
             const string colors = "grrbrggbr";
 
-            var src = colors.Async()
+            var src = colors.ToAsyncEnumerable()
                 .GroupBy(c => c)
                 .Select(g => g.Select((c, i) => new ColorAndIndex(c, i)))
                 .Merge();
@@ -89,7 +89,7 @@
                 async (yield, token) =>
                 {
                     var stack = new Stack<ConnectDelegate>();
-                    var groups = bla.Async().GroupBy(ci => ci.Color).Connectable(stack);
+                    var groups = bla.ToAsyncEnumerable().GroupBy(ci => ci.Color).Connectable(stack);
                     var red = ColorGroup('r').Prepend(null).Connectable(stack);
                     var enumeration = ColorGroup('g').Merge(ColorGroup('b'), ColorGroup('y'))
                         .Combine(red.Prepend(null), (c, r) => new { RedIndex = r?.Index, c.Color, ColorIndex = c.Index })

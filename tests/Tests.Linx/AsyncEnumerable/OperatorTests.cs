@@ -12,7 +12,7 @@
         [Fact]
         public async Task TestConcat()
         {
-            var r = Enumerable.Range(0, 3).Async();
+            var r = Enumerable.Range(0, 3).ToAsyncEnumerable();
             // ReSharper disable PossibleMultipleEnumeration
             var result = await r.Concat(r, r).ToList(default);
             // ReSharper restore PossibleMultipleEnumeration
@@ -22,7 +22,7 @@
         [Fact]
         public async Task TestTake()
         {
-            var result = await new[] { 1, 2, 3, 4 }.Async().Where(i => i != 2).Take(2).ToList(CancellationToken.None);
+            var result = await new[] { 1, 2, 3, 4 }.ToAsyncEnumerable().Where(i => i != 2).Take(2).ToList(CancellationToken.None);
             Assert.True(new[] { 1, 3 }.SequenceEqual(result));
         }
 

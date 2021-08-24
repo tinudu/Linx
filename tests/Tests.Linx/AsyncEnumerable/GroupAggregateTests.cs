@@ -9,7 +9,7 @@
         [Fact]
         public async Task Success()
         {
-            var result = await "Abracadabra".Async()
+            var result = await "Abracadabra".ToAsyncEnumerable()
                 .GroupAggregate(char.ToUpperInvariant, (g, t) => g.Count(t))
                 .ToDictionary(default);
             Assert.Equal(5, result['A']);

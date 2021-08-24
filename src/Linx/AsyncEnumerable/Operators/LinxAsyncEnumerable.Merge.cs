@@ -34,7 +34,7 @@
 
             return maxConcurrent == 1 ?
                 sources.Concat() :
-                Create(token => new MergeEnumerator<T>(sources.Async(), maxConcurrent, token));
+                Create(token => new MergeEnumerator<T>(sources.ToAsyncEnumerable(), maxConcurrent, token));
         }
 
         /// <summary>
@@ -44,7 +44,7 @@
         {
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));
-            return Create(token => new MergeEnumerator<T>(new[] { first, second }.Async(), int.MaxValue, token));
+            return Create(token => new MergeEnumerator<T>(new[] { first, second }.ToAsyncEnumerable(), int.MaxValue, token));
         }
 
         /// <summary>
@@ -55,7 +55,7 @@
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            return Create(token => new MergeEnumerator<T>(sources.Prepend(second).Prepend(first).Async(), int.MaxValue, token));
+            return Create(token => new MergeEnumerator<T>(sources.Prepend(second).Prepend(first).ToAsyncEnumerable(), int.MaxValue, token));
         }
 
         private sealed class MergeEnumerator<T> : IAsyncEnumerator<T>

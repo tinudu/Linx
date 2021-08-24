@@ -44,7 +44,7 @@
             Func<TSource, CancellationToken, Task<TResult>> selector,
             bool preserveOrder = false,
             int maxConcurrent = int.MaxValue)
-            => source.Async().Parallel(selector, preserveOrder, maxConcurrent);
+            => source.ToAsyncEnumerable().Parallel(selector, preserveOrder, maxConcurrent);
 
         private sealed class ParallelEnumerable<TSource, TResult> : IAsyncEnumerable<TResult>
         {
