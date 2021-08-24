@@ -48,8 +48,8 @@
             private readonly Func<TSource, TKey> _keySelector;
             private readonly Dictionary<Boxed<TKey>, Group> _groups;
             private bool _whileEnumerated;
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder(); // Task for last consumer
+            private readonly CancellationTokenSource _cts = new();
+            private AsyncTaskMethodBuilder _atmbDisposed = new(); // Task for last consumer
             private int _active;
 
             public GroupByEnumerator(
@@ -72,8 +72,8 @@
 
             #region outer enumerator context
 
-            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-            private readonly ManualResetValueTaskSource _tsEmitting = new ManualResetValueTaskSource();
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
+            private readonly ManualResetValueTaskSource _tsEmitting = new();
             private CancellationTokenRegistration _ctr;
             private int _state = _sInitial;
             private Exception _error;
@@ -263,8 +263,8 @@
                 private readonly GroupByEnumerator<TSource, TKey> _enumerator;
                 private readonly Boxed<TKey> _key;
 
-                public readonly ManualResetValueTaskSource<bool> TsAccepting = new ManualResetValueTaskSource<bool>();
-                public readonly ManualResetValueTaskSource TsEmitting = new ManualResetValueTaskSource();
+                public readonly ManualResetValueTaskSource<bool> TsAccepting = new();
+                public readonly ManualResetValueTaskSource TsEmitting = new();
                 public int State;
                 private CancellationTokenRegistration _ctr;
                 private Exception _error;

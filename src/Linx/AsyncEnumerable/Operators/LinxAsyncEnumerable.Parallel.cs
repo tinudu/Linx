@@ -80,11 +80,11 @@
                 private const int _sFinal = 4;
 
                 private readonly ParallelEnumerable<TSource, TResult> _enumerable;
-                private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-                private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-                private readonly Queue<TResult> _queue = new Queue<TResult>();
+                private readonly CancellationTokenSource _cts = new();
+                private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
+                private readonly Queue<TResult> _queue = new();
                 private CancellationTokenRegistration _ctr;
-                private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+                private AsyncTaskMethodBuilder _atmbDisposed = new();
                 private int _state, _active;
                 private ManualResetValueTaskSource<bool> _tsMaxConcurrent;
                 private bool _incrementActive;

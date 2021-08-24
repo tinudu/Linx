@@ -92,11 +92,11 @@ namespace Linx.AsyncEnumerable
                 return resultSelector(<#= string.Join(", ", names.Select(x => $"multi._{x.Aggregate}"))  #>);
             }
 
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+            private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = <#= n #>;
             private Exception _error;
-            private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();
+            private AsyncTaskMethodBuilder _atmbWhenAll = new();
 <# foreach(var x in names) { #>
             private <#= x.GenArg #> _<#= x.Aggregate #>;
 <# } #>

@@ -68,9 +68,9 @@
 
             private readonly IAsyncEnumerable<IAsyncEnumerable<T>> _sources;
             private readonly int _maxConcurrent;
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-            private readonly Queue<(T Next, ManualResetValueTaskSource<bool> Ts)> _queue = new Queue<(T, ManualResetValueTaskSource<bool>)>();
+            private readonly CancellationTokenSource _cts = new();
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
+            private readonly Queue<(T Next, ManualResetValueTaskSource<bool> Ts)> _queue = new();
             private AsyncTaskMethodBuilder _atmbDisposed = default;
             private CancellationTokenRegistration _ctr;
             private ManualResetValueTaskSource<bool> _tsMaxConcurrent;

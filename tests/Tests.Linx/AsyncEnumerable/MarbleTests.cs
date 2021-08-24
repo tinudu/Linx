@@ -12,9 +12,9 @@
     /// </summary>
     public sealed class MarbleTests
     {
-        private static TimeInterval<Notification<T>> Next<T>(int seconds, T value) => new TimeInterval<Notification<T>>(TimeSpan.FromTicks(seconds * TimeSpan.TicksPerSecond), Notification.Next(value));
-        private static TimeInterval<Notification<T>> Completed<T>(int seconds) => new TimeInterval<Notification<T>>(TimeSpan.FromTicks(seconds * TimeSpan.TicksPerSecond), Notification.Completed<T>());
-        private static TimeInterval<Notification<T>> Error<T>(int seconds, Exception error) => new TimeInterval<Notification<T>>(TimeSpan.FromTicks(seconds * TimeSpan.TicksPerSecond), Notification.Error<T>(error));
+        private static TimeInterval<Notification<T>> Next<T>(int seconds, T value) => new(TimeSpan.FromTicks(seconds * TimeSpan.TicksPerSecond), Notification.Next(value));
+        private static TimeInterval<Notification<T>> Completed<T>(int seconds) => new(TimeSpan.FromTicks(seconds * TimeSpan.TicksPerSecond), Notification.Completed<T>());
+        private static TimeInterval<Notification<T>> Error<T>(int seconds, Exception error) => new(TimeSpan.FromTicks(seconds * TimeSpan.TicksPerSecond), Notification.Error<T>(error));
 
         [Fact]
         public void TestNever()

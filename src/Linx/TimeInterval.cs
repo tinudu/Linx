@@ -13,7 +13,7 @@
         /// <summary>
         /// <see cref="TimeInterval{T}"/> factory method.
         /// </summary>
-        public static TimeInterval<T> Create<T>(T value, TimeSpan interval) => new TimeInterval<T>(interval, value);
+        public static TimeInterval<T> Create<T>(T value, TimeSpan interval) => new(interval, value);
 
         /// <summary>
         /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="TimeInterval{T}"/> using the specified comparer for <typeparamref name="T"/>.
@@ -60,6 +60,16 @@
 
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is TimeInterval<T> other && Equals(other);
+
+        /// <summary>
+        /// Equality.
+        /// </summary>
+        public static bool operator ==(TimeInterval<T> left, TimeInterval<T> right) => left.Equals(right);
+
+        /// <summary>
+        /// Inequality.
+        /// </summary>
+        public static bool operator !=(TimeInterval<T> left, TimeInterval<T> right) => !left.Equals(right);
 
         /// <inheritdoc />
         public override int GetHashCode() => HashCode.Combine(Interval, EqualityComparer<T>.Default.GetHashCode(Value));

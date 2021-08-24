@@ -35,12 +35,12 @@
             private readonly IAsyncEnumerable<T> _source;
             private readonly TimeSpan _interval;
             private readonly ITime _time = Time.Current;
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+            private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
-            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-            private readonly ManualResetValueTaskSource<bool> _tsEmitting = new ManualResetValueTaskSource<bool>();
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
+            private readonly ManualResetValueTaskSource<bool> _tsEmitting = new();
             private ManualResetValueTaskSource _tsTimer;
-            private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+            private AsyncTaskMethodBuilder _atmbDisposed = new();
             private int _state;
             private Exception _error;
             private DateTimeOffset _due;
@@ -194,7 +194,7 @@
 
                         default: // Initial, Emitting???
                             _state = state | _fProduce;
-                            throw new Exception(state + "???");
+                            break;
                     }
                 }
             }
@@ -257,7 +257,7 @@
 
                         default:
                             _state = state | _fTimer;
-                            throw new Exception(state + "???");
+                            break;
                     }
                 }
             }

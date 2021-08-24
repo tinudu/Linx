@@ -49,6 +49,16 @@
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is Notification<T> other && NotificationComparer<T>.Default.Equals(this, other);
 
+        /// <summary>
+        /// Equality.
+        /// </summary>
+        public static bool operator ==(Notification<T> left, Notification<T> right) => NotificationComparer<T>.Default.Equals(left, right);
+
+        /// <summary>
+        /// Inequality.
+        /// </summary>
+        public static bool operator !=(Notification<T> left, Notification<T> right) => !NotificationComparer<T>.Default.Equals(left, right);
+
         /// <inheritdoc />
         public override int GetHashCode() => NotificationComparer<T>.Default.GetHashCode(this);
 

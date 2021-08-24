@@ -13,7 +13,7 @@
         /// <summary>
         /// Timestamp the specified value with the specified timestamp.
         /// </summary>
-        public static Timestamped<T> Create<T>(DateTimeOffset timestamp, T value) => new Timestamped<T>(timestamp, value);
+        public static Timestamped<T> Create<T>(DateTimeOffset timestamp, T value) => new(timestamp, value);
 
         /// <summary>
         /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="TimeInterval{T}"/> using the specified comparer for <typeparamref name="T"/>.
@@ -64,6 +64,16 @@
 
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is Timestamped<T> other && Equals(other);
+
+        /// <summary>
+        /// Equality.
+        /// </summary>
+        public static bool operator ==(Timestamped<T> left, Timestamped<T> right) => left.Equals(right);
+
+        /// <summary>
+        /// Inequality.
+        /// </summary>
+        public static bool operator !=(Timestamped<T> left, Timestamped<T> right) => !left.Equals(right);
 
         /// <inheritdoc />
         public override int GetHashCode() => HashCode.Combine(Timestamp, EqualityComparer<T>.Default.GetHashCode(Value));

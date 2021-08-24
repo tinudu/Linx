@@ -26,7 +26,7 @@
                     {
                         MemberTypes.Field => ((FieldInfo) mx.Member).GetValue(target),
                         MemberTypes.Property => ((PropertyInfo) mx.Member).GetValue(target),
-                        _ => throw new ArgumentOutOfRangeException(nameof(mx.Member.MemberType))
+                        _ => throw new Exception($"Unexpected member type {mx.Member.MemberType}.")
                     };
                 }
                 case ExpressionType.Lambda:

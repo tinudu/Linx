@@ -53,10 +53,10 @@
         private sealed class ConnectableEnumerable<T> : IAsyncEnumerable<T>
         {
             private readonly IAsyncEnumerable<T> _source;
-            private readonly ManualResetEventSlim _gate = new ManualResetEventSlim(true);
-            private readonly List<Enumerator> _enumerators = new List<Enumerator>();
-            private readonly CancellationTokenSource _tcs = new CancellationTokenSource(); // as canceled as the last enumerator
-            private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+            private readonly ManualResetEventSlim _gate = new(true);
+            private readonly List<Enumerator> _enumerators = new();
+            private readonly CancellationTokenSource _tcs = new(); // as canceled as the last enumerator
+            private AsyncTaskMethodBuilder _atmbDisposed = new();
             private int _active; // number of active enumerators (Accepting or Emitting)
             private bool _isConnected;
 
@@ -162,8 +162,8 @@
             private sealed class Enumerator : IAsyncEnumerator<T>
             {
                 private readonly ConnectableEnumerable<T> _e;
-                public readonly ManualResetValueTaskSource<bool> TsAccepting = new ManualResetValueTaskSource<bool>();
-                public readonly ManualResetValueTaskSource<bool> TsEmitting = new ManualResetValueTaskSource<bool>();
+                public readonly ManualResetValueTaskSource<bool> TsAccepting = new();
+                public readonly ManualResetValueTaskSource<bool> TsEmitting = new();
                 private CancellationTokenRegistration _ctr;
                 public EnumeratorState State;
                 private Exception _error;

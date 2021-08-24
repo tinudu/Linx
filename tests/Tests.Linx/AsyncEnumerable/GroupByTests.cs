@@ -26,7 +26,6 @@
 
 
         [Fact]
-        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Success()
         {
             var source = "Abracadabra".Async().GroupBy(char.ToUpperInvariant);

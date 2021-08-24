@@ -13,7 +13,7 @@
         /// <summary>
         /// Create a <see cref="Boxed{T}"/> from the specified value.
         /// </summary>
-        public static Boxed<T> Create<T>(T value) => new Boxed<T>(value);
+        public static Boxed<T> Create<T>(T value) => new(value);
 
         /// <summary>
         /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="Boxed{T}"/> using the specified comparer for <typeparamref name="T"/>.
@@ -66,7 +66,7 @@
         /// <summary>
         /// Implicit <see cref="Boxed{T}"/> to <typeparamref name="T"/> conversion.
         /// </summary>
-        public static implicit operator Boxed<T>(T value) => new Boxed<T>(value);
+        public static implicit operator Boxed<T>(T value) => new(value);
 
         /// <summary>
         /// Implicit <typeparamref name="T"/> to <see cref="Boxed{T}"/> conversion.

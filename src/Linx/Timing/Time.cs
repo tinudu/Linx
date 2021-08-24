@@ -8,7 +8,7 @@
     /// </summary>
     public static class Time
     {
-        private static readonly AsyncLocal<ITime> _timeProvider = new AsyncLocal<ITime>();
+        private static readonly AsyncLocal<ITime> _timeProvider = new();
 
         /// <summary>
         /// Gets or sets the current time.

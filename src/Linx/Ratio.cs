@@ -35,12 +35,12 @@
         /// <summary>
         /// Addition operator.
         /// </summary>
-        public static Int64Ratio operator +(Int64Ratio x, Int64Ratio y) => new Int64Ratio(checked(x.Sum + y.Sum), checked(x.Count + y.Count));
+        public static Int64Ratio operator +(Int64Ratio x, Int64Ratio y) => new(checked(x.Sum + y.Sum), checked(x.Count + y.Count));
 
         /// <summary>
         /// Addition operator.
         /// </summary>
-        public static Int64Ratio operator +(Int64Ratio x, long y) => new Int64Ratio(checked(x.Sum + y), checked(x.Count + 1));
+        public static Int64Ratio operator +(Int64Ratio x, long y) => new(checked(x.Sum + y), checked(x.Count + 1));
 
         /// <summary>
         /// (<see cref="Sum"/>/<see cref="Count"/>)
@@ -80,12 +80,12 @@
         /// <summary>
         /// Addition operator.
         /// </summary>
-        public static FloatRatio operator +(FloatRatio x, FloatRatio y) => new FloatRatio(x.Sum + y.Sum, checked(x.Count + y.Count));
+        public static FloatRatio operator +(FloatRatio x, FloatRatio y) => new(x.Sum + y.Sum, checked(x.Count + y.Count));
 
         /// <summary>
         /// Addition operator.
         /// </summary>
-        public static FloatRatio operator +(FloatRatio x, float y) => new FloatRatio(x.Sum + y, checked(x.Count + 1));
+        public static FloatRatio operator +(FloatRatio x, float y) => new(x.Sum + y, checked(x.Count + 1));
 
         /// <summary>
         /// (<see cref="Sum"/>/<see cref="Count"/>)
@@ -125,12 +125,12 @@
         /// <summary>
         /// Addition operator.
         /// </summary>
-        public static DoubleRatio operator +(DoubleRatio x, DoubleRatio y) => new DoubleRatio(x.Sum + y.Sum, checked(x.Count + y.Count));
+        public static DoubleRatio operator +(DoubleRatio x, DoubleRatio y) => new(x.Sum + y.Sum, checked(x.Count + y.Count));
 
         /// <summary>
         /// Addition operator.
         /// </summary>
-        public static DoubleRatio operator +(DoubleRatio x, double y) => new DoubleRatio(x.Sum + y, checked(x.Count + 1));
+        public static DoubleRatio operator +(DoubleRatio x, double y) => new(x.Sum + y, checked(x.Count + 1));
 
         /// <summary>
         /// (<see cref="Sum"/>/<see cref="Count"/>)
@@ -170,12 +170,12 @@
         /// <summary>
         /// Addition operator.
         /// </summary>
-        public static DecimalRatio operator +(DecimalRatio x, DecimalRatio y) => new DecimalRatio(x.Sum + y.Sum, checked(x.Count + y.Count));
+        public static DecimalRatio operator +(DecimalRatio x, DecimalRatio y) => new(x.Sum + y.Sum, checked(x.Count + y.Count));
 
         /// <summary>
         /// Addition operator.
         /// </summary>
-        public static DecimalRatio operator +(DecimalRatio x, decimal y) => new DecimalRatio(x.Sum + y, checked(x.Count + 1));
+        public static DecimalRatio operator +(DecimalRatio x, decimal y) => new(x.Sum + y, checked(x.Count + 1));
 
         /// <summary>
         /// (<see cref="Sum"/>/<see cref="Count"/>)

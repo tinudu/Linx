@@ -39,7 +39,7 @@
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken) => this;
             T IAsyncEnumerator<T>.Current => default;
             ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync() => _failed;
-            ValueTask IAsyncDisposable.DisposeAsync() => new ValueTask(Task.CompletedTask);
+            ValueTask IAsyncDisposable.DisposeAsync() => new(Task.CompletedTask);
 
             public override string ToString() => "Throw";
         }

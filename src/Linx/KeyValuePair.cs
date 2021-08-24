@@ -13,7 +13,7 @@
         /// <summary>
         /// Create a new <see cref="KeyValuePair{TKey,TValue}"/> from the specified values.
         /// </summary>
-        public static KeyValuePair<TKey, TValue> Create<TKey, TValue>(TKey key, TValue value) => new KeyValuePair<TKey, TValue>(key, value);
+        public static KeyValuePair<TKey, TValue> Create<TKey, TValue>(TKey key, TValue value) => new(key, value);
 
         /// <summary>
         /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="KeyValuePair{TKey,TValue}"/> using the specified individual comparers for <typeparamref name="TKey"/> and <typeparamref name="TValue"/>.

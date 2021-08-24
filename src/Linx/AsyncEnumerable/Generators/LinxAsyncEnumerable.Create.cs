@@ -44,9 +44,9 @@
 
             private readonly GeneratorDelegate<T> _generator;
             private readonly CancellationToken _token;
-            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
-            private readonly ManualResetValueTaskSource<bool> _tsEmitting = new ManualResetValueTaskSource<bool>();
-            private AsyncTaskMethodBuilder _atmbDisposed = new AsyncTaskMethodBuilder();
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
+            private readonly ManualResetValueTaskSource<bool> _tsEmitting = new();
+            private AsyncTaskMethodBuilder _atmbDisposed = new();
             private CancellationTokenRegistration _ctr;
             private int _state;
             private Exception _error;

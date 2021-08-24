@@ -12,7 +12,7 @@
     [DebuggerNonUserCode]
     public sealed class ManualResetValueTaskSource : IValueTaskSource
     {
-        private ManualResetValueTaskSourceCore<Unit> _core = new ManualResetValueTaskSourceCore<Unit>();
+        private ManualResetValueTaskSourceCore<Unit> _core = new();
 
         /// <summary>Resets to prepare for the next operation.</summary>
         public void Reset() => _core.Reset();
@@ -35,7 +35,7 @@
         /// <summary>
         /// Gets a <see cref="ValueTask"/>.
         /// </summary>
-        public ValueTask Task => new ValueTask(this, _core.Version);
+        public ValueTask Task => new(this, _core.Version);
 
         ValueTaskSourceStatus IValueTaskSource.GetStatus(short token) => _core.GetStatus(token);
         void IValueTaskSource.OnCompleted(Action<object> continuation, object state, short token, ValueTaskSourceOnCompletedFlags flags) => _core.OnCompleted(continuation, state, token, flags);
@@ -48,7 +48,7 @@
     [DebuggerNonUserCode]
     public sealed class ManualResetValueTaskSource<T> : IValueTaskSource<T>, IValueTaskSource
     {
-        private ManualResetValueTaskSourceCore<T> _core = new ManualResetValueTaskSourceCore<T>();
+        private ManualResetValueTaskSourceCore<T> _core = new();
 
         /// <summary>Resets to prepare for the next operation.</summary>
         public void Reset() => _core.Reset();
@@ -71,12 +71,12 @@
         /// <summary>
         /// Gets a <see cref="ValueTask{TResult}"/>.
         /// </summary>
-        public ValueTask<T> Task => new ValueTask<T>(this, _core.Version);
+        public ValueTask<T> Task => new(this, _core.Version);
 
         /// <summary>
         /// Gets a <see cref="ValueTask"/>.
         /// </summary>
-        public ValueTask TaskNonGeneric => new ValueTask(this, _core.Version);
+        public ValueTask TaskNonGeneric => new(this, _core.Version);
 
         ValueTaskSourceStatus IValueTaskSource<T>.GetStatus(short token) => _core.GetStatus(token);
         ValueTaskSourceStatus IValueTaskSource.GetStatus(short token) => _core.GetStatus(token);

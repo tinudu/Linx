@@ -45,8 +45,8 @@
 
             private readonly IAsyncEnumerable<TSource> _source;
             private readonly IAsyncEnumerable<TSample> _sampler;
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
+            private readonly CancellationTokenSource _cts = new();
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private AsyncTaskMethodBuilder _atmbDisposed = default;
             private CancellationTokenRegistration _ctr;
             private int _state, _active;

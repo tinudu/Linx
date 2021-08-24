@@ -52,11 +52,11 @@
                 }
             }
 
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+            private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active;
             private Exception _error;
-            private AsyncTaskMethodBuilder _atmbWhenAll = new AsyncTaskMethodBuilder();
+            private AsyncTaskMethodBuilder _atmbWhenAll = new();
 
             private MultiConsumer(int active, CancellationToken token)
             {

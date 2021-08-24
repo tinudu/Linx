@@ -11,8 +11,8 @@
         private readonly ISubject<T> _subject;
         private CancellationTokenRegistration _ctr;
 
-        public ManualResetValueTaskSource<bool> TsAccepting = new ManualResetValueTaskSource<bool>();
-        public ManualResetValueTaskSource<bool> TsEmitting = new ManualResetValueTaskSource<bool>();
+        public ManualResetValueTaskSource<bool> TsAccepting = new();
+        public ManualResetValueTaskSource<bool> TsEmitting = new();
         public EnumeratorState State;
         public Exception Error;
         public Task Disposed;

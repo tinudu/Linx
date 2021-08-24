@@ -10,7 +10,7 @@
     /// </summary>
     public static class LinxXml
     {
-        private static readonly Regex _rgxTimezone = new Regex(@"(([+-][0-9][0-9]:[0-9][0-9])|Z)$", RegexOptions.Compiled);
+        private static readonly Regex _rgxTimezone = new(@"(([+-][0-9][0-9]:[0-9][0-9])|Z)$", RegexOptions.Compiled);
 
         /// <summary>
         /// Convert a xml string to a <see cref="DateTimeOffset"/>.

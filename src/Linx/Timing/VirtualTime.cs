@@ -68,12 +68,12 @@
         private const int _sIdle = 2;
         private const int _sDisposed = 3;
 
-        private static readonly ObjectDisposedException _virtualTimeDisposed = new ObjectDisposedException(nameof(VirtualTime));
+        private static readonly ObjectDisposedException _virtualTimeDisposed = new(nameof(VirtualTime));
 
-        private readonly PriorityQueue<Bucket> _queue = new PriorityQueue<Bucket>();
-        private readonly Dictionary<DateTime, Queue<Timer>> _timersByDue = new Dictionary<DateTime, Queue<Timer>>();
-        private readonly Stack<Queue<Timer>> _pool = new Stack<Queue<Timer>>(); // recicle empty timer lists
-        private readonly ManualResetValueTaskSource _tsIdle = new ManualResetValueTaskSource();
+        private readonly PriorityQueue<Bucket> _queue = new();
+        private readonly Dictionary<DateTime, Queue<Timer>> _timersByDue = new();
+        private readonly Stack<Queue<Timer>> _pool = new(); // recicle empty timer lists
+        private readonly ManualResetValueTaskSource _tsIdle = new();
         private int _state;
 
         /// <summary>
@@ -241,7 +241,7 @@
             private const int _tCanceled = 2;
             private const int _tDisposed = 3;
 
-            private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
+            private readonly ManualResetValueTaskSource _ts = new();
             private readonly VirtualTime _time;
             private readonly CancellationToken _token;
             private CancellationTokenRegistration _ctr;

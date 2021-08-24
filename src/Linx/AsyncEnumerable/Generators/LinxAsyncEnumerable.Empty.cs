@@ -27,8 +27,8 @@
             public override string ToString() => "Empty";
 
             T IAsyncEnumerator<T>.Current => default;
-            ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync() => new ValueTask<bool>(false);
-            ValueTask IAsyncDisposable.DisposeAsync() => new ValueTask(Task.CompletedTask);
+            ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync() => new(false);
+            ValueTask IAsyncDisposable.DisposeAsync() => new(Task.CompletedTask);
         }
     }
 }

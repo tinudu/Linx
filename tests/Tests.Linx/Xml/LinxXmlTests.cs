@@ -190,7 +190,7 @@
 
     public sealed class TheToDateTimeOffsetMethod
     {
-        private static readonly DateTime _dt = new DateTime(2018, 2, 25, 13, 15, 12, 345);
+        private static readonly DateTime _dt = new(2018, 2, 25, 13, 15, 12, 345);
         private static readonly string _dtStr = XmlConvert.ToString(_dt, XmlDateTimeSerializationMode.Unspecified);
 
         [Fact]

@@ -12,7 +12,7 @@
         {
             private readonly CancellationTokenSource _cts;
             private readonly Func<ConfiguredValueTaskAwaitable<bool>>[] _moveNexts;
-            private readonly ManualResetValueTaskSource<bool> _ts = new ManualResetValueTaskSource<bool>();
+            private readonly ManualResetValueTaskSource<bool> _ts = new();
             private bool _completed;
             private Exception _error;
             private int _active;

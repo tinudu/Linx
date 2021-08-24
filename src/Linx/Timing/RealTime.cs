@@ -23,7 +23,7 @@
         public DateTimeOffset Now => DateTimeOffset.Now;
 
         /// <inheritdoc />
-        public ValueTask Delay(TimeSpan due, CancellationToken token) => new ValueTask(due > TimeSpan.Zero ? Task.Delay(due, token) : Task.CompletedTask);
+        public ValueTask Delay(TimeSpan due, CancellationToken token) => new(due > TimeSpan.Zero ? Task.Delay(due, token) : Task.CompletedTask);
 
         /// <inheritdoc />
         public ValueTask Delay(DateTimeOffset due, CancellationToken token) => Delay(due - DateTimeOffset.Now, token);
@@ -38,7 +38,7 @@
             private const int _sCanceled = 2;
             private const int _sDisposed = 3;
 
-            private readonly ManualResetValueTaskSource _ts = new ManualResetValueTaskSource();
+            private readonly ManualResetValueTaskSource _ts = new();
             private readonly System.Threading.Timer _timer;
             private readonly CancellationToken _token;
             private CancellationTokenRegistration _ctr;

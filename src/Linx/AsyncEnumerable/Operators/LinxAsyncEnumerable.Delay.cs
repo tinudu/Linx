@@ -37,7 +37,7 @@
                         case NotificationKind.Completed:
                             yield break;
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new Exception("Invalid kind.");
                     }
                 }
             }

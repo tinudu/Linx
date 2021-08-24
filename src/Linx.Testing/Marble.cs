@@ -16,7 +16,6 @@
         /// <summary>
         /// Dispose/Cancel before first call to <see cref="IAsyncEnumerator{T}.MoveNextAsync"/>.
         /// </summary>
-        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public static async Task AssertThrowsInitial<T>(this IAsyncEnumerable<T> sequence)
         {
             // Dispose before MoveNextAsync
@@ -49,7 +48,7 @@
         /// Assert that <paramref name="actual"/> represents the same sequence as <paramref name="expected"/>.
         /// </summary>
         public static async Task AssertEqual<T>(this IMarbleDiagram<T> expected, IAsyncEnumerable<T> actual, DateTimeOffset now = default, IEqualityComparer<T> elementComparer = null)
-            => await VirtualTime.Run(() => AssetEqualCore(expected.Absolute(now), actual, default, elementComparer), now).ConfigureAwait(false);
+            => await VirtualTime.Run(() => AssetEqualCore(expected.Absolute(now), actual, elementComparer, default), now).ConfigureAwait(false);
 
         /// <summary>
         /// Assert that <paramref name="actual"/> represents the same (canceled) sequence as <paramref name="expected"/>.
@@ -69,7 +68,7 @@
             {
                 // ReSharper disable AccessToDisposedClosure
                 Time.Current.Schedule(cts.Cancel, cancelAt, default);
-                await AssetEqualCore(exp, actual, cts.Token, elementComparer).ConfigureAwait(false);
+                await AssetEqualCore(exp, actual, elementComparer, cts.Token).ConfigureAwait(false);
                 // ReSharper restore AccessToDisposedClosure
             }, now).ConfigureAwait(false);
         }
@@ -98,13 +97,13 @@
 
             if (tsEx.Value == null)
                 throw new Exception($"Consumer returned sucessfully @{tsEx.Timestamp}.");
-            if (!(tsEx.Value is OperationCanceledException oce) || oce.CancellationToken != cts.Token)
+            if (tsEx.Value is not OperationCanceledException oce || oce.CancellationToken != cts.Token)
                 throw new Exception($"Consumer threw an exception other than an OCE on the specified token.@{tsEx.Timestamp}", tsEx.Value);
             if (tsEx.Timestamp != cancelAt)
                 throw new Exception($"Consumer canceld @{tsEx.Value}. Expected {cancelAt}.");
         }
 
-        private static async Task AssetEqualCore<T>(IEnumerable<Timestamped<Notification<T>>> expected, IAsyncEnumerable<T> actual, CancellationToken token, IEqualityComparer<T> elementComparer)
+        private static async Task AssetEqualCore<T>(IEnumerable<Timestamped<Notification<T>>> expected, IAsyncEnumerable<T> actual, IEqualityComparer<T> elementComparer, CancellationToken token)
         {
             Debug.Assert(expected != null);
             Debug.Assert(actual != null);

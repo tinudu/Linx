@@ -44,7 +44,7 @@
             private readonly IAsyncEnumerable<T> _source;
             private readonly IQueue _queue;
             private readonly CancellationToken _token;
-            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new ManualResetValueTaskSource<bool>();
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private CancellationTokenRegistration _ctr;
             private AsyncTaskMethodBuilder _atmbDisposed = default;
             private T _current;

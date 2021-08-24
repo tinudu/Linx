@@ -18,7 +18,6 @@
         }
 
         [Fact]
-        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Completed()
         {
             var i1 = Marble.Parse("-a- b-  c-|");
@@ -29,7 +28,6 @@
         }
 
         [Fact]
-        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Error()
         {
             var i1 = Marble.Parse("-a- b-  c-|");
@@ -40,7 +38,6 @@
         }
 
         [Fact]
-        [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
         public async Task Cancel()
         {
             var i1 = Marble.Parse(" -a-bc");

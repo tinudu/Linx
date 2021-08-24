@@ -12,16 +12,16 @@
         /// <summary>
         /// Create a <see cref="NotificationKind.Next"/> notification.
         /// </summary>
-        public static Notification<T> Next<T>(T value) => new Notification<T>(value);
+        public static Notification<T> Next<T>(T value) => new(value);
 
         /// <summary>
         /// Create a <see cref="NotificationKind.Completed"/> notification.
         /// </summary>
-        public static Notification<T> Completed<T>() => new Notification<T>();
+        public static Notification<T> Completed<T>() => new();
 
         /// <summary>
         /// Create a <see cref="NotificationKind.Error"/> notification.
         /// </summary>
-        public static Notification<T> Error<T>(Exception error) => new Notification<T>(error);
+        public static Notification<T> Error<T>(Exception error) => new(error);
     }
 }

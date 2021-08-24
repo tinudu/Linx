@@ -20,7 +20,7 @@
         public TimeSpan FrameSize
         {
             get => _frameSize;
-            set => _frameSize = value > TimeSpan.Zero ? value : throw new ArgumentOutOfRangeException();
+            set => _frameSize = value > TimeSpan.Zero ? value : throw new ArgumentOutOfRangeException(nameof(value));
         }
 
         /// <summary>
