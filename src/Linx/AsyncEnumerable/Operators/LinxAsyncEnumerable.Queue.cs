@@ -38,9 +38,6 @@ namespace Linx.AsyncEnumerable
             private const int _sError = 4; // canceled or disposed while still producing items
             private const int _sFinal = 5;
 
-            private static readonly Func<IQueue<S, R>, R> _dequeueOne = q => q.Dequeue();
-            private static readonly Func<IQueue<S, R>, IReadOnlyList<R>> _dequeueAll = q => q.DequeueAll();
-
             private readonly IAsyncEnumerable<S> _source;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private readonly CancellationTokenSource _cts = new();
@@ -224,16 +221,13 @@ namespace Linx.AsyncEnumerable
                     _e = e;
                 }
 
-                public R Dequeue(short version) => Dequeue(_dequeueOne, version);
-                public IReadOnlyList<R> DequeueAll(short version) => Dequeue(_dequeueAll, version);
-
-                private T Dequeue<T>(Func<IQueue<S, R>, T> dequeue, short version)
+                public R Dequeue(short version)
                 {
                     var state = Atomic.Lock(ref _e._state);
                     try
                     {
                         if (version != _e._version) throw _queueVersionConflict;
-                        return dequeue(_e._queue);
+                        return _e._queue.Dequeue();
                     }
                     finally
                     {
@@ -317,16 +311,13 @@ namespace Linx.AsyncEnumerable
                     _e = e;
                 }
 
-                public R Dequeue(short version) => Dequeue(_dequeueOne, version);
-                public IReadOnlyList<R> DequeueAll(short version) => Dequeue(_dequeueAll, version);
-
-                private T Dequeue<T>(Func<IQueue<S, R>, T> dequeue, short version)
+                public R Dequeue(short version)
                 {
                     var state = Atomic.Lock(ref _e._state);
                     try
                     {
                         if (version != _e._version) throw _queueVersionConflict;
-                        return dequeue(_e._queue);
+                        return _e._queue.Dequeue();
                     }
                     finally
                     {

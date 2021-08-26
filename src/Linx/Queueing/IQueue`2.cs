@@ -31,15 +31,5 @@ namespace Linx.Queueing
         /// </summary>
         /// <exception cref="InvalidOperationException">The queue is empty.</exception>
         TOut Dequeue();
-
-        /// <summary>
-        /// Dequeue all items from the queue.
-        /// </summary>
-        IReadOnlyList<TOut> DequeueAll();
-
-        /// <summary>
-        /// Clears all items from the queue.
-        /// </summary>
-        void Clear();
     }
 }

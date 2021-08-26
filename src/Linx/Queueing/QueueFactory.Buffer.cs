@@ -1,61 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Linx.Queueing
 {
     partial class QueueFactory
     {
         /// <summary>
-        /// Creates a <see cref="IQueue{TIn, TOut}"/> that buffers all items.
+        /// Creates a <see cref="IQueue{TIn, TOut}"/> that buffers all elements.
         /// </summary>
-        public static IQueue<T, T> Buffer<T>() => new BufferAllQueue<T>();
+        public static IQueue<T, T> Buffer<T>() => new BufferQueue<T>(int.MaxValue);
 
         /// <summary>
-        /// Creates a <see cref="IQueue{TIn, TOut}"/> that buffers up to <paramref name="maxSize"/> items.
+        /// Creates a <see cref="IQueue{TIn, TOut}"/> that buffers up to <paramref name="maxSize"/> elements.
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxSize"/> must be positive.</exception>
-        public static IQueue<T, T> Buffer<T>(int maxSize)
-            => maxSize switch
-            {
-                int.MaxValue => new BufferAllQueue<T>(),
-                > 0 => new BufferNQueue<T>(maxSize),
-                _ => throw new ArgumentOutOfRangeException(nameof(maxSize))
-            };
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxSize"/> must greater than 1.</exception>
+        public static IQueue<T, T> Buffer<T>(int maxSize) => new BufferQueue<T>(maxSize);
 
-        private sealed class BufferAllQueue<T> : IQueue<T, T>
-        {
-            private readonly Queue<T> _queue = new();
-
-            bool IQueue<T, T>.IsFull => false;
-
-            public bool IsEmpty => _queue.Count == 0;
-
-            public void Enqueue(T item) => _queue.Enqueue(item);
-
-            public T Dequeue() => _queue.Dequeue();
-
-            public IReadOnlyList<T> DequeueAll()
-            {
-                var result = _queue.ToList();
-                _queue.Clear();
-                return result;
-            }
-
-            public void Clear() => _queue.Clear();
-        }
-
-        private sealed class BufferNQueue<T> : IQueue<T, T>
+        private sealed class BufferQueue<T> : IQueue<T, T>
         {
             private readonly Queue<T> _queue = new();
             private readonly int _maxSize;
 
-            public BufferNQueue(int maxSize)
+            public BufferQueue(int maxSize)
             {
-                Debug.Assert(maxSize > 0 && maxSize < int.MaxValue);
+                if (maxSize <= 1) throw new ArgumentOutOfRangeException(nameof(maxSize), "Must be > 1.");
                 _maxSize = maxSize;
             }
 
@@ -70,15 +38,6 @@ namespace Linx.Queueing
             }
 
             public T Dequeue() => _queue.Dequeue();
-
-            public IReadOnlyList<T> DequeueAll()
-            {
-                var result = _queue.ToList();
-                _queue.Clear();
-                return result;
-            }
-
-            public void Clear() => _queue.Clear();
         }
     }
 }

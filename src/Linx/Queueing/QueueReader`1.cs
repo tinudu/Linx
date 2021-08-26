@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Linx.Queueing
+﻿namespace Linx.Queueing
 {
     /// <summary>
     /// Provides access to a queue.
@@ -16,11 +14,6 @@ namespace Linx.Queueing
             /// Implementation of <see cref="QueueReader{T}.Dequeue"/>.
             /// </summary>
             T Dequeue(short version);
-
-            /// <summary>
-            /// Implementation of <see cref="QueueReader{T}.DequeueAll"/>.
-            /// </summary>
-            IReadOnlyList<T> DequeueAll(short version);
         }
 
         private readonly IProvider _provider;
@@ -39,10 +32,5 @@ namespace Linx.Queueing
         /// Dequeue one item from the queue.
         /// </summary>
         public T Dequeue() => _provider.Dequeue(_version);
-
-        /// <summary>
-        /// Dequeue all items from the queue.
-        /// </summary>
-        public IReadOnlyList<T> DequeueAll() => _provider.DequeueAll(_version);
     }
 }
