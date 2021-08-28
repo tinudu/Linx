@@ -72,7 +72,7 @@
             if (token.IsCancellationRequested) return Task.FromCanceled(token);
             if (!token.CanBeCanceled) return _never;
             var atmb = new AsyncTaskMethodBuilder();
-            if (token.CanBeCanceled) token.Register(() => atmb.SetException(new OperationCanceledException(token)));
+            token.Register(() => atmb.SetException(new OperationCanceledException(token)));
             return atmb.Task;
         }
     }
