@@ -9,7 +9,7 @@
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Dematerializes the explicit notification values of an observable sequence as implicit notifications.
+        /// Dematerializes the explicit notification values of a sequence as implicit notifications.
         /// </summary>
         public static IAsyncEnumerable<T> Dematerialize<T>(this IAsyncEnumerable<Notification<T>> source)
         {
@@ -18,9 +18,6 @@
 
             async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var n in source.WithCancellation(token).ConfigureAwait(false))
                     switch (n.Kind)
                     {
@@ -34,7 +31,7 @@
                         default:
                             throw new Exception(n.Kind + "???");
                     }
-                await token.WhenCanceled().ConfigureAwait(false);
+                throw await token.WhenCanceledAsync().ConfigureAwait(false);
             }
         }
     }

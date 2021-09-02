@@ -13,26 +13,26 @@
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by it's <see cref="IAsyncEnumerable{T}.GetAsyncEnumerator(CancellationToken)"/> implementation.
         /// </summary>
-        public static IAsyncEnumerable<T> Create<T>(Func<CancellationToken, IAsyncEnumerator<T>> getAsyncEnumerator, [CallerMemberName] string name = null)
+        public static IAsyncEnumerable<T> Create<T>(Func<CancellationToken, IAsyncEnumerator<T>> getAsyncEnumerator)
         {
             if (getAsyncEnumerator == null) throw new ArgumentNullException(nameof(getAsyncEnumerator));
-            return new AnonymousAsyncEnumerable<T>(getAsyncEnumerator, name);
+            return new AnonymousAsyncEnumerable<T>(getAsyncEnumerator);
         }
 
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Create<T>(GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
+        public static IAsyncEnumerable<T> Create<T>(GeneratorDelegate<T> generator)
         {
             if (generator == null) throw new ArgumentNullException(nameof(generator));
-            return new AnonymousAsyncEnumerable<T>(token => new GeneratorEnumerator<T>(generator, token), name);
+            return new AnonymousAsyncEnumerable<T>(token => new GeneratorEnumerator<T>(generator, token));
         }
 
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="GeneratorDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Create<T>(T _, GeneratorDelegate<T> generator, [CallerMemberName] string name = null)
-            => Create(generator, name);
+        public static IAsyncEnumerable<T> Create<T>(T _, GeneratorDelegate<T> generator)
+            => Create(generator);
 
         private sealed class GeneratorEnumerator<T> : IAsyncEnumerator<T>
         {

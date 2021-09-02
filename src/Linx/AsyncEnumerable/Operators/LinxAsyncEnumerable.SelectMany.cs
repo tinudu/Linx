@@ -156,8 +156,7 @@
             return source
                 .Select(s => collectionSelector(s).Select(c => (s, c)))
                 .Merge(maxConcurrent)
-                .Select(t => resultSelector(t.s, t.c))
-                .WithName(nameof(Merge));
+                .Select(t => resultSelector(t.s, t.c));
         }
 
         /// <summary>
@@ -176,8 +175,7 @@
             return source
                 .Select((s, i) => collectionSelector(s, i).Select(c => (s, c)))
                 .Merge(maxConcurrent)
-                .Select(t => resultSelector(t.s, t.c))
-                .WithName(nameof(Merge));
+                .Select(t => resultSelector(t.s, t.c));
         }
 
         #endregion
@@ -232,8 +230,7 @@
             return source
                 .Select(s => collectionSelector(s).Select(c => (s, c)))
                 .Merge(maxConcurrent)
-                .Select(t => resultSelector(t.s, t.c))
-                .WithName(nameof(Merge));
+                .Select(t => resultSelector(t.s, t.c));
         }
 
         /// <summary>
@@ -252,8 +249,7 @@
             return source
                 .Select((s, i) => collectionSelector(s, i).Select(c => (s, c)))
                 .Merge(maxConcurrent)
-                .Select(t => resultSelector(t.s, t.c))
-                .WithName(nameof(Merge));
+                .Select(t => resultSelector(t.s, t.c));
         }
 
         #endregion

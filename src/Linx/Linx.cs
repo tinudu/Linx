@@ -11,8 +11,6 @@
     /// </summary>
     public static class Linx
     {
-        private static readonly Task _never = new AsyncTaskMethodBuilder().Task;
-
         /// <summary>
         /// Sets the value at specified storage location to the default value.
         /// </summary>
@@ -64,15 +62,16 @@
         }
 
         /// <summary>
-        /// Gets a task that completes as <see cref="TaskStatus.Canceled"/> when the specified <paramref name="token"/> requests cancellation.
+        /// Gets a task that completes when the specified <paramref name="token"/> requests cancellation.
         /// </summary>
         [DebuggerNonUserCode]
-        public static Task WhenCanceled(this CancellationToken token)
+        public static Task<OperationCanceledException> WhenCanceledAsync(this CancellationToken token)
         {
-            if (token.IsCancellationRequested) return Task.FromCanceled(token);
-            if (!token.CanBeCanceled) return _never;
-            var atmb = new AsyncTaskMethodBuilder();
-            token.Register(() => atmb.SetException(new OperationCanceledException(token)));
+            var atmb = new AsyncTaskMethodBuilder<OperationCanceledException>();
+            if (token.IsCancellationRequested)
+                atmb.SetResult(new OperationCanceledException(token));
+            else if (token.CanBeCanceled)
+                token.Register(() => atmb.SetResult(new OperationCanceledException(token)));
             return atmb.Task;
         }
     }

@@ -36,7 +36,7 @@
                 }
             }
 
-            await token.WhenCanceled().ConfigureAwait(false);
+            throw await token.WhenCanceledAsync().ConfigureAwait(false);
         }
 
         /// <inheritdoc />
