@@ -68,7 +68,7 @@
 
             private readonly IAsyncEnumerable<IAsyncEnumerable<T>> _sources;
             private readonly int _maxConcurrent;
-            private readonly LinxCancellationTokenSource _cts = new();
+            private readonly CancellationTokenSource _cts = new();
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private readonly Queue<(T Next, ManualResetValueTaskSource<bool> Ts)> _queue = new();
             private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -361,7 +361,7 @@
                             default:
                                 Debug.Assert(state == _sLastEmitting || state == _sFinal);
                                 _state = state;
-                                throw _cts.WhenCancellationRequested.Result;
+                                throw _cts.Token.WhenCancellationRequestedAsync().Result;
                         }
                     }
                 }

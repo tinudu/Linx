@@ -80,7 +80,7 @@
                 private const int _sFinal = 4;
 
                 private readonly ParallelEnumerable<TSource, TResult> _enumerable;
-                private readonly LinxCancellationTokenSource _cts = new();
+                private readonly CancellationTokenSource _cts = new();
                 private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
                 private readonly Queue<TResult> _queue = new();
                 private CancellationTokenRegistration _ctr;

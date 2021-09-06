@@ -79,6 +79,18 @@
         }
 
         /// <summary>
+        /// Defensive cancellation.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="cts"/> is null.</exception>
+        public static void TryCancel(this CancellationTokenSource cts)
+        {
+            if (cts is null) throw new ArgumentNullException(nameof(cts));
+
+            try { cts.Cancel(); }
+            catch { /**/ }
+        }
+
+        /// <summary>
         /// Enumerate buffer capacities starting with <paramref name="maxCapacity"/>, dividing by 2 until a value of 4..7 is reached.
         /// </summary>
         internal static IEnumerable<int> Capacities(int maxCapacity)

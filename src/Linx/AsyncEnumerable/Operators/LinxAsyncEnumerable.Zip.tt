@@ -56,7 +56,7 @@ namespace Linx.AsyncEnumerable
             {
                 token.ThrowIfCancellationRequested();
 
-                var cts = new LinxCancellationTokenSource();
+                var cts = new CancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
 <# foreach(var n in arg.Names) { #>
                 await using var <#= n.Ae #> = <#= n.Source #>.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();

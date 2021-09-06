@@ -10,14 +10,14 @@
     {
         private sealed class ZipContext
         {
-            private readonly LinxCancellationTokenSource _cts;
+            private readonly CancellationTokenSource _cts;
             private readonly Func<ConfiguredValueTaskAwaitable<bool>>[] _moveNexts;
             private readonly ManualResetValueTaskSource<bool> _ts = new();
             private bool _completed;
             private Exception _error;
             private int _active;
 
-            public ZipContext(LinxCancellationTokenSource cts, params Func<ConfiguredValueTaskAwaitable<bool>>[] moveNexts)
+            public ZipContext(CancellationTokenSource cts, params Func<ConfiguredValueTaskAwaitable<bool>>[] moveNexts)
             {
                 _cts = cts;
                 _moveNexts = moveNexts;
