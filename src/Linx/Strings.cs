@@ -6,5 +6,6 @@
         public const string SequenceContainsMultipleElements = "Sequence contains multiple elements.";
 
         public const string QueueIsEmpty = "Queue is empty.";
+        public const string QueueIsFull = "Queue is full.";
     }
 }

@@ -1,6 +1,7 @@
 ﻿namespace Linx
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Runtime.CompilerServices;
     using System.Threading;
@@ -52,27 +53,42 @@
         public static TResult Invoke<TArgument, TResult>(this TArgument argument, Func<TArgument, TResult> function) => function(argument);
 
         /// <summary>
-        /// <see cref="CancellationTokenSource.Cancel()"/> catching exception.
+        /// Await cancellation.
         /// </summary>
-        [DebuggerNonUserCode]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TryCancel(this CancellationTokenSource cts)
+        /// <example>
+        /// <code>
+        /// throw await token.WhenCancellationRequestedAsync().ConfigureAwait(false);
+        /// </code>
+        /// </example>
+        public static Task<OperationCanceledException> WhenCancellationRequestedAsync(this CancellationToken token)
         {
-            try { cts.Cancel(); } catch {/**/}
+            var atmb = new AsyncTaskMethodBuilder<OperationCanceledException>();
+            try
+            {
+                if (token.IsCancellationRequested)
+                    atmb.SetResult(new OperationCanceledException(token));
+                else if (token.CanBeCanceled)
+                    token.Register(() =>
+                    {
+                        try { atmb.SetResult(new OperationCanceledException(token)); }
+                        catch (Exception ex) { atmb.SetException(ex); }
+                    });
+            }
+            catch (Exception ex) { atmb.SetException(ex); }
+            return atmb.Task;
         }
 
         /// <summary>
-        /// Gets a task that completes when the specified <paramref name="token"/> requests cancellation.
+        /// Enumerate buffer capacities starting with <paramref name="maxCapacity"/>, dividing by 2 until a value of 4..7 is reached.
         /// </summary>
-        [DebuggerNonUserCode]
-        public static Task<OperationCanceledException> WhenCanceledAsync(this CancellationToken token)
+        internal static IEnumerable<int> Capacities(int maxCapacity)
         {
-            var atmb = new AsyncTaskMethodBuilder<OperationCanceledException>();
-            if (token.IsCancellationRequested)
-                atmb.SetResult(new OperationCanceledException(token));
-            else if (token.CanBeCanceled)
-                token.Register(() => atmb.SetResult(new OperationCanceledException(token)));
-            return atmb.Task;
+            yield return maxCapacity;
+            while (maxCapacity > 7)
+            {
+                maxCapacity >>= 1;
+                yield return maxCapacity;
+            }
         }
     }
 }

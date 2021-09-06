@@ -25,7 +25,7 @@
             {
                 token.ThrowIfCancellationRequested();
 
-                using var cts = new CancellationTokenSource();
+                var cts = new LinxCancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -58,7 +58,7 @@
             {
                 token.ThrowIfCancellationRequested();
 
-                using var cts = new CancellationTokenSource();
+                var cts = new LinxCancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -94,7 +94,7 @@
             {
                 token.ThrowIfCancellationRequested();
 
-                using var cts = new CancellationTokenSource();
+                var cts = new LinxCancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -133,7 +133,7 @@
             {
                 token.ThrowIfCancellationRequested();
 
-                using var cts = new CancellationTokenSource();
+                var cts = new LinxCancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -175,7 +175,7 @@
             {
                 token.ThrowIfCancellationRequested();
 
-                using var cts = new CancellationTokenSource();
+                var cts = new LinxCancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -220,7 +220,7 @@
             {
                 token.ThrowIfCancellationRequested();
 
-                using var cts = new CancellationTokenSource();
+                var cts = new LinxCancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -268,7 +268,7 @@
             {
                 token.ThrowIfCancellationRequested();
 
-                using var cts = new CancellationTokenSource();
+                var cts = new LinxCancellationTokenSource();
                 // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();

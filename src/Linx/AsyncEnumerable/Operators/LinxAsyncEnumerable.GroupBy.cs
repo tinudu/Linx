@@ -48,7 +48,7 @@
             private readonly Func<TSource, TKey> _keySelector;
             private readonly Dictionary<Boxed<TKey>, Group> _groups;
             private bool _whileEnumerated;
-            private readonly CancellationTokenSource _cts = new();
+            private readonly LinxCancellationTokenSource _cts = new();
             private AsyncTaskMethodBuilder _atmbDisposed = new(); // Task for last consumer
             private int _active;
 

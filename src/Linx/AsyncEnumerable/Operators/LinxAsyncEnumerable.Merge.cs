@@ -68,7 +68,7 @@
 
             private readonly IAsyncEnumerable<IAsyncEnumerable<T>> _sources;
             private readonly int _maxConcurrent;
-            private readonly CancellationTokenSource _cts = new();
+            private readonly LinxCancellationTokenSource _cts = new();
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private readonly Queue<(T Next, ManualResetValueTaskSource<bool> Ts)> _queue = new();
             private AsyncTaskMethodBuilder _atmbDisposed = default;
@@ -306,8 +306,7 @@
                                 {
                                     _state = state;
                                     ProduceInner(inner);
-                                    if (_cts.IsCancellationRequested)
-                                        return;
+                                    _cts.Token.ThrowIfCancellationRequested();
                                 }
                                 else
                                 {
@@ -336,8 +335,7 @@
                 Exception error = null;
                 try
                 {
-                    if (_cts.IsCancellationRequested)
-                        return;
+                    _cts.Token.ThrowIfCancellationRequested();
 
                     var ts = new ManualResetValueTaskSource<bool>();
                     await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
@@ -349,8 +347,7 @@
                                 Current = item;
                                 _state = _sEmitting;
                                 _tsAccepting.SetResult(true);
-                                if (_cts.IsCancellationRequested)
-                                    return;
+                                _cts.Token.ThrowIfCancellationRequested();
                                 break;
 
                             case _sEmitting:
@@ -364,7 +361,7 @@
                             default:
                                 Debug.Assert(state == _sLastEmitting || state == _sFinal);
                                 _state = state;
-                                return;
+                                throw _cts.WhenCancellationRequested.Result;
                         }
                     }
                 }

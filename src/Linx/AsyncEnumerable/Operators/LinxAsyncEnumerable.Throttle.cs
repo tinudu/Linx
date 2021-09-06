@@ -42,7 +42,7 @@
             private readonly IAsyncEnumerable<T> _source;
             private readonly TimeSpan _interval;
             private readonly ITime _time;
-            private readonly CancellationTokenSource _cts = new();
+            private readonly LinxCancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private AsyncTaskMethodBuilder _atmbDisposed = default;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();

@@ -45,7 +45,7 @@
 
             private readonly IAsyncEnumerable<TSource> _source;
             private readonly IAsyncEnumerable<TSample> _sampler;
-            private readonly CancellationTokenSource _cts = new();
+            private readonly LinxCancellationTokenSource _cts = new();
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private AsyncTaskMethodBuilder _atmbDisposed = default;
             private CancellationTokenRegistration _ctr;
@@ -234,8 +234,7 @@
                                 Current = item;
                                 _state = _sEmitting;
                                 _tsAccepting.SetResult(true);
-                                if (_cts.IsCancellationRequested)
-                                    return;
+                                _cts.Token.ThrowIfCancellationRequested();
                                 break;
 
                             case _sEmitting:
@@ -266,9 +265,7 @@
                 Exception error = null;
                 try
                 {
-                    if (_cts.IsCancellationRequested)
-                        return;
-
+                    _cts.Token.ThrowIfCancellationRequested();
                     await foreach (var _ in _sampler.WithCancellation(_cts.Token).ConfigureAwait(false))
                     {
                         var state = Atomic.Lock(ref _state);
@@ -283,8 +280,7 @@
                                 Current = _next;
                                 _state = _sEmitting;
                                 _tsAccepting.SetResult(true);
-                                if (_cts.IsCancellationRequested)
-                                    return;
+                                _cts.Token.ThrowIfCancellationRequested();
                                 break;
 
                             case _sEmitting:

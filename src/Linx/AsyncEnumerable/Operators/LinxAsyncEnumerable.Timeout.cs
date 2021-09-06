@@ -35,7 +35,7 @@
             private readonly IAsyncEnumerable<T> _source;
             private readonly TimeSpan _interval;
             private readonly ITime _time = Time.Current;
-            private readonly CancellationTokenSource _cts = new();
+            private readonly LinxCancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private readonly ManualResetValueTaskSource<bool> _tsEmitting = new();
