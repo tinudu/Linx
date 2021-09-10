@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -14,13 +15,10 @@
         public static IAsyncEnumerable<T> Concat<T>(this IAsyncEnumerable<IAsyncEnumerable<T>> sources)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var outer in sources.WithCancellation(token).ConfigureAwait(false))
                     await foreach (var inner in outer.WithCancellation(token).ConfigureAwait(false))
                         yield return inner;
@@ -33,13 +31,10 @@
         public static IAsyncEnumerable<T> Concat<T>(this IEnumerable<IAsyncEnumerable<T>> sources)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 foreach (var outer in sources)
                     await foreach (var inner in outer.WithCancellation(token).ConfigureAwait(false))
                         yield return inner;

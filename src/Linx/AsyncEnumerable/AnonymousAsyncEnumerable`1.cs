@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Threading;
 
     internal sealed class AnonymousAsyncEnumerable<T> : IAsyncEnumerable<T>
@@ -11,13 +10,10 @@
 
         public AnonymousAsyncEnumerable(Func<CancellationToken, IAsyncEnumerator<T>> getEnumerator)
         {
-            Debug.Assert(getEnumerator != null);
+            if (getEnumerator is null) throw new ArgumentNullException(nameof(getEnumerator));
             _getEnumerator = getEnumerator;
         }
 
-        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
-            => token.IsCancellationRequested ?
-                new LinxAsyncEnumerable.ThrowIterator<T>(new OperationCanceledException(token)) :
-                _getEnumerator(token);
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => _getEnumerator(token);
     }
 }

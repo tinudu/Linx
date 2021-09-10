@@ -20,14 +20,17 @@
         public async Task TestInitial() => await Marble.Parse("abc").Sample(TimeSpan.MaxValue).AssertThrowsInitial();
 
         [Fact]
-        public async Task Success()
+        public void Success()
+        //public async Task Success()
         {
-            var pul = Marble.Parse("p-   - -p-  - -  -p- -  -  -p-  -p- -  -   -pp");
-            var src = Marble.Parse(" -abc- - -  -d-ef- - -gh-  - -  - -i-  -jk|");
-            var smp = Marble.Parse(" -   -x- -xx- -  - -x-  -xx- -xx- - -xx");
-            var exp = Marble.Parse(" -   -c- -  -d-  - -f-  -  -h-  - -i-  -   -k|");
-            var testee = pul.Select(src.Sample(smp));
-            await exp.AssertEqual(testee);
+            // TODO
+            throw new NotImplementedException("TODO: Marble with deferred pulling.");
+            //var pul = Marble.Parse("p-   - -p-  - -  -p- -  -  -p-  -p- -  -   -pp");
+            //var src = Marble.Parse(" -abc- - -  -d-ef- - -gh-  - -  - -i-  -jk|");
+            //var smp = Marble.Parse(" -   -x- -xx- -  - -x-  -xx- -xx- - -xx");
+            //var exp = Marble.Parse(" -   -c- -  -d-  - -f-  -  -h-  - -i-  -   -k|");
+            //var testee = pul.SelectAwait(src.Sample(smp));
+            //await exp.AssertEqual(testee);
         }
 
         [Fact]

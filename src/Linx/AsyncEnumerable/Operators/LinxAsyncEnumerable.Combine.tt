@@ -6,13 +6,12 @@ namespace Linx.AsyncEnumerable
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
 
     partial class LinxAsyncEnumerable
     {
 <#
 const int min = 2;
-const int max = 8;
+const int max = 7;
 foreach(var n in Enumerable.Range(min, max - min + 1))
 {
     var names = Enumerable.Range(1, n)
@@ -22,78 +21,71 @@ foreach(var n in Enumerable.Range(min, max - min + 1))
             GenArg = "T" + i,
             Source = "source" + i,
             Value = "_value" + i,
-            OnNext = "OnNext" + i,
-            Seq = "seq" + i
+            OnNext = "OnNext" + i
         })
         .ToList();
-    var genArgs = $"<{string.Join(", ", names.Select(x => x.GenArg))}, TResult>";
+    var genArgs = string.Join(", ", names.Select(x => x.GenArg));
 #>
         /// <summary>
-        /// Merges differently typed sequences into one.
+        /// Merges differently typed sequences into a <see cref="ValueTuple{<#= genArgs #>}"/>.
         /// </summary>
         /// <remarks>
         /// <paramref name="startAtFirstElement"/> determines how the start of the sequence is handled.
         /// If it's false (the default), the operator only produces elements once all sources have produced their first element.
         /// If it's true, the sequence starts at the first element produced by any source,
-        /// with default values passed to the <paramref name="resultSelector"/> for any source that has not produced a value.
+        /// with default values for any source that has not yet produced a value.
         /// </remarks>
-        public static IAsyncEnumerable<TResult> Combine<#= genArgs #>(this
+        public static IAsyncEnumerable<ValueTuple<<#= genArgs #>>> Combine<<#= genArgs #>>(this
 <# foreach (var x in names) { #>
             IAsyncEnumerable<<#= x.GenArg #>> <#= x.Source #>,
 <# } #>
-            Func<#= genArgs #> resultSelector,
             bool startAtFirstElement = false)
         {
 <# foreach (var x in names) { #>
             if (<#= x.Source #> == null) throw new ArgumentNullException(nameof(<#= x.Source #>));
 <# } #>
-            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return Create(token =>
+            return Defer(() =>
             {
-                token.ThrowIfCancellationRequested();
-                var tuple = new CombineTuple<#= genArgs #>(resultSelector, startAtFirstElement);
+                var tuple = new CombineTuple<<#= genArgs #>>(startAtFirstElement);
+                return new[] 
+                    {
 <# foreach (var x in names) { #>
-                var <#= x.Seq #> = <#= x.Source #>.Select(v => tuple.<#= x.OnNext #>(v));
+                        <#= x.Source #>.Select(v => tuple.<#= x.OnNext #>(v)),
 <# } #>
-                return new[] { <#= string.Join(", ", names.Select(x => x.Seq)) #> }.Merge().SkipUntil(m => m.HasValue).Select(m => m.Value).GetAsyncEnumerator(token);
+                    }
+                    .Merge()
+                    .SkipUntil(t => t.HasValue)
+                    .Select(t => t.GetValueOrDefault());
             });
         }
 
-        private sealed class CombineTuple<#= genArgs #>
+        private sealed class CombineTuple<<#= genArgs #>>
         {
-            private readonly Func<#= genArgs #> _resultSelector;
             private int _missing;
 <# foreach (var x in names) { #>
             private <#= x.GenArg #> <#= x.Value #>;
 <# } #>
 
-            public CombineTuple(Func<#= genArgs #> resultSelector, bool startAtFirstElement = true)
+            public CombineTuple(bool startAtFirstElement)
             {
-                _resultSelector = resultSelector;
-                if (!startAtFirstElement) _missing = (1 << <#= n #>) - 1;
+                if (!startAtFirstElement)
+                    _missing = (1 << <#= n #>) - 1;
             }
 
 <# foreach (var x in names) { #>
-            public (bool HasValue, TResult Value) <#= x.OnNext #>(<#= x.GenArg #> value)
+            public ValueTuple<<#= genArgs #>>? <#= x.OnNext #>(<#= x.GenArg #> value)
             {
-<# if (x.Index == 0) { #>
-                // ReSharper disable once ShiftExpressionRealShiftCountIsZero
-<# } #>
                 var missing = Atomic.Lock(ref _missing) & ~(1 << <#= x.Index #>);
                 <#= x.Value #> = value;
-                return GetResult(missing);
+                var result = missing == 0 ? new ValueTuple<<#= genArgs #>>(<#= string.Join(", ", names.Select(x => x.Value)) #>): default;
+                _missing = missing;
+                return result;
             }
 
 <# } #>
-            private (bool HasValue, TResult Value) GetResult(int missing)
-            {
-                Debug.Assert((_missing & Atomic.LockBit) != 0);
-                if (missing != 0) { _missing = missing; return default; }
-                try { return (true, _resultSelector(<#= string.Join(", ", names.Select(x => x.Value)) #>)); }
-                finally { _missing = 0; }
-            }
         }
+
 <# } #>
     }
 }

@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -13,11 +14,10 @@
         public static IAsyncEnumerable<T> Append<T>(this IAsyncEnumerable<T> source, T element)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                     yield return item;
                 yield return element;

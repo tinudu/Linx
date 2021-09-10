@@ -30,6 +30,7 @@ namespace Linx.AsyncEnumerable
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -49,21 +50,15 @@ namespace Linx.AsyncEnumerable
             if (<#= n.Source #> == null) throw new ArgumentNullException(nameof(<#= n.Source #>));
 <# } #>
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var cts = new CancellationTokenSource();
-                // ReSharper disable PossibleMultipleEnumeration
 <# foreach(var n in arg.Names) { #>
                 await using var <#= n.Ae #> = <#= n.Source #>.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
 <# } #>
-                // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                // ReSharper disable once UseAwaitUsing
                 using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
                     while (await ctx.MoveNextAsync().ConfigureAwait(false))
                         yield return resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>);

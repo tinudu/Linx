@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
     using Timing;
@@ -14,15 +15,12 @@
         public static IAsyncEnumerable<TimeInterval<T>> TimeInterval<T>(this IAsyncEnumerable<T> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<TimeInterval<T>> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TimeInterval<T>> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var time = Time.Current;
                 var t0 = time.Now;
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                 {
                     var t = time.Now;

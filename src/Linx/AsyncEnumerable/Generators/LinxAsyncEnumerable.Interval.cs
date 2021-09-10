@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using Timing;
 
@@ -14,15 +15,14 @@
         public static IAsyncEnumerable<DateTimeOffset> Interval(TimeSpan interval)
         {
             if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<DateTimeOffset> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<DateTimeOffset> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var time = Time.Current;
                 var due = time.Now;
                 yield return due;
+
                 using var timer = time.GetTimer(token);
                 while (true)
                 {
@@ -30,7 +30,6 @@
                     await timer.Delay(due).ConfigureAwait(false);
                     yield return due;
                 }
-                // ReSharper disable once IteratorNeverReturns
             }
         }
     }

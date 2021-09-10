@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -15,13 +16,10 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = EqualityComparer<T>.Default;
 
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 await using var ae = source.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
                 if (!await ae.MoveNextAsync())
                     yield break;
@@ -30,7 +28,7 @@
                 while (await ae.MoveNextAsync())
                 {
                     var current = ae.Current;
-                    if(comparer.Equals(current,prev))
+                    if (comparer.Equals(current, prev))
                         continue;
                     prev = current;
                 }

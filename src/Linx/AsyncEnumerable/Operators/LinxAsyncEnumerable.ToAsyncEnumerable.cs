@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading.Tasks;
 
     partial class LinxAsyncEnumerable
     {
@@ -10,16 +11,16 @@
         /// </summary>
         public static IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> source)
         {
-            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (source is null) throw new ArgumentNullException(nameof(source));
+            return Iterator();
 
-            return Create<T>(async (yield, token) =>
+            async IAsyncEnumerable<T> Iterator()
             {
                 foreach (var item in source)
-                {
-                    if (!await yield(item).ConfigureAwait(false))
-                        return;
-                }
-            });
+                    yield return item;
+
+                await Task.CompletedTask.ConfigureAwait(false); // prevent CS1998
+            }
         }
     }
 }

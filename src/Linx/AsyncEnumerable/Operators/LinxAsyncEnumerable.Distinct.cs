@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -14,14 +15,13 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
                 token.ThrowIfCancellationRequested();
 
                 var distinct = new HashSet<T>(comparer);
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                     if (distinct.Add(item))
                         yield return item;

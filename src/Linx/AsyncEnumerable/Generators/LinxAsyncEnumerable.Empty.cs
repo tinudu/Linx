@@ -22,9 +22,7 @@
             public static EmptyAsyncEnumerable<T> Singleton { get; } = new EmptyAsyncEnumerable<T>();
             private EmptyAsyncEnumerable() { }
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => this;
-
-            public override string ToString() => "Empty";
+            IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken token) => this;
 
             T IAsyncEnumerator<T>.Current => default;
             ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync() => new(false);

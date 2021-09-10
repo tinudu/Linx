@@ -15,9 +15,6 @@
             var result = await LinxAsyncEnumerable.Return(42).Single(default);
             Assert.Equal(42, result);
 
-            result = await LinxAsyncEnumerable.Return(() => 42).Single(default);
-            Assert.Equal(42, result);
-
             var t0 = DateTimeOffset.Now;
             var delay = TimeSpan.FromDays(30);
             var actual = await VirtualTime.Run(async () =>

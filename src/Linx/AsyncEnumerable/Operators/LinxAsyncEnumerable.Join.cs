@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -25,19 +26,15 @@
             if (innerKeySelector == null) throw new ArgumentNullException(nameof(innerKeySelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 var innerItems = inner
                     .Select(i => (key: innerKeySelector(i), value: i))
                     .Where(kv => kv.key != null)
                     .ToLookup(kv => kv.key, kv => kv.value, comparer);
 
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var o in outer.WithCancellation(token).ConfigureAwait(false))
                     foreach (var i in innerItems[outerKeySelector(o)])
                         yield return resultSelector(o, i);

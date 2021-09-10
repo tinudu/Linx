@@ -53,7 +53,7 @@
             var source = Marble.Parse("Abracadabra#").GroupBy(char.ToUpperInvariant);
 
             var groups = new List<char>();
-            async Task<bool> Selector(IAsyncGrouping<char, char> g, CancellationToken t)
+            async ValueTask<bool> Selector(IAsyncGrouping<char, char> g, CancellationToken t)
             {
                 try
                 {

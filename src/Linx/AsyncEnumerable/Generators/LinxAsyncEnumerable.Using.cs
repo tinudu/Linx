@@ -22,8 +22,6 @@
 
             async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
             {
-                token.ThrowIfCancellationRequested();
-
                 using var resource = resourceFactory();
                 await foreach (var item in sequenceFactory(resource).WithCancellation(token).ConfigureAwait(false))
                     yield return item;

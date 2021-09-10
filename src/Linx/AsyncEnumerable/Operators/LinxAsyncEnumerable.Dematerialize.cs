@@ -1,10 +1,11 @@
 ﻿namespace Linx.AsyncEnumerable
 {
-    using Notifications;
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
+    using Notifications;
 
     partial class LinxAsyncEnumerable
     {
@@ -14,24 +15,24 @@
         public static IAsyncEnumerable<T> Dematerialize<T>(this IAsyncEnumerable<Notification<T>> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return Create<T>(GetEnumerator);
+            return Iterator();
 
-            async Task GetEnumerator(YieldAsyncDelegate<T> yield, CancellationToken token)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
                 await foreach (var n in source.WithCancellation(token).ConfigureAwait(false))
                     switch (n.Kind)
                     {
                         case NotificationKind.Next:
-                            await yield(n.Value).ConfigureAwait(false);
+                            yield return n.Value;
                             break;
                         case NotificationKind.Completed:
-                            return;
+                            yield break;
                         case NotificationKind.Error:
                             throw n.Error;
                         default:
                             throw new Exception(n.Kind + "???");
                     }
-                throw await token.WhenCancellationRequestedAsync().ConfigureAwait(false);
+                throw await token.WhenCancellationRequested().ConfigureAwait(false);
             }
         }
     }

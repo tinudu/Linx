@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
     using Notifications;
@@ -18,12 +19,12 @@
             if (delay <= TimeSpan.Zero) return source;
 
             var notifications = source.Materialize().Timestamp().Buffer();
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
                 using var timer = Time.Current.GetTimer(token);
-                // ReSharper disable once PossibleMultipleEnumeration
+
                 await foreach (var item in notifications.WithCancellation(token).ConfigureAwait(false))
                 {
                     await timer.Delay(item.Timestamp + delay).ConfigureAwait(false);

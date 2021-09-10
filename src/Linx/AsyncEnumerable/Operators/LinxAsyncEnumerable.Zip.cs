@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -18,20 +19,14 @@
             if (source1 == null) throw new ArgumentNullException(nameof(source1));
             if (source2 == null) throw new ArgumentNullException(nameof(source2));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var cts = new CancellationTokenSource();
-                // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                // ReSharper disable once UseAwaitUsing
                 using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
                     while (await ctx.MoveNextAsync().ConfigureAwait(false))
                         yield return resultSelector(ae1.Current, ae2.Current);
@@ -51,21 +46,15 @@
             if (source2 == null) throw new ArgumentNullException(nameof(source2));
             if (source3 == null) throw new ArgumentNullException(nameof(source3));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var cts = new CancellationTokenSource();
-                // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae3 = source3.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                // ReSharper disable once UseAwaitUsing
                 using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
                     while (await ctx.MoveNextAsync().ConfigureAwait(false))
                         yield return resultSelector(ae1.Current, ae2.Current, ae3.Current);
@@ -87,22 +76,16 @@
             if (source3 == null) throw new ArgumentNullException(nameof(source3));
             if (source4 == null) throw new ArgumentNullException(nameof(source4));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var cts = new CancellationTokenSource();
-                // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae3 = source3.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae4 = source4.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                // ReSharper disable once UseAwaitUsing
                 using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
                     while (await ctx.MoveNextAsync().ConfigureAwait(false))
                         yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current);
@@ -126,23 +109,17 @@
             if (source4 == null) throw new ArgumentNullException(nameof(source4));
             if (source5 == null) throw new ArgumentNullException(nameof(source5));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var cts = new CancellationTokenSource();
-                // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae3 = source3.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae4 = source4.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae5 = source5.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                // ReSharper disable once UseAwaitUsing
                 using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
                     while (await ctx.MoveNextAsync().ConfigureAwait(false))
                         yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current);
@@ -168,24 +145,18 @@
             if (source5 == null) throw new ArgumentNullException(nameof(source5));
             if (source6 == null) throw new ArgumentNullException(nameof(source6));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var cts = new CancellationTokenSource();
-                // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae3 = source3.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae4 = source4.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae5 = source5.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae6 = source6.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                // ReSharper disable once UseAwaitUsing
                 using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
                     while (await ctx.MoveNextAsync().ConfigureAwait(false))
                         yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current);
@@ -213,15 +184,11 @@
             if (source6 == null) throw new ArgumentNullException(nameof(source6));
             if (source7 == null) throw new ArgumentNullException(nameof(source7));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var cts = new CancellationTokenSource();
-                // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae3 = source3.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -229,9 +196,7 @@
                 await using var ae5 = source5.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae6 = source6.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae7 = source7.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                // ReSharper disable once UseAwaitUsing
                 using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
                     while (await ctx.MoveNextAsync().ConfigureAwait(false))
                         yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current, ae7.Current);
@@ -261,15 +226,11 @@
             if (source7 == null) throw new ArgumentNullException(nameof(source7));
             if (source8 == null) throw new ArgumentNullException(nameof(source8));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var cts = new CancellationTokenSource();
-                // ReSharper disable PossibleMultipleEnumeration
                 await using var ae1 = source1.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae2 = source2.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae3 = source3.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -278,9 +239,7 @@
                 await using var ae6 = source6.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae7 = source7.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
                 await using var ae8 = source8.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
-                // ReSharper restore PossibleMultipleEnumeration
                 var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                // ReSharper disable once UseAwaitUsing
                 using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
                     while (await ctx.MoveNextAsync().ConfigureAwait(false))
                         yield return resultSelector(ae1.Current, ae2.Current, ae3.Current, ae4.Current, ae5.Current, ae6.Current, ae7.Current, ae8.Current);

@@ -10,7 +10,7 @@
     /// <summary>
     /// Common convenience methods.
     /// </summary>
-    public static class Linx
+    public static partial class Linx
     {
         /// <summary>
         /// Sets the value at specified storage location to the default value.
@@ -57,10 +57,11 @@
         /// </summary>
         /// <example>
         /// <code>
-        /// throw await token.WhenCancellationRequestedAsync().ConfigureAwait(false);
+        /// token.ThrowIfCancellationRequested();
+        /// throw await token.WhenCancellationRequested();
         /// </code>
         /// </example>
-        public static Task<OperationCanceledException> WhenCancellationRequestedAsync(this CancellationToken token)
+        public static Task<OperationCanceledException> WhenCancellationRequested(this CancellationToken token)
         {
             var atmb = new AsyncTaskMethodBuilder<OperationCanceledException>();
             try

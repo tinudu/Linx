@@ -2,7 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Threading;
+using System.Runtime.CompilerServices;
+using System.Threading;
     using Timing;
 
     partial class LinxAsyncEnumerable
@@ -42,8 +43,7 @@
         {
             if (timeZone == null) throw new ArgumentNullException(nameof(timeZone));
             if (resolution.Ticks < 100 * TimeSpan.TicksPerMillisecond) throw new ArgumentOutOfRangeException(nameof(resolution), "Must be at least 100ms");
-
-            return Create(GetEnumerator);
+            return Iterator();
 
             DateTimeOffset ValidClockTime(DateTimeOffset t)
             {
@@ -61,10 +61,8 @@
                 }
             }
 
-            async IAsyncEnumerator<DateTimeOffset> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<DateTimeOffset> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var time = Time.Current;
                 var due = TimeZoneInfo.ConvertTime(time.Now, timeZone);
                 due = ValidClockTime(new DateTimeOffset(due.Ticks / resolution.Ticks * resolution.Ticks, due.Offset));
@@ -75,7 +73,6 @@
                     yield return due;
                     due = ValidClockTime(new DateTimeOffset(due.DateTime + resolution, due.Offset));
                 }
-                // ReSharper disable once IteratorNeverReturns
             }
         }
     }

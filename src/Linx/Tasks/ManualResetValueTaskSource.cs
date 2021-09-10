@@ -23,15 +23,6 @@
         /// <summary>Completes with an error.</summary>
         public void SetException(Exception exception) => _core.SetException(exception);
 
-        /// <summary>Completes with an error or successfully.</summary>
-        public void SetExceptionOrResult(Exception exception)
-        {
-            if (exception != null)
-                _core.SetException(exception);
-            else
-                _core.SetResult(default);
-        }
-
         /// <summary>
         /// Gets a <see cref="ValueTask"/>.
         /// </summary>
@@ -58,15 +49,6 @@
 
         /// <summary>Completes with an error.</summary>
         public void SetException(Exception exception) => _core.SetException(exception);
-
-        /// <summary>Completes with an error or successfully.</summary>
-        public void SetExceptionOrResult(Exception exception, T result)
-        {
-            if (exception != null)
-                _core.SetException(exception);
-            else
-                _core.SetResult(result);
-        }
 
         /// <summary>
         /// Gets a <see cref="ValueTask{TResult}"/>.

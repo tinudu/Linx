@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -19,13 +20,10 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
-            return Create(GetAsycEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<TResult> GetAsycEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var inner in source.WithCancellation(token).ConfigureAwait(false))
                     foreach (var element in collectionSelector(inner))
                         yield return element;
@@ -41,16 +39,13 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
-            return Create(GetAsycEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<TResult> GetAsycEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var i = 0;
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var inner in source.WithCancellation(token).ConfigureAwait(false))
-                    foreach (var element in collectionSelector(inner, i++))
+                    foreach (var element in collectionSelector(inner, unchecked(i++)))
                         yield return element;
             }
         }
@@ -66,13 +61,10 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            return Create(GetAsycEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<TResult> GetAsycEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var inner in source.WithCancellation(token).ConfigureAwait(false))
                     foreach (var element in collectionSelector(inner))
                         yield return resultSelector(inner, element);
@@ -90,16 +82,13 @@
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            return Create(GetAsycEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<TResult> GetAsycEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var i = 0;
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var inner in source.WithCancellation(token).ConfigureAwait(false))
-                    foreach (var element in collectionSelector(inner, i++))
+                    foreach (var element in collectionSelector(inner, unchecked(i++)))
                         yield return resultSelector(inner, element);
             }
         }

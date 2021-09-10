@@ -1,5 +1,6 @@
 ﻿namespace Linx.AsyncEnumerable
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
@@ -16,7 +17,7 @@
     /// <param name="yield"><see cref="YieldAsyncDelegate{T}"/> to which to yield sequence elements.</param>
     /// <param name="token">Token on which cancellation is requested.</param>
     /// <returns>A task that, when completed, notifies the end of the sequence.</returns>
-    public delegate Task GeneratorDelegate<out T>(YieldAsyncDelegate<T> yield, CancellationToken token);
+    public delegate Task ProduceAsyncDelegate<out T>(YieldAsyncDelegate<T> yield, CancellationToken token);
 
     /// <summary>
     /// Delegate to produce an aggregate from a sequence.

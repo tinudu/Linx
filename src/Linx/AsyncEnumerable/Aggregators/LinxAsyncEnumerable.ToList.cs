@@ -13,11 +13,15 @@
         public static async Task<List<T>> ToList<T>(this IAsyncEnumerable<T> source, CancellationToken token)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            token.ThrowIfCancellationRequested();
 
+            token.ThrowIfCancellationRequested();
             var result = new List<T>();
             await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+            {
                 result.Add(item);
+                token.ThrowIfCancellationRequested();
+            }
+
             return result;
         }
     }

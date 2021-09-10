@@ -36,7 +36,7 @@
                 }
             }
 
-            throw await token.WhenCancellationRequestedAsync().ConfigureAwait(false);
+            throw await token.WhenCancellationRequested().ConfigureAwait(false);
         }
 
         /// <inheritdoc />

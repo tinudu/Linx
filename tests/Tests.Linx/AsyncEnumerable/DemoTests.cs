@@ -67,40 +67,5 @@
 
             public override string ToString() => $"{Color}{Index}";
         }
-
-        [Fact]
-        public async Task Demo()
-        {
-            const string colors = "grrbrggbr";
-
-            var src = colors.ToAsyncEnumerable()
-                .GroupBy(c => c)
-                .Select(g => g.Select((c, i) => new ColorAndIndex(c, i)))
-                .Merge();
-            var bla = await src.ToList(default);
-
-            var redAndOther = LinxAsyncEnumerable.Create(
-                new
-                {
-                    RedIndex = default(int?),
-                    Color = default(char),
-                    ColorIndex = default(int)
-                },
-                async (yield, token) =>
-                {
-                    var stack = new Stack<ConnectDelegate>();
-                    var groups = bla.ToAsyncEnumerable().GroupBy(ci => ci.Color).Connectable(stack);
-                    var red = ColorGroup('r').Prepend(null).Connectable(stack);
-                    var enumeration = ColorGroup('g').Merge(ColorGroup('b'), ColorGroup('y'))
-                        .Combine(red.Prepend(null), (c, r) => new { RedIndex = r?.Index, c.Color, ColorIndex = c.Index })
-                        .CopyTo(yield, token);
-                    stack.Connect();
-                    await enumeration.ConfigureAwait(false);
-
-                    IAsyncEnumerable<ColorAndIndex> ColorGroup(char color) => groups.Where(g => g.Key == color).Take(1).SelectMany(g => g);
-                });
-
-            var result = await redAndOther.ToList(default);
-        }
     }
 }

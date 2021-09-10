@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -14,14 +15,10 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                     yield return selector(item);
             }
@@ -34,35 +31,27 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var i = 0;
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
-                    yield return selector(item, i++);
+                    yield return selector(item, unchecked(i++));
             }
         }
 
         /// <summary>
         /// Projects each element of a sequence into a new form.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, CancellationToken, Task<TResult>> selector)
+        public static IAsyncEnumerable<TResult> SelectAwait<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, CancellationToken, ValueTask<TResult>> selector)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                     yield return await selector(item, token).ConfigureAwait(false);
             }
@@ -71,39 +60,31 @@
         /// <summary>
         /// Projects each element of a sequence into a new form.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, int, CancellationToken, Task<TResult>> selector)
+        public static IAsyncEnumerable<TResult> SelectAwait<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, int, CancellationToken, ValueTask<TResult>> selector)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
+            return Iterator();
 
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var i = 0;
-                // ReSharper disable once PossibleMultipleEnumeration
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
-                    yield return await selector(item, i++, token).ConfigureAwait(false);
+                    yield return await selector(item, unchecked(i++), token).ConfigureAwait(false);
             }
         }
 
         /// <summary>
         /// Projects each element of a sequence into a new form.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, CancellationToken, Task<TResult>> selector)
+        public static IAsyncEnumerable<TResult> SelectAwait<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, CancellationToken, ValueTask<TResult>> selector)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
+            return Iterator();
 
-            return LinxAsyncEnumerable.Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 foreach (var item in source)
                     yield return await selector(item, token).ConfigureAwait(false);
             }
@@ -112,42 +93,17 @@
         /// <summary>
         /// Projects each element of a sequence into a new form.
         /// </summary>
-        public static IAsyncEnumerable<TResult> Select<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, int, CancellationToken, Task<TResult>> selector)
+        public static IAsyncEnumerable<TResult> SelectAwait<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, int, CancellationToken, ValueTask<TResult>> selector)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
+            return Iterator();
 
-            return LinxAsyncEnumerable.Create(GetEnumerator);
-
-            async IAsyncEnumerator<TResult> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
                 var i = 0;
-                // ReSharper disable once PossibleMultipleEnumeration
                 foreach (var item in source)
-                    yield return await selector(item, i++, token).ConfigureAwait(false);
-            }
-        }
-
-        /// <summary>
-        /// Projects each element of a sequence into the corresponding element of another sequence.
-        /// </summary>
-        public static IAsyncEnumerable<T2> Select<T1, T2>(this IAsyncEnumerable<T1> first, IAsyncEnumerable<T2> second)
-        {
-            if (first == null) throw new ArgumentNullException(nameof(first));
-            if (second == null) throw new ArgumentNullException(nameof(second));
-
-            return Create(GetEnumerator);
-
-            async IAsyncEnumerator<T2> GetEnumerator(CancellationToken token)
-            {
-                // ReSharper disable PossibleMultipleEnumeration
-                await using var ae1 = first.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                await using var ae2 = second.WithCancellation(token).ConfigureAwait(false).GetAsyncEnumerator();
-                // ReSharper restore PossibleMultipleEnumeration
-                while (await ae1.MoveNextAsync() && await ae2.MoveNextAsync())
-                    yield return ae2.Current;
+                    yield return await selector(item, unchecked(i++), token).ConfigureAwait(false);
             }
         }
     }

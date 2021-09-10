@@ -2,9 +2,10 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Tasks;
+    using global::Linx.Tasks;
 
     partial class LinxAsyncEnumerable
     {
@@ -25,79 +26,34 @@
 
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) => new Enumerator(token);
 
-            public override string ToString() => "Never";
-
             private sealed class Enumerator : IAsyncEnumerator<T>
             {
-                private const int _sInitial = 0;
-                private const int _sAccepting = 1;
-                private const int _sFinal = 2;
-
-                private readonly ManualResetValueTaskSource<bool> _tp = new();
+                private AsyncTaskMethodBuilder<bool> _atmbMoveNext;
                 private CancellationTokenRegistration _ctr;
                 private int _state;
-                private Exception _error;
 
                 public Enumerator(CancellationToken token)
                 {
-                    if (token.CanBeCanceled) _ctr = token.Register(() => Cancel(new OperationCanceledException(token)));
+                    if (token.CanBeCanceled)
+                        _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
                 }
 
                 public T Current => default;
 
-                public ValueTask<bool> MoveNextAsync()
-                {
-                    _tp.Reset();
-
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                            _state = _sAccepting;
-                            break;
-                        case _sFinal:
-                            _state = _sFinal;
-                            _tp.SetException(_error);
-                            break;
-                        default: // Accepting???
-                            _state = state;
-                            throw new Exception(_state + "???");
-                    }
-
-                    return _tp.Task;
-                }
+                public ValueTask<bool> MoveNextAsync() => new(_atmbMoveNext.Task);
 
                 public ValueTask DisposeAsync()
                 {
-                    Cancel(AsyncEnumeratorDisposedException.Instance);
-                    return new ValueTask(Task.CompletedTask);
+                    SetFinal(AsyncEnumeratorDisposedException.Instance);
+                    return new(Task.CompletedTask);
                 }
 
-                public override string ToString() => "Never";
-
-                private void Cancel(Exception error)
+                private void SetFinal(Exception error)
                 {
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sInitial:
-                            _error = error;
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            break;
-                        case _sAccepting:
-                            _error = error;
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            _tp.SetException(error);
-                            break;
-                        case _sFinal:
-                            _state = _sFinal;
-                            break;
-                        default:
-                            _state = state;
-                            throw new Exception(state + "???");
-                    }
+                    if (Interlocked.CompareExchange(ref _state, 1, 0) != 0)
+                        return;
+                    _ctr.Dispose();
+                    _atmbMoveNext.SetException(error);
                 }
             }
         }

@@ -19,7 +19,7 @@
         /// <param name="maxConcurrent">Maximum number of concurrent tasks.</param>
         public static IAsyncEnumerable<TResult> Parallel<TSource, TResult>(
             this IAsyncEnumerable<TSource> source,
-            Func<TSource, CancellationToken, Task<TResult>> selector,
+            Func<TSource, CancellationToken, ValueTask<TResult>> selector,
             bool preserveOrder = false,
             int maxConcurrent = int.MaxValue)
         {
@@ -28,7 +28,7 @@
             if (maxConcurrent <= 0) throw new ArgumentOutOfRangeException(nameof(maxConcurrent));
 
             return maxConcurrent == 1 ?
-                source.Select(selector) :
+                source.SelectAwait(selector) :
                 new ParallelEnumerable<TSource, TResult>(source, selector, preserveOrder, maxConcurrent);
         }
 
@@ -41,7 +41,7 @@
         /// <param name="maxConcurrent">Maximum number of concurrent tasks.</param>
         public static IAsyncEnumerable<TResult> Parallel<TSource, TResult>(
             this IEnumerable<TSource> source,
-            Func<TSource, CancellationToken, Task<TResult>> selector,
+            Func<TSource, CancellationToken, ValueTask<TResult>> selector,
             bool preserveOrder = false,
             int maxConcurrent = int.MaxValue)
             => source.ToAsyncEnumerable().Parallel(selector, preserveOrder, maxConcurrent);
@@ -49,12 +49,12 @@
         private sealed class ParallelEnumerable<TSource, TResult> : IAsyncEnumerable<TResult>
         {
             private readonly IAsyncEnumerable<TSource> _source;
-            private readonly Func<TSource, CancellationToken, Task<TResult>> _selector;
+            private readonly Func<TSource, CancellationToken, ValueTask<TResult>> _selector;
             private readonly bool _preserveOrder;
             private readonly int _maxConcurrent;
 
             public ParallelEnumerable(IAsyncEnumerable<TSource> source,
-                Func<TSource, CancellationToken, Task<TResult>> selector,
+                Func<TSource, CancellationToken, ValueTask<TResult>> selector,
                 bool preserveOrder,
                 int maxConcurrent)
             {

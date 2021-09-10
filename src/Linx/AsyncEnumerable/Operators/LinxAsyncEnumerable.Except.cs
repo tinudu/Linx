@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -16,17 +17,13 @@
             if (second == null) throw new ArgumentNullException(nameof(second));
             if (comparer == null) comparer = EqualityComparer<T>.Default;
 
-            return Create(GetEnumerator);
+            return Iterator();
 
-            async IAsyncEnumerator<T> GetEnumerator(CancellationToken token)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                token.ThrowIfCancellationRequested();
-
-                // ReSharper disable once PossibleMultipleEnumeration
                 var excluded = second is HashSet<T> h && h.Comparer == comparer ? h : new HashSet<T>(second, comparer);
                 var included = new HashSet<T>(comparer);
-                // ReSharper disable once PossibleMultipleEnumeration
-                await foreach(var item in first.WithCancellation(token).ConfigureAwait(false))
+                await foreach (var item in first.WithCancellation(token).ConfigureAwait(false))
                     if (!excluded.Contains(item) && included.Add(item))
                         yield return item;
             }
