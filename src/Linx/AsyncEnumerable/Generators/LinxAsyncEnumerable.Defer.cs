@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -14,7 +15,14 @@
         public static IAsyncEnumerable<T> Defer<T>(Func<IAsyncEnumerable<T>> getSource)
         {
             if (getSource == null) throw new ArgumentNullException(nameof(getSource));
-            return new DeferAsyncEnumerable<T>(getSource);
+            return Iterator();
+
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
+            {
+                var source = getSource();
+                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                    yield return item;
+            }
         }
 
         /// <summary>
@@ -23,40 +31,11 @@
         public static IAsyncEnumerable<T> DeferAwait<T>(Func<CancellationToken, Task<IAsyncEnumerable<T>>> getSourceAsync)
         {
             if (getSourceAsync == null) throw new ArgumentNullException(nameof(getSourceAsync));
-            return new DeferAwaitAsyncEnumerable<T>(getSourceAsync);
-        }
+            return Iterator();
 
-        private sealed class DeferAsyncEnumerable<T> : IAsyncEnumerable<T>
-        {
-            private readonly Func<IAsyncEnumerable<T>> _getSource;
-
-            public DeferAsyncEnumerable(Func<IAsyncEnumerable<T>> getSource)
+            async IAsyncEnumerable<T> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                Debug.Assert(getSource is not null);
-                _getSource = getSource;
-            }
-
-            public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
-            {
-                var source = _getSource();
-                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
-                    yield return item;
-            }
-        }
-
-        private sealed class DeferAwaitAsyncEnumerable<T> : IAsyncEnumerable<T>
-        {
-            private readonly Func<CancellationToken, Task<IAsyncEnumerable<T>>> _getSourceAsync;
-
-            public DeferAwaitAsyncEnumerable(Func<CancellationToken, Task<IAsyncEnumerable<T>>> getSourceAsync)
-            {
-                Debug.Assert(getSourceAsync is not null);
-                _getSourceAsync = getSourceAsync;
-            }
-
-            public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
-            {
-                var source = await _getSourceAsync(token).ConfigureAwait(false);
+                var source = await getSourceAsync(token).ConfigureAwait(false);
                 await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                     yield return item;
             }
