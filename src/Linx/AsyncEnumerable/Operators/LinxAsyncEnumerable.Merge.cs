@@ -6,7 +6,6 @@
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Threading;
-    using System.Threading.Channels;
     using System.Threading.Tasks;
     using Tasks;
 
@@ -73,8 +72,6 @@
 
             private readonly IAsyncEnumerable<IAsyncEnumerable<T>> _sources;
             private readonly int _maxConcurrent;
-            private readonly IEnumerable<int> _capacities;
-            private readonly int _initialCapacity;
 
             private readonly CancellationTokenSource _cts = new();
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
@@ -85,8 +82,7 @@
             private int _state;
             private Exception _error;
             private int _active;
-            private (ManualResetValueTaskSource<bool>, T)[] _queue;
-            private int _offset, _count;
+            private Queue<(ManualResetValueTaskSource<bool>, T)> _queue = new();
 
             public MergeIterator(IAsyncEnumerable<IAsyncEnumerable<T>> sources, int maxConcurrent)
             {
@@ -95,15 +91,12 @@
 
                 _sources = sources;
                 _maxConcurrent = maxConcurrent;
-                _capacities = Linx.Capacities(maxConcurrent);
             }
 
             private MergeIterator(MergeIterator<T> parent)
             {
                 _sources = parent._sources;
                 _maxConcurrent = parent._maxConcurrent;
-                _capacities = parent._capacities;
-                _initialCapacity = parent._initialCapacity;
             }
 
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
@@ -147,9 +140,9 @@
                 {
                     var tsEmitting = Linx.Clear(ref _tsEmitting);
 
-                    if (_count > 0) // yield the next item from the queue
+                    if (_queue.Count > 0) // yield the next item from the queue
                     {
-                        var (ts, item) = Dequeue();
+                        var (ts, item) = _queue.Dequeue();
                         Current = item;
                         _tsEmitting = ts;
                         _state = _sEmitting;
@@ -182,10 +175,10 @@
                         break;
 
                     case _sError:
-                        Debug.Assert(_count > 0);
-                        var (ts, item) = Dequeue();
+                        Debug.Assert(_queue.Count > 0);
+                        var (ts, item) = _queue.Dequeue();
                         Current = item;
-                        if (_count == 0)
+                        if (_queue.Count == 0)
                         {
                             _state = _sFinal;
                             _ctr.Dispose();
@@ -217,22 +210,6 @@
                 return new(_atmbDisposed.Task);
             }
 
-            private (ManualResetValueTaskSource<bool>, T) Dequeue()
-            {
-                Debug.Assert(_count > 0);
-
-                var result = Linx.Clear(ref _queue[_offset++]);
-                if (--_count == 0)
-                {
-                    _offset = 0;
-                    if (_queue.Length > _initialCapacity)
-                        _queue = null;
-                }
-                else if (_offset == _queue.Length)
-                    _offset = 0;
-                return result;
-            }
-
             private void SetCompleted(Exception errorOrNot)
             {
                 var state = Atomic.Lock(ref _state);
@@ -245,7 +222,7 @@
                     case _sEmitting:
                         if (errorOrNot is not null)
                         {
-                            if (_count == 0)
+                            if (_queue.Count == 0)
                                 SetFinal(_sEmitting, errorOrNot);
                             else // go _sError
                             {
@@ -324,8 +301,8 @@
                             _cts.TryCancel();
                         tsMaxConcurrent?.SetResult(false);
                         tsEmitting?.SetResult(false);
-                        while (_count > 0)
-                            Dequeue().Item1.SetResult(false);
+                        while (_queue.Count > 0)
+                            _queue.Dequeue().Item1.SetResult(false);
                         _queue = null;
                         if (state == _sAccepting)
                             _tsAccepting?.SetExceptionOrResult(errorOrNot, false);
@@ -398,44 +375,12 @@
                         switch (_state)
                         {
                             case _sEmitting:
-                                try // enque
-                                {
-                                    if (_queue == null)
-                                    {
-                                        Debug.Assert(_count == 0 && _offset == 0);
-                                        _queue = new (ManualResetValueTaskSource<bool>, T)[_initialCapacity];
-                                        _queue[0] = (tsEmitting, item);
-                                        _count = 1;
-                                    }
-                                    else if (_count == _queue.Length) // increase _queue size
-                                    {
-                                        Debug.Assert(_count < _maxConcurrent);
-                                        var q = new (ManualResetValueTaskSource<bool>, T)[_capacities.TakeWhile(c => c > _count).Last()];
-                                        if (_offset == 0)
-                                            Array.Copy(_queue, q, _count);
-                                        else
-                                        {
-                                            var c = _queue.Length - _offset;
-                                            Array.Copy(_queue, _offset, q, 0, c);
-                                            Array.Copy(_queue, 0, q, c, _offset);
-                                            _offset = 0;
-                                        }
-                                        q[_count++] = (tsEmitting, item);
-                                        _queue = q;
-                                    }
-                                    else if (_offset == 0)
-                                        _queue[_count++] = (tsEmitting, item);
-                                    else
-                                    {
-                                        var ix = _offset - _queue.Length + _count++;
-                                        _queue[ix >= 0 ? ix : ix + _queue.Length] = (tsEmitting, item);
-                                    }
-                                }
+                                try { _queue.Enqueue((tsEmitting, item)); }
                                 finally { _state = _sEmitting; }
                                 break;
 
                             case _sAccepting:
-                                Debug.Assert(_count == 0);
+                                Debug.Assert(_queue.Count == 0);
                                 Current = item;
                                 _tsEmitting = tsEmitting;
                                 _state = _sEmitting;

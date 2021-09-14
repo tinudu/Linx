@@ -48,13 +48,15 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
-            return Iterator();
 
-            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
-            {
-                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
-                    yield return await selector(item, token).ConfigureAwait(false);
-            }
+            throw new NotImplementedException("cancellation is not guaranteed.");
+            //return Iterator();
+
+            //async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
+            //{
+            //    await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+            //        yield return await selector(item, token).ConfigureAwait(false);
+            //}
         }
 
         /// <summary>
@@ -64,14 +66,16 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
-            return Iterator();
 
-            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
-            {
-                var i = 0;
-                await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
-                    yield return await selector(item, unchecked(i++), token).ConfigureAwait(false);
-            }
+            throw new NotImplementedException("cancellation is not guaranteed.");
+            //return Iterator();
+
+            //async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
+            //{
+            //    var i = 0;
+            //    await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+            //        yield return await selector(item, unchecked(i++), token).ConfigureAwait(false);
+            //}
         }
 
         /// <summary>
@@ -81,13 +85,15 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
-            return Iterator();
 
-            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
-            {
-                foreach (var item in source)
-                    yield return await selector(item, token).ConfigureAwait(false);
-            }
+            throw new NotImplementedException("cancellation is not guaranteed.");
+            //return Iterator();
+
+            //async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
+            //{
+            //    foreach (var item in source)
+            //        yield return await selector(item, token).ConfigureAwait(false);
+            //}
         }
 
         /// <summary>
@@ -97,14 +103,16 @@
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
-            return Iterator();
 
-            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
-            {
-                var i = 0;
-                foreach (var item in source)
-                    yield return await selector(item, unchecked(i++), token).ConfigureAwait(false);
-            }
+            throw new NotImplementedException("cancellation is not guaranteed.");
+            //return Iterator();
+
+            //async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
+            //{
+            //    var i = 0;
+            //    foreach (var item in source)
+            //        yield return await selector(item, unchecked(i++), token).ConfigureAwait(false);
+            //}
         }
     }
 }

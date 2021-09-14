@@ -1,5 +1,6 @@
 ﻿namespace Linx.AsyncEnumerable
 {
+    using global::Linx.Collections;
     using global::Linx.Tasks;
     using System;
     using System.Collections.Generic;
@@ -40,8 +41,6 @@
             private readonly IAsyncEnumerable<T> _source;
             private readonly int _maxCapacity;
             private readonly bool _backpressure;
-            private readonly IEnumerable<int> _capacities;
-            private readonly int _initialCapacity;
 
             public BufferAsyncEnumerable(IAsyncEnumerable<T> source, int maxCapacity, bool backpressure)
             {
@@ -51,8 +50,6 @@
                 _source = source;
                 _maxCapacity = maxCapacity;
                 _backpressure = backpressure;
-                _capacities = Linx.Capacities(maxCapacity);
-                _initialCapacity = _capacities.Last();
             }
 
             public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) =>
@@ -74,12 +71,12 @@
                 private readonly AsyncTaskMethodBuilder _atmbDisposed;
                 private int _state;
                 private Exception _error;
-                private T[] _buffer;
-                private int _offset, _count;
+                private LinxQueue<T> _queue;
 
                 public Enumerator(BufferAsyncEnumerable<T> e, CancellationToken token)
                 {
                     _e = e;
+                    _queue = new(e._maxCapacity, false);
                     Produce(token);
                     if (token.CanBeCanceled)
                         _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
@@ -96,19 +93,11 @@
                     {
                         case _sEmitting:
                             var tsEmitting = Linx.Clear(ref _tsEmitting);
-                            if (_count == 0)
+                            if (_queue.Count == 0)
                                 _state = _sAccepting;
                             else // dequeue
                             {
-                                Current = Linx.Clear(ref _buffer[_offset++]);
-                                if (--_count == 0)
-                                {
-                                    _offset = 0;
-                                    if (_buffer.Length > _e._initialCapacity)
-                                        _buffer = null;
-                                }
-                                else if (_offset == _buffer.Length)
-                                    _offset = 0;
+                                Current = _queue.DequeueOne();
                                 _state = _sEmitting;
                                 _tsAccepting.SetResult(true);
                             }
@@ -116,17 +105,12 @@
                             break;
 
                         case _sCompleted:
-                            Debug.Assert(_count > 0);
-                            Current = Linx.Clear(ref _buffer[_offset++]);
-                            if (--_count > 0)
-                            {
-                                if (_offset == _buffer.Length)
-                                    _offset = 0;
+                            Debug.Assert(_queue.Count > 0);
+                            Current = _queue.DequeueOne();
+                            if (_queue.Count > 0)
                                 _state = _sCompleted;
-                            }
                             else
                             {
-                                _buffer = null;
                                 _state = _sFinal;
                                 _ctr.Dispose();
                             }
@@ -163,17 +147,15 @@
                         case _sEmitting:
                             var tsBp = Linx.Clear(ref _tsEmitting);
                             _error = error;
-                            _buffer = null;
                             _state = _sFinal;
                             _ctr.Dispose();
                             tsBp?.SetResult(false);
                             break;
 
                         case _sAccepting:
-                            Debug.Assert(_count == 0);
+                            Debug.Assert(_queue.Count == 0);
                             Current = default;
                             _error = error;
-                            _buffer = null;
                             _state = _sFinal;
                             _ctr.Dispose();
                             _tsAccepting.SetExceptionOrResult(error, false);
@@ -181,7 +163,6 @@
 
                         case _sCompleted:
                             _error = error;
-                            _buffer = null;
                             _state = _sFinal;
                             _ctr.Dispose();
                             break;
@@ -209,7 +190,7 @@
                         {
                             var state = Atomic.Lock(ref _state);
                             if (_e._backpressure)
-                                while (_state == _sEmitting && _count == _e._maxCapacity)
+                                while (_state == _sEmitting && _queue.Count == _queue.MaxCapacity)
                                 {
                                     _tsEmitting = tsEmitting;
                                     _state = _sEmitting;
@@ -222,51 +203,12 @@
                             switch (state)
                             {
                                 case _sEmitting:
-                                    try // to enqueue
-                                    {
-                                        if (_count == _e._maxCapacity)
-                                        {
-                                            Debug.Assert(!_e._backpressure);
-                                            throw new Exception(Strings.QueueIsFull);
-                                        }
-
-                                        if (_buffer is null)
-                                        {
-                                            Debug.Assert(_count == 0 && _offset == 0);
-                                            _buffer = new T[_e._initialCapacity];
-                                            _buffer[0] = item;
-                                            _count = 1;
-                                        }
-                                        else if (_count == _buffer.Length) // increase buffer size
-                                        {
-                                            var newBuffer = new T[_e._capacities.TakeWhile(i => i > _count).Last()];
-                                            if (_offset == 0)
-                                                Array.Copy(_buffer, newBuffer, _count);
-                                            else
-                                            {
-                                                var c = _count - _offset;
-                                                Array.Copy(_buffer, _offset, newBuffer, 0, c);
-                                                Array.Copy(_buffer, 0, newBuffer, c, _offset);
-                                                _offset = 0;
-                                            }
-                                            newBuffer[_count++] = item;
-                                            _buffer = newBuffer;
-                                        }
-                                        else if (_offset == 0)
-                                            _buffer[_count++] = item;
-                                        else
-                                        {
-                                            var ix = _offset - _buffer.Length + _count;
-                                            _buffer[ix > 0 ? ix : ix + _buffer.Length] = item;
-                                            _count++;
-                                            _state = _sEmitting;
-                                        }
-                                    }
+                                    try { _queue.Enqueue(item); }
                                     finally { _state = _sEmitting; }
                                     break;
 
                                 case _sAccepting:
-                                    Debug.Assert(_count == 0);
+                                    Debug.Assert(_queue.Count == 0);
                                     Current = item;
                                     _state = _sEmitting;
                                     _tsAccepting.SetResult(true);
@@ -286,7 +228,7 @@
                         _atmbDisposed.SetResult();
 
                         var state = Atomic.Lock(ref _state);
-                        if (state == _sEmitting && _count > 0)
+                        if (state == _sEmitting && _queue.Count > 0)
                         {
                             _error = error;
                             _state = _sCompleted;
