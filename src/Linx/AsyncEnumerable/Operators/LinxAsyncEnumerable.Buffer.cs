@@ -1,22 +1,20 @@
-﻿namespace Linx.AsyncEnumerable
-{
-    using global::Linx.Collections;
-    using global::Linx.Tasks;
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
-    using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
 
+namespace Linx.AsyncEnumerable
+{
     partial class LinxAsyncEnumerable
     {
         /// <summary>
         /// Decouples the source from its consumer; buffered items are retrieved individually.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
-        public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source) => source.Buffer(int.MaxValue, false);
+        public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source)
+        {
+            if (source is null) throw new ArgumentNullException(nameof(source));
+
+            return new QueueingIterator<T, T>(source, () => new BufferThrowQueue<T>(int.MaxValue)).Select(dd => dd.Dequeue());
+        }
 
         /// <summary>
         /// Decouples the source from its consumer; buffered items are retrieved individually.
@@ -33,214 +31,102 @@
             if (source is null) throw new ArgumentNullException(nameof(source));
             if (maxCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(maxCapacity), "Must be positive.");
 
-            return new BufferAsyncEnumerable<T>(source, maxCapacity, backpressure);
+            Func<IQueue<T, T>> queueFactory = backpressure ?
+                () => new BufferBackpressureQueue<T>(maxCapacity) :
+                () => new BufferThrowQueue<T>(maxCapacity);
+            return new QueueingIterator<T, T>(source, queueFactory).Select(dd => dd.Dequeue());
         }
 
-        private sealed class BufferAsyncEnumerable<T> : IAsyncEnumerable<T>
+        /// <summary>
+        /// Decouples the source from its consumer; buffered items are retrieved in batches.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
+        public static IAsyncEnumerable<DeferredDequeue<IReadOnlyList<T>>> BufferBatch<T>(this IAsyncEnumerable<T> source)
         {
-            private readonly IAsyncEnumerable<T> _source;
-            private readonly int _maxCapacity;
-            private readonly bool _backpressure;
+            if (source is null) throw new ArgumentNullException(nameof(source));
 
-            public BufferAsyncEnumerable(IAsyncEnumerable<T> source, int maxCapacity, bool backpressure)
-            {
-                Debug.Assert(source is not null);
-                Debug.Assert(maxCapacity > 0);
+            return new QueueingIterator<T, IReadOnlyList<T>>(source, () => new BufferBatchThrowQueue<T>(int.MaxValue));
+        }
 
-                _source = source;
-                _maxCapacity = maxCapacity;
-                _backpressure = backpressure;
-            }
+        /// <summary>
+        /// Decouples the source from its consumer; buffered items are retrieved in batches.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxCapacity"/> is non-positive.</exception>
+        /// <remarks>
+        /// <paramref name="backpressure"/> controls what happens if <paramref name="maxCapacity"/> is reached:
+        /// A value of true excerts backpressure on the source.
+        /// A value of false terminates the sequence with an exception.
+        /// </remarks>
+        public static IAsyncEnumerable<DeferredDequeue<IReadOnlyList<T>>> BufferBatch<T>(this IAsyncEnumerable<T> source, int maxCapacity, bool backpressure)
+        {
+            if (source is null) throw new ArgumentNullException(nameof(source));
+            if (maxCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(maxCapacity), "Must be positive.");
 
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token) =>
-                token.IsCancellationRequested ?
-                    new ThrowIterator<T>(new OperationCanceledException(token)) :
-                    new Enumerator(this, token);
+            Func<IQueue<T, IReadOnlyList<T>>> queueFactory = backpressure ?
+                () => new BufferBatchBackpressureQueue<T>(maxCapacity) :
+                () => new BufferBatchThrowQueue<T>(maxCapacity);
+            return new QueueingIterator<T, IReadOnlyList<T>>(source, queueFactory);
+        }
 
-            private sealed class Enumerator : IAsyncEnumerator<T>
-            {
-                private const int _sEmitting = 0;
-                private const int _sAccepting = 1;
-                private const int _sCompleted = 2;
-                private const int _sFinal = 3;
+        private abstract class BufferQueueBase<T> : QueueBase<T, T, T>
+        {
+            public BufferQueueBase(int maxCapacity) : base(maxCapacity, false) { }
 
-                private readonly BufferAsyncEnumerable<T> _e;
-                private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
-                private ManualResetValueTaskSource<bool> _tsEmitting;
-                private readonly CancellationTokenRegistration _ctr;
-                private readonly AsyncTaskMethodBuilder _atmbDisposed;
-                private int _state;
-                private Exception _error;
-                private LinxQueue<T> _queue;
+            // Backpressure remains abstract
 
-                public Enumerator(BufferAsyncEnumerable<T> e, CancellationToken token)
-                {
-                    _e = e;
-                    _queue = new(e._maxCapacity, false);
-                    Produce(token);
-                    if (token.CanBeCanceled)
-                        _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
-                }
+            public override sealed void Enqueue(T item)
+                => EnqueueThrowIfFull(item);
 
-                public T Current { get; private set; }
+            public override sealed T Dequeue()
+                => DequeueOne();
 
-                public ValueTask<bool> MoveNextAsync()
-                {
-                    _tsAccepting.Reset();
+            public override sealed void DequeueFailSafe()
+                => DequeueOne();
+        }
 
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sEmitting:
-                            var tsEmitting = Linx.Clear(ref _tsEmitting);
-                            if (_queue.Count == 0)
-                                _state = _sAccepting;
-                            else // dequeue
-                            {
-                                Current = _queue.DequeueOne();
-                                _state = _sEmitting;
-                                _tsAccepting.SetResult(true);
-                            }
-                            tsEmitting?.SetResult(true);
-                            break;
+        private sealed class BufferThrowQueue<T> : BufferQueueBase<T>
+        {
+            public BufferThrowQueue(int maxCapacity) : base(maxCapacity) { }
 
-                        case _sCompleted:
-                            Debug.Assert(_queue.Count > 0);
-                            Current = _queue.DequeueOne();
-                            if (_queue.Count > 0)
-                                _state = _sCompleted;
-                            else
-                            {
-                                _state = _sFinal;
-                                _ctr.Dispose();
-                            }
-                            _tsAccepting.SetResult(true);
-                            break;
+            public override bool Backpressure => false;
+        }
 
-                        case _sFinal:
-                            Current = default;
-                            _state = _sFinal;
-                            _tsAccepting.SetExceptionOrResult(_error, false);
-                            break;
+        private sealed class BufferBackpressureQueue<T> : BufferQueueBase<T>
+        {
+            public BufferBackpressureQueue(int maxCapacity) : base(maxCapacity) { }
 
-                        default: // _sAccepting???
-                            _state = _sAccepting;
-                            SetFinal(new Exception(state + "???"));
-                            break;
-                    }
+            public override bool Backpressure => IsFull;
+        }
 
-                    return _tsAccepting.Task;
-                }
+        private abstract class BufferBatchQueueBase<T> : ListQueueBase<T, IReadOnlyList<T>>
+        {
+            public BufferBatchQueueBase(int maxCapacity) : base(maxCapacity) { }
 
-                public async ValueTask DisposeAsync()
-                {
-                    SetFinal(AsyncEnumeratorDisposedException.Instance);
-                    Current = default;
-                    await _atmbDisposed.Task.ConfigureAwait(false);
-                }
+            // Backpressure remains abstract
 
-                private void SetFinal(Exception error)
-                {
-                    var state = Atomic.Lock(ref _state);
-                    switch (state)
-                    {
-                        case _sEmitting:
-                            var tsBp = Linx.Clear(ref _tsEmitting);
-                            _error = error;
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            tsBp?.SetResult(false);
-                            break;
+            public override sealed void Enqueue(T item)
+                => EnqueueThrowIfFull(item);
 
-                        case _sAccepting:
-                            Debug.Assert(_queue.Count == 0);
-                            Current = default;
-                            _error = error;
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            _tsAccepting.SetExceptionOrResult(error, false);
-                            break;
+            public override sealed IReadOnlyList<T> Dequeue()
+                => DequeueAll();
 
-                        case _sCompleted:
-                            _error = error;
-                            _state = _sFinal;
-                            _ctr.Dispose();
-                            break;
+            public override sealed void DequeueFailSafe()
+                => Clear();
+        }
 
-                        default: // _sFinal
-                            _state = state;
-                            break;
-                    }
-                }
+        private sealed class BufferBatchThrowQueue<T> : BufferBatchQueueBase<T>
+        {
+            public BufferBatchThrowQueue(int maxCapacity) : base(maxCapacity) { }
 
-                private async void Produce(CancellationToken token)
-                {
-                    Exception error = null;
-                    try
-                    {
-                        ManualResetValueTaskSource<bool> tsEmitting = new();
-                        tsEmitting.Reset();
-                        _tsEmitting = tsEmitting;
+            public override bool Backpressure => false;
+        }
 
-                        if (!await tsEmitting.Task.ConfigureAwait(false))
-                            return;
-                        tsEmitting.Reset();
+        private sealed class BufferBatchBackpressureQueue<T> : BufferBatchQueueBase<T>
+        {
+            public BufferBatchBackpressureQueue(int maxCapacity) : base(maxCapacity) { }
 
-                        await foreach (var item in _e._source.WithCancellation(token).ConfigureAwait(false))
-                        {
-                            var state = Atomic.Lock(ref _state);
-                            if (_e._backpressure)
-                                while (_state == _sEmitting && _queue.Count == _queue.MaxCapacity)
-                                {
-                                    _tsEmitting = tsEmitting;
-                                    _state = _sEmitting;
-                                    if (!await tsEmitting.Task.ConfigureAwait(false))
-                                        return;
-                                    _tsEmitting.Reset();
-                                    state = Atomic.Lock(ref state);
-                                }
-
-                            switch (state)
-                            {
-                                case _sEmitting:
-                                    try { _queue.Enqueue(item); }
-                                    finally { _state = _sEmitting; }
-                                    break;
-
-                                case _sAccepting:
-                                    Debug.Assert(_queue.Count == 0);
-                                    Current = item;
-                                    _state = _sEmitting;
-                                    _tsAccepting.SetResult(true);
-                                    if (_state == _sFinal)
-                                        return;
-                                    break;
-
-                                default: // _sFinal
-                                    _state = state;
-                                    return;
-                            }
-                        }
-                    }
-                    catch (Exception ex) { error = ex; }
-                    finally
-                    {
-                        _atmbDisposed.SetResult();
-
-                        var state = Atomic.Lock(ref _state);
-                        if (state == _sEmitting && _queue.Count > 0)
-                        {
-                            _error = error;
-                            _state = _sCompleted;
-                        }
-                        else
-                        {
-                            _state = state;
-                            SetFinal(error);
-                        }
-                    }
-                }
-            }
+            public override bool Backpressure => IsFull;
         }
     }
 }

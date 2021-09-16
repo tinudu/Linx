@@ -5,16 +5,18 @@ using System.Diagnostics;
 
 namespace Linx.Collections
 {
-    internal sealed class LinxQueue<T>
+    internal class LinxQueue<T>
     {
         private readonly int _initialCapacity;
+        private readonly int _maxCapacity;
         private T[] _buffer;
         private int _offset, _count;
 
-        public int MaxCapacity { get; init; }
         public T[] Buffer => _buffer;
         public int Offset => _offset;
         public int Count => _count;
+        public bool IsEmpty => Count == 0;
+        public bool IsFull => Count == _maxCapacity;
 
         /// <summary>
         /// Initialize.
@@ -26,7 +28,7 @@ namespace Linx.Collections
         {
             if (maxCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(maxCapacity));
 
-            MaxCapacity = maxCapacity;
+            _maxCapacity = maxCapacity;
             if (initial1)
                 _initialCapacity = 1;
             else
@@ -46,7 +48,7 @@ namespace Linx.Collections
         /// <exception cref="InvalidOperationException">Queue is full.</exception>
         public void Enqueue(T item)
         {
-            if (_count == MaxCapacity) throw new InvalidOperationException(Strings.QueueIsFull);
+            if (_count == _maxCapacity) throw new InvalidOperationException(Strings.QueueIsFull);
 
             if (_buffer is null)
             {
@@ -56,7 +58,7 @@ namespace Linx.Collections
                 _buffer[0] = item;
                 _count = 1;
             }
-            else if (_buffer.Length < MaxCapacity)
+            else if (_buffer.Length < _maxCapacity)
             {
                 if (_offset == 0)
                     _buffer[_count++] = item;
@@ -68,7 +70,7 @@ namespace Linx.Collections
             }
             else // _buffer is full; increase size
             {
-                var s = MaxCapacity;
+                var s = _maxCapacity;
                 while (s > 7)
                 {
                     var s1 = s >> 1;
@@ -94,7 +96,7 @@ namespace Linx.Collections
         /// Dequeue an item.
         /// </summary>
         /// <exception cref="InvalidOperationException">Queue is empty.</exception>
-        public T DequeueOne()
+        public T Dequeue()
         {
             if (_count == 0) throw new InvalidOperationException(Strings.QueueIsEmpty);
 
@@ -113,7 +115,7 @@ namespace Linx.Collections
             return result;
         }
 
-        public IReadOnlyCollection<T> DequeueAll()
+        public IReadOnlyCollection<T> DequeueBatch()
         {
             if (_count == 0)
                 return Array.Empty<T>();
