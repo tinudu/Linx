@@ -2,7 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
+using Linx.Tasks;
 
 namespace Linx.AsyncEnumerable
 {
@@ -274,18 +277,236 @@ namespace Linx.AsyncEnumerable
             void ICollection<T>.Clear() => throw new NotSupportedException();
         }
 
-        private sealed class QueueingIterator<TSource, TResult> : IAsyncEnumerable<DeferredDequeue<TResult>>
+        private sealed class QueueingIterator<TSource, TResult> : IAsyncEnumerable<Deferred<TResult>>, IAsyncEnumerator<Deferred<TResult>>, Deferred<TResult>.IProvider
         {
+            private const int _sInitial = 0;
+            private const int _sEmitting = 1;
+            private const int _sAccepting = 2;
+            private const int _sFinal = 3;
+
             private readonly IAsyncEnumerable<TSource> _source;
             private readonly Func<IQueue<TSource, TResult>> _queueFactory;
 
+            private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
+            private readonly CancellationTokenSource _cts = new();
+            private ManualResetValueTaskSource<bool> _tsProduce = new();
+            private CancellationTokenRegistration _ctr;
+            private AsyncTaskMethodBuilder _atmbDisposed;
+            private int _state;
+            private Exception _error;
+            private IQueue<TSource, TResult> _queue;
+            private short _version;
+            private bool _isVersionValid;
+
             public QueueingIterator(IAsyncEnumerable<TSource> source, Func<IQueue<TSource, TResult>> queueFactory)
             {
+                Debug.Assert(source is not null);
+                Debug.Assert(queueFactory is not null);
+
+                _source = source;
+                _queueFactory = queueFactory;
+                _queue = queueFactory();
             }
 
-            public IAsyncEnumerator<DeferredDequeue<TResult>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+            public IAsyncEnumerator<Deferred<TResult>> GetAsyncEnumerator(CancellationToken token)
             {
-                throw new NotImplementedException();
+                var state = Atomic.Lock(ref _state);
+                if (state != _sInitial)
+                {
+                    _state = state;
+                    return new QueueingIterator<TSource, TResult>(_source, _queueFactory).GetAsyncEnumerator(token);
+                }
+
+                _state = _sEmitting;
+                Produce(_tsProduce, token);
+                return this;
+            }
+
+            public ValueTask<bool> MoveNextAsync()
+            {
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sInitial:
+                    case _sAccepting:
+                        _state = state;
+                        throw new InvalidOperationException();
+
+                    case _sEmitting:
+                        if (_isVersionValid && !_queue.IsEmpty) // not dequeued
+                            _queue.DequeueFailSafe();
+
+                        Current = new(this, unchecked(_version++));
+                        _isVersionValid = true;
+                        _tsAccepting.Reset();
+                        if (_queue.IsEmpty)
+                            _state = _sAccepting;
+                        else
+                        {
+                            _state = _sEmitting;
+                            _tsAccepting.SetResult(true);
+                        }
+                        return _tsAccepting.Task;
+
+                    case _sFinal:
+                        _isVersionValid = false;
+                        Current = default;
+                        _queue = null;
+                        _state = _sFinal;
+                        _tsAccepting.Reset();
+                        _tsAccepting.SetExceptionOrResult(_error, false);
+                        return _tsAccepting.Task;
+
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                SetFinal(AsyncEnumeratorDisposedException.Instance);
+                _isVersionValid = false;
+                Current = default;
+                _queue = null;
+                return new(_atmbDisposed.Task);
+            }
+
+            TResult Deferred<TResult>.IProvider.GetResult(short version)
+            {
+                ManualResetValueTaskSource<bool> tsProduce = null;
+
+                var state = Atomic.Lock(ref _state);
+                try
+                {
+                    if (version != _version || !_isVersionValid)
+                        throw new InvalidOperationException();
+
+                    if (_queue.IsEmpty) // called before MoveNextAsync returned true
+                        return default;
+
+                    var result = _queue.Dequeue();
+                    _isVersionValid = false;
+                    if (!_queue.Backpressure)
+                        tsProduce = Linx.Clear(ref _tsProduce);
+                    return result;
+                }
+                finally
+                {
+                    _state = state;
+                    tsProduce?.SetResult(true);
+                }
+            }
+
+            public Deferred<TResult> Current { get; private set; }
+
+            private void SetFinal(Exception errorOrNot)
+            {
+                ManualResetValueTaskSource<bool> tsProduce;
+
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sInitial: // DisposeAsync called on IAsyncEnumerator<>
+                        _state = state;
+                        throw new InvalidOperationException();
+
+                    case _sEmitting:
+                        _error = errorOrNot;
+                        tsProduce = Linx.Clear(ref _tsProduce);
+                        _state = _sFinal;
+                        _ctr.Dispose();
+                        tsProduce?.SetResult(false);
+                        _cts.TryCancel();
+                        break;
+
+                    case _sAccepting:
+                        _error = errorOrNot;
+                        _isVersionValid = false;
+                        Current = default;
+                        _queue = null;
+                        tsProduce = Linx.Clear(ref _tsProduce);
+                        _state = _sFinal;
+                        _ctr.Dispose();
+                        tsProduce?.SetResult(false);
+                        _cts.TryCancel();
+                        _tsAccepting.SetExceptionOrResult(errorOrNot, false);
+                        break;
+
+                    case _sFinal:
+                        _state = _sFinal;
+                        break;
+
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+            }
+
+            private async void Produce(ManualResetValueTaskSource<bool> tsProduce, CancellationToken token)
+            {
+                Exception error = null;
+                try
+                {
+                    if (token.CanBeCanceled)
+                        _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
+
+                    if (!await tsProduce.Task.ConfigureAwait(false))
+                        return;
+                    tsProduce.Reset();
+
+                    await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
+                    {
+                        bool loop;
+                        do
+                        {
+                            var state = Atomic.Lock(ref _state);
+                            switch (state)
+                            {
+                                case _sAccepting:
+                                case _sEmitting:
+                                    if (_queue.Backpressure)
+                                    {
+                                        _tsProduce = tsProduce;
+                                        _state = state;
+                                        if (!await tsProduce.Task.ConfigureAwait(false))
+                                            return;
+                                        tsProduce.Reset();
+                                        loop = true;
+                                    }
+                                    else
+                                    {
+                                        try { _queue.Enqueue(item); }
+                                        catch { _state = state; throw; }
+
+                                        if (state == _sAccepting && !_queue.IsEmpty)
+                                        {
+                                            _state = _sEmitting;
+                                            _tsAccepting.SetResult(true);
+                                        }
+                                        else
+                                            _state = state;
+                                        loop = false;
+                                    }
+                                    break;
+
+                                case _sFinal:
+                                    _state = _sFinal;
+                                    return;
+
+                                default:
+                                    _state = state;
+                                    throw new Exception(state + "???");
+                            }
+                        } while (loop);
+                    }
+                }
+                catch (Exception ex) { error = ex; }
+                finally
+                {
+                    _atmbDisposed.SetResult();
+                    SetFinal(error);
+                }
             }
         }
     }

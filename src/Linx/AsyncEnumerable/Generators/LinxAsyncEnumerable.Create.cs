@@ -28,7 +28,6 @@
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProduceAsyncDelegate{T}"/> coroutine.
         /// </summary>
-        [Obsolete("use iterator")]
         public static IAsyncEnumerable<T> Create<T>(T _, ProduceAsyncDelegate<T> produceAsync, [CallerMemberName] string displayName = default)
         {
             if (produceAsync == null) throw new ArgumentNullException(nameof(produceAsync));

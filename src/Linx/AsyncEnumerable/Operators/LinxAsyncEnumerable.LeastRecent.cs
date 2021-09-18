@@ -5,6 +5,30 @@ namespace Linx.AsyncEnumerable
 {
     partial class LinxAsyncEnumerable
     {
+        /// <summary>
+        /// Gets access to the least recent item.
+        /// </summary>
+        public static IAsyncEnumerable<Deferred<Lossy<T>>> LeastRecent<T>(this IAsyncEnumerable<T> source)
+        {
+            if (source is null) throw new ArgumentNullException(nameof(source));
+
+            return new QueueingIterator<T, Lossy<T>>(source, () => new LeastRecentOneQueue<T>());
+        }
+
+        /// <summary>
+        /// Gets access to the least recent item, while keeping up to <paramref name="maxCapacity"/> items in a queue.
+        /// </summary>
+        public static IAsyncEnumerable<Deferred<Lossy<T>>> LeastRecent<T>(this IAsyncEnumerable<T> source, int maxCapacity)
+        {
+            if (source is null) throw new ArgumentNullException(nameof(source));
+            if (maxCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(maxCapacity), "Must be positive.");
+
+            Func<IQueue<T, Lossy<T>>> queueFactory = maxCapacity == 1 ?
+                () => new LeastRecentOneQueue<T>() :
+                () => new LeastRecentManyQueue<T>(maxCapacity);
+            return new QueueingIterator<T, Lossy<T>>(source, queueFactory);
+        }
+
         private sealed class LeastRecentOneQueue<T> : IQueue<T, Lossy<T>>
         {
             private bool _hasValue;
@@ -73,36 +97,6 @@ namespace Linx.AsyncEnumerable
 
             public override void DequeueFailSafe()
                 => DequeueOne();
-        }
-
-        private sealed class LeastRecentBatchQueue<T> : ListQueueBase<T, Lossy<IReadOnlyList<T>>>
-        {
-            private int _ignoredCount;
-
-            public LeastRecentBatchQueue(int maxCapacity) : base(maxCapacity) { }
-
-            public override bool Backpressure => false;
-
-            public override void Enqueue(T item)
-            {
-                if (IsFull)
-                    checked { _ignoredCount++; }
-                else
-                    EnqueueThrowIfFull(item);
-            }
-
-            public override Lossy<IReadOnlyList<T>> Dequeue()
-            {
-                var result = new Lossy<IReadOnlyList<T>>(DequeueAll(), _ignoredCount);
-                _ignoredCount = 0;
-                return result;
-            }
-
-            public override void DequeueFailSafe()
-            {
-                Clear();
-                _ignoredCount = 0;
-            }
         }
     }
 }

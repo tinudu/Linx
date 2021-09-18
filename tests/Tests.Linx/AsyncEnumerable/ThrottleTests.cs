@@ -57,7 +57,7 @@
         {
             var source = Marble.Parse("-a-bc-d-- -e-fg");
             var expect = Marble.Parse("- -  - --d- -  -#");
-            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).Latest();
+            var testee = source.Throttle(2 * MarbleSettings.DefaultFrameSize).MostRecent().Select(x => x.GetResult().Value);
             await expect.AssertEqualCancel(testee, 8 * MarbleSettings.DefaultFrameSize);
         }
     }
