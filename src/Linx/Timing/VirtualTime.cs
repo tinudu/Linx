@@ -1,13 +1,13 @@
-﻿namespace Linx.Timing
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Collections;
-    using Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Linx.Collections;
+using Linx.Tasks;
 
+namespace Linx.Timing
+{
     /// <summary>
     /// Virtuala time.
     /// </summary>
@@ -79,9 +79,9 @@
         /// <summary>
         /// Crete with <see cref="Now"/> being <paramref name="now"/>.
         /// </summary>
-        public VirtualTime(DateTimeOffset now = default)
+        private VirtualTime(DateTimeOffset now = default)
         {
-            if (Time.Current != RealTime.Instance) throw new InvalidOperationException("Current time must be real time before switching to virtual time.");
+            if (Time.Current != Time.RealTime) throw new InvalidOperationException("Current time must be real time before switching to virtual time.");
 
             Time.Current = this;
             Now = now;
@@ -148,7 +148,7 @@
             _timersByDue.Clear();
             _queue.Clear();
             _pool.Clear();
-            Time.Current = RealTime.Instance;
+            Time.Current = Time.RealTime;
         }
 
         /// <inheritdoc />

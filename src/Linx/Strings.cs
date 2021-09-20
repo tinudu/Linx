@@ -7,5 +7,7 @@
 
         public const string QueueIsEmpty = "Queue is empty.";
         public const string QueueIsFull = "Queue is full.";
+
+        public const string MethodIsNotReentrant = "Method is not reentrant.";
     }
 }

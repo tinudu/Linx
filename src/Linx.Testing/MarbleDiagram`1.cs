@@ -1,11 +1,11 @@
-﻿namespace Linx.Testing
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Threading;
-    using Notifications;
-    using Timing;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+using Linx.Notifications;
+using Linx.Timing;
 
+namespace Linx.Testing
+{
     internal sealed class MarbleDiagram<T> : IMarbleDiagram<T>
     {
         public IEnumerable<TimeInterval<Notification<T>>> Marbles { get; }
@@ -15,8 +15,9 @@
         /// <inheritdoc />
         public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
         {
-            using var timer = Time.Current.GetTimer(token);
-            var t = timer.Time.Now;
+            var time = Time.Current;
+            using var timer = time.GetTimer(token);
+            var t = time.Now;
             foreach (var ti in Marbles)
             {
                 t += ti.Interval;
