@@ -1,13 +1,14 @@
-﻿namespace Linx.AsyncEnumerable
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
+using Linx.Tasks;
+using Linx.Timing;
 
+namespace Linx.AsyncEnumerable
+{
     partial class LinxAsyncEnumerable
     {
         /// <summary>
@@ -23,10 +24,10 @@
         /// <summary>
         /// Samples <paramref name="source"/> at the specified interval.
         /// </summary>
-        public static IAsyncEnumerable<T> Sample<T>(this IAsyncEnumerable<T> source, TimeSpan interval)
+        public static IAsyncEnumerable<T> Sample<T>(this IAsyncEnumerable<T> source, TimeSpan interval, ITime time)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            var sampler = Interval(interval);
+            var sampler = Interval(interval, time);
             return Create(token => new SampleEnumerator<T, DateTimeOffset>(source, sampler, token));
         }
 

@@ -1,48 +1,51 @@
-﻿namespace Linx.AsyncEnumerable
-{
-    using System;
-    using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
-    using Timing;
+using Linx.Timing;
 
+namespace Linx.AsyncEnumerable
+{
     partial class LinxAsyncEnumerable
     {
         /// <summary>
         /// Days in a time zone.
         /// </summary>
         /// <remarks>Immediately emits the floor of the current time.</remarks>
-        public static IAsyncEnumerable<DateTimeOffset> DaysClock(TimeZoneInfo timeZone) => Clock(TimeSpan.FromTicks(TimeSpan.TicksPerDay), timeZone);
+        public static IAsyncEnumerable<DateTimeOffset> DaysClock(TimeZoneInfo timeZone, ITime time) => Clock(TimeSpan.FromTicks(TimeSpan.TicksPerDay), timeZone, time);
 
         /// <summary>
         /// Hours in a time zone.
         /// </summary>
         /// <remarks>Immediately emits the floor of the current time.</remarks>
-        public static IAsyncEnumerable<DateTimeOffset> HoursClock(TimeZoneInfo timeZone) => Clock(TimeSpan.FromTicks(TimeSpan.TicksPerHour), timeZone);
+        public static IAsyncEnumerable<DateTimeOffset> HoursClock(TimeZoneInfo timeZone, ITime time) => Clock(TimeSpan.FromTicks(TimeSpan.TicksPerHour), timeZone, time);
 
         /// <summary>
         /// Minutes in a time zone.
         /// </summary>
         /// <remarks>Immediately emits the floor of the current time.</remarks>
-        public static IAsyncEnumerable<DateTimeOffset> MinutesClock(TimeZoneInfo timeZone) => Clock(TimeSpan.FromTicks(TimeSpan.TicksPerMinute), timeZone);
+        public static IAsyncEnumerable<DateTimeOffset> MinutesClock(TimeZoneInfo timeZone, ITime time) => Clock(TimeSpan.FromTicks(TimeSpan.TicksPerMinute), timeZone, time);
 
         /// <summary>
         /// Seconds in a time zone.
         /// </summary>
         /// <remarks>Immediately emits the floor of the current time.</remarks>
-        public static IAsyncEnumerable<DateTimeOffset> SecondsClock(TimeZoneInfo timeZone) => Clock(TimeSpan.FromTicks(TimeSpan.TicksPerSecond), timeZone);
+        public static IAsyncEnumerable<DateTimeOffset> SecondsClock(TimeZoneInfo timeZone, ITime time) => Clock(TimeSpan.FromTicks(TimeSpan.TicksPerSecond), timeZone, time);
 
         /// <summary>
         /// Time in a time zone.
         /// </summary>
         /// <param name="resolution">Clock resolution.</param>
         /// <param name="timeZone">The time zone.</param>
+        /// <param name="time">The time.</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="resolution"/> must be at least 100ms.</exception>
         /// <remarks>Immediately emits the floor of the current time.</remarks>
-        public static IAsyncEnumerable<DateTimeOffset> Clock(TimeSpan resolution, TimeZoneInfo timeZone)
+        public static IAsyncEnumerable<DateTimeOffset> Clock(TimeSpan resolution, TimeZoneInfo timeZone, ITime time)
         {
             if (timeZone == null) throw new ArgumentNullException(nameof(timeZone));
             if (resolution.Ticks < 100 * TimeSpan.TicksPerMillisecond) throw new ArgumentOutOfRangeException(nameof(resolution), "Must be at least 100ms");
+            if (time is null) time = Time.RealTime;
+
             return Iterator();
 
             DateTimeOffset ValidClockTime(DateTimeOffset t)
@@ -63,7 +66,6 @@ using System.Threading;
 
             async IAsyncEnumerable<DateTimeOffset> Iterator([EnumeratorCancellation] CancellationToken token = default)
             {
-                var time = Time.Current;
                 var due = TimeZoneInfo.ConvertTime(time.Now, timeZone);
                 due = ValidClockTime(new DateTimeOffset(due.Ticks / resolution.Ticks * resolution.Ticks, due.Offset));
                 using var timer = time.GetTimer(token);

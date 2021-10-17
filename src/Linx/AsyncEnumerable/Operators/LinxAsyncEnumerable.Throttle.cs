@@ -1,32 +1,32 @@
-﻿namespace Linx.AsyncEnumerable
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Tasks;
-    using Timing;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
+using Linx.Tasks;
+using Linx.Timing;
 
+namespace Linx.AsyncEnumerable
+{
     partial class LinxAsyncEnumerable
     {
         /// <summary>
         /// Ignores values which are followed by another value before the specified interval in milliseconds.
         /// </summary>
-        public static IAsyncEnumerable<T> Throttle<T>(this IAsyncEnumerable<T> source, int intervalMilliseconds)
-            => source.Throttle(TimeSpan.FromMilliseconds(intervalMilliseconds));
+        public static IAsyncEnumerable<T> Throttle<T>(this IAsyncEnumerable<T> source, int intervalMilliseconds, ITime time)
+            => source.Throttle(TimeSpan.FromMilliseconds(intervalMilliseconds), time);
 
         /// <summary>
         /// Ignores values which are followed by another value within the specified interval.
         /// </summary>
-        public static IAsyncEnumerable<T> Throttle<T>(this IAsyncEnumerable<T> source, TimeSpan interval)
+        public static IAsyncEnumerable<T> Throttle<T>(this IAsyncEnumerable<T> source, TimeSpan interval, ITime time)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
             return interval <= TimeSpan.Zero ?
                 source :
-                Create(token => new ThrottleEnumerator<T>(source, interval, token));
+                Create(token => new ThrottleEnumerator<T>(source, interval, time, token));
         }
 
         private sealed class ThrottleEnumerator<T> : IAsyncEnumerator<T>
@@ -52,14 +52,14 @@
             private T _next;
             private DateTimeOffset _due;
 
-            public ThrottleEnumerator(IAsyncEnumerable<T> source, TimeSpan interval, CancellationToken token)
+            public ThrottleEnumerator(IAsyncEnumerable<T> source, TimeSpan interval, ITime time, CancellationToken token)
             {
                 Debug.Assert(source != null);
                 Debug.Assert(interval > TimeSpan.Zero);
 
                 _source = source;
                 _interval = interval;
-                _time = Time.Current;
+                _time = time ?? Time.RealTime;
 
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }

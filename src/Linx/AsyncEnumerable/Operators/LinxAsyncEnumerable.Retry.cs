@@ -1,9 +1,9 @@
-﻿namespace Linx.AsyncEnumerable
-{
-    using System;
-    using System.Collections.Generic;
-    using Timing;
+﻿using System;
+using System.Collections.Generic;
+using Linx.Timing;
 
+namespace Linx.AsyncEnumerable
+{
     partial class LinxAsyncEnumerable
     {
         /// <summary>
@@ -70,13 +70,13 @@
         /// <summary>
         /// Retry the sequence until it terminates successfully, waiting <paramref name="waitTime"/> between retries.
         /// </summary>
-        public static IAsyncEnumerable<T> Retry<T>(this IAsyncEnumerable<T> source, TimeSpan waitTime)
+        public static IAsyncEnumerable<T> Retry<T>(this IAsyncEnumerable<T> source, TimeSpan waitTime, ITime time)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+            if (time is null) time = Time.RealTime;
 
             return Create<T>(async (yield, token) =>
             {
-                var time = Time.Current;
                 try
                 {
                     // ReSharper disable once PossibleMultipleEnumeration
@@ -101,14 +101,14 @@
         /// <summary>
         /// Retry the sequence, waiting between retries for each element in <paramref name="waitTimes"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Retry<T>(this IAsyncEnumerable<T> source, IEnumerable<TimeSpan> waitTimes)
+        public static IAsyncEnumerable<T> Retry<T>(this IAsyncEnumerable<T> source, IEnumerable<TimeSpan> waitTimes, ITime time)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (waitTimes == null) throw new ArgumentNullException(nameof(waitTimes));
+            if (time is null) time = Time.RealTime;
 
             return Create<T>(async (yield, token) =>
             {
-                var time = Time.Current;
                 Exception error;
                 try
                 {

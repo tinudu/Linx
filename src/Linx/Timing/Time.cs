@@ -11,21 +11,10 @@ namespace Linx.Timing
     /// </summary>
     public static class Time
     {
-        private static readonly AsyncLocal<ITime> _timeProvider = new();
-
         /// <summary>
         /// Gets the real <see cref="ITime"/>.
         /// </summary>
         public static ITime RealTime { get; } = new RealTimeImpl();
-
-        /// <summary>
-        /// Gets or sets the current time.
-        /// </summary>
-        public static ITime Current
-        {
-            get => _timeProvider.Value ?? RealTime;
-            internal set => _timeProvider.Value = value;
-        }
 
         /// <summary>
         /// Schedule an action.

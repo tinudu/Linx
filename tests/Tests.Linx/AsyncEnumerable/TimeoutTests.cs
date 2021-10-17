@@ -1,27 +1,33 @@
-﻿namespace Tests.Linx.AsyncEnumerable
-{
-    using global::Linx.AsyncEnumerable;
-    using global::Linx.Testing;
-    using System;
-    using System.Threading.Tasks;
-    using Xunit;
+﻿using System;
+using Linx.AsyncEnumerable;
+using Linx.Testing;
+using Xunit;
 
+namespace Tests.Linx.AsyncEnumerable
+{
     public sealed class TimeoutTests
     {
         [Fact]
-        public async Task TestNoTimeout()
+        public void TestNoTimeout()
         {
-            var seq = Marble.Parse("a-b--c--d-|");
-            var testee = seq.Timeout(3 * MarbleSettings.DefaultFrameSize);
-            await seq.AssertEqual(testee);
+            VirtualTime.Run(vt =>
+            {
+                const string seq = "a-b--c--d-|";
+                var testee = vt.Parse(seq).Timeout(3 * LinxTesting.DefaultTimeFrame, vt);
+                return testee.Expect(seq, vt);
+            });
         }
 
         [Fact]
-        public async Task TestTimeout()
+        public void TestTimeout()
         {
-            var testee = Marble.Parse("a-b--c-----d|").Timeout(3 * MarbleSettings.DefaultFrameSize);
-            var expect = Marble.Parse("a-b--c---#", new MarbleSettings { Error = new TimeoutException() });
-            await expect.AssertEqual(testee);
+            VirtualTime.Run(vt =>
+            {
+                const string seq = "a-b--c-----d|";
+                const string exp = "a-b--c---#";
+                var testee = vt.Parse(seq).Timeout(3 * LinxTesting.DefaultTimeFrame, vt);
+                return testee.Expect(exp, vt, ex => ex is TimeoutException);
+            });
         }
     }
 }

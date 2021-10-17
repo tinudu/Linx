@@ -27,6 +27,8 @@
         /// </summary>
         public LookAhead(IEnumerable<T> source)
         {
+            if (source is null) throw new ArgumentNullException(nameof(source));
+
             var e = source.GetEnumerator();
             try
             {

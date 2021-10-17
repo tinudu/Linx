@@ -1,14 +1,14 @@
-﻿namespace Linx.AsyncEnumerable
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
-    using Notifications;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Linx.Notifications;
 
+namespace Linx.AsyncEnumerable
+{
     partial class LinxAsyncEnumerable
     {
         /// <summary>
-        /// Materializes the implicit notifications of an observable sequence as explicit notification values.
+        /// Materializes the implicit notifications of a sequence as explicit notification values.
         /// </summary>
         public static IAsyncEnumerable<Notification<T>> Materialize<T>(this IAsyncEnumerable<T> source)
         {
@@ -24,7 +24,11 @@
                             return;
                     completion = Notification.Completed<T>();
                 }
-                catch (Exception ex) { completion = Notification.Error<T>(ex); }
+                catch (Exception ex)
+                {
+                    token.ThrowIfCancellationRequested();
+                    completion = Notification.Error<T>(ex);
+                }
 
                 await yield(completion).ConfigureAwait(false);
             });

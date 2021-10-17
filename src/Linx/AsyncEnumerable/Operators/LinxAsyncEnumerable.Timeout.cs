@@ -14,12 +14,12 @@
         /// <summary>
         /// Throws a <see cref="TimeoutException"/> if no element is observed within <paramref name="interval"/>.
         /// </summary>
-        public static IAsyncEnumerable<T> Timeout<T>(this IAsyncEnumerable<T> source, TimeSpan interval)
+        public static IAsyncEnumerable<T> Timeout<T>(this IAsyncEnumerable<T> source, TimeSpan interval, ITime time)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
 
-            return Create(token => new TimeoutEnumerator<T>(source, interval, token));
+            return Create(token => new TimeoutEnumerator<T>(source, interval, time, token));
         }
 
         private sealed class TimeoutEnumerator<T> : IAsyncEnumerator<T>
@@ -34,7 +34,7 @@
 
             private readonly IAsyncEnumerable<T> _source;
             private readonly TimeSpan _interval;
-            private readonly ITime _time = Time.Current;
+            private readonly ITime _time;
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
@@ -45,12 +45,14 @@
             private Exception _error;
             private DateTimeOffset _due;
 
-            public TimeoutEnumerator(IAsyncEnumerable<T> source, TimeSpan interval, CancellationToken token)
+            public TimeoutEnumerator(IAsyncEnumerable<T> source, TimeSpan interval,ITime time, CancellationToken token)
             {
                 Debug.Assert(source != null);
                 Debug.Assert(interval > TimeSpan.Zero);
+
                 _source = source;
                 _interval = interval;
+                _time = time ?? Time.RealTime;
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 

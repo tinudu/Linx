@@ -14,6 +14,21 @@
     {
         private ManualResetValueTaskSourceCore<Unit> _core = new();
 
+        /// <summary>
+        /// Gets a <see cref="ValueTask"/>.
+        /// </summary>
+        public ValueTask Task => new(this, _core.Version);
+
+        /// <summary>
+        /// Gets or sets whether to force continuations to run asynchronously.
+        /// </summary>
+        /// <value>true to force continuations to run asynchronously; otherwise, false.</value>
+        public bool RunContinuationsAsynchronously
+        {
+            get => _core.RunContinuationsAsynchronously;
+            set => _core.RunContinuationsAsynchronously = value;
+        }
+
         /// <summary>Resets to prepare for the next operation.</summary>
         public void Reset() => _core.Reset();
 
@@ -22,11 +37,6 @@
 
         /// <summary>Completes with an error.</summary>
         public void SetException(Exception exception) => _core.SetException(exception);
-
-        /// <summary>
-        /// Gets a <see cref="ValueTask"/>.
-        /// </summary>
-        public ValueTask Task => new(this, _core.Version);
 
         ValueTaskSourceStatus IValueTaskSource.GetStatus(short token) => _core.GetStatus(token);
         void IValueTaskSource.OnCompleted(Action<object> continuation, object state, short token, ValueTaskSourceOnCompletedFlags flags) => _core.OnCompleted(continuation, state, token, flags);
@@ -41,15 +51,6 @@
     {
         private ManualResetValueTaskSourceCore<T> _core = new();
 
-        /// <summary>Resets to prepare for the next operation.</summary>
-        public void Reset() => _core.Reset();
-
-        /// <summary>Completes successfully.</summary>
-        public void SetResult(T result) => _core.SetResult(result);
-
-        /// <summary>Completes with an error.</summary>
-        public void SetException(Exception exception) => _core.SetException(exception);
-
         /// <summary>
         /// Gets a <see cref="ValueTask{TResult}"/>.
         /// </summary>
@@ -59,6 +60,25 @@
         /// Gets a <see cref="ValueTask"/>.
         /// </summary>
         public ValueTask TaskNonGeneric => new(this, _core.Version);
+
+        /// <summary>
+        /// Gets or sets whether to force continuations to run asynchronously.
+        /// </summary>
+        /// <value>true to force continuations to run asynchronously; otherwise, false.</value>
+        public bool RunContinuationsAsynchronously
+        {
+            get => _core.RunContinuationsAsynchronously;
+            set => _core.RunContinuationsAsynchronously = value;
+        }
+
+        /// <summary>Resets to prepare for the next operation.</summary>
+        public void Reset() => _core.Reset();
+
+        /// <summary>Completes successfully.</summary>
+        public void SetResult(T result) => _core.SetResult(result);
+
+        /// <summary>Completes with an error.</summary>
+        public void SetException(Exception exception) => _core.SetException(exception);
 
         ValueTaskSourceStatus IValueTaskSource<T>.GetStatus(short token) => _core.GetStatus(token);
         ValueTaskSourceStatus IValueTaskSource.GetStatus(short token) => _core.GetStatus(token);
