@@ -1,6 +1,7 @@
 ﻿namespace Linx
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Runtime.CompilerServices;
     using System.Threading;
@@ -88,6 +89,19 @@
 
             try { cts.Cancel(); }
             catch { /**/ }
+        }
+
+        /// <summary>
+        /// Starting with <paramref name="maxCapacity"/>, halve it until a value in the range 4..7 is reached.
+        /// </summary>
+        internal static IEnumerable<int> Capacities(int maxCapacity)
+        {
+            yield return maxCapacity;
+            while (maxCapacity > 7)
+            {
+                maxCapacity >>= 1;
+                yield return maxCapacity;
+            }
         }
     }
 }
