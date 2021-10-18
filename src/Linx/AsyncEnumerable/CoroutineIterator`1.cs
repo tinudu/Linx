@@ -16,8 +16,9 @@ namespace Linx.AsyncEnumerable
 
         private readonly ProduceAsyncDelegate<T> _produceAsync;
         private readonly string _displayName;
-        private ManualResetValueTaskSource<bool> _tsAccepting;
-        private ManualResetValueTaskSource<bool> _tsEmitting;
+
+        private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
+        private readonly ManualResetValueTaskSource<bool> _tsEmitting = new();
         private AsyncTaskMethodBuilder<bool> _atmbFinal;
         private AsyncTaskMethodBuilder _atmbDisposed;
         private CancellationTokenRegistration _ctr;
@@ -39,9 +40,6 @@ namespace Linx.AsyncEnumerable
 
         public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
         {
-            if (token.IsCancellationRequested)
-                return new LinxAsyncEnumerable.ThrowIterator<T>(new OperationCanceledException(token));
-
             var state = Atomic.Lock(ref _state);
             if (state != _sInitial)
             {
@@ -49,31 +47,12 @@ namespace Linx.AsyncEnumerable
                 return new CoroutineIterator<T>(this).GetAsyncEnumerator(token);
             }
 
-            try
-            {
-                _tsAccepting = new();
-                _tsEmitting = new();
-                _tsEmitting.Reset();
-                _state = _sEmitting;
-                Produce(token);
-                if (token.CanBeCanceled)
-                    _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
-                return this;
-            }
-            catch (Exception ex)
-            {
-                _state = Atomic.LockBit;
-                Current = default;
-                _tsAccepting = default;
-                _tsEmitting = default;
-                _atmbFinal = default;
-                _atmbDisposed = default;
-                _ctr = default;
-                _state = _sFinal;
-                _atmbFinal.SetException(ex);
-                _atmbDisposed.SetResult();
-                return new LinxAsyncEnumerable.ThrowIterator<T>(ex);
-            }
+            _state = _sEmitting;
+            Produce(token);
+            if (token.CanBeCanceled)
+                _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
+
+            return this;
         }
 
         /// <inheritdoc />
@@ -85,24 +64,21 @@ namespace Linx.AsyncEnumerable
             var state = Atomic.Lock(ref _state);
             switch (state)
             {
-                case _sInitial:
-                    _state = _sInitial;
-                    throw new InvalidOperationException("GetAsyncEnumerator was not called.");
-
                 case _sEmitting:
                     _tsAccepting.Reset();
                     _state = _sAccepting;
                     _tsEmitting.SetResult(true);
                     return _tsAccepting.Task;
 
-                case _sAccepting:
-                    _state = _sAccepting;
-                    throw new InvalidOperationException("MoveNextAsync is not reentrant.");
-
                 case _sFinal:
                     Current = default;
                     _state = _sFinal;
                     return new(_atmbFinal.Task);
+
+                case _sInitial:
+                case _sAccepting:
+                    _state = state;
+                    throw new InvalidOperationException();
 
                 default:
                     _state = state;
@@ -160,8 +136,8 @@ namespace Linx.AsyncEnumerable
             catch (Exception ex) { error = ex; }
             finally
             {
-                _atmbDisposed.SetResult();
                 SetFinal(error);
+                _atmbDisposed.SetResult();
             }
         }
 
