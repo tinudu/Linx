@@ -75,14 +75,14 @@
 
             private readonly CancellationTokenSource _cts = new();
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
-            private ManualResetValueTaskSource<bool> _tsMaxConcurrent = new();
-            private ManualResetValueTaskSource<bool> _tsEmitting;
+            private ManualResetValueTaskSource<bool>? _tsMaxConcurrent;
+            private ManualResetValueTaskSource<bool>? _tsEmitting;
             private CancellationTokenRegistration _ctr;
             private AsyncTaskMethodBuilder _atmbDisposed;
             private int _state;
-            private Exception _error;
+            private Exception? _error;
             private int _active;
-            private Queue<(ManualResetValueTaskSource<bool>, T)> _queue = new();
+            private Queue<(ManualResetValueTaskSource<bool>, T)>? _queue = new();
 
             public MergeIterator(IAsyncEnumerable<IAsyncEnumerable<T>> sources, int maxConcurrent)
             {
@@ -108,9 +108,10 @@
                     return new MergeIterator<T>(this).GetAsyncEnumerator(token);
                 }
 
+                var tsMaxConcurrent = _tsMaxConcurrent = new();
                 _active = 1;
                 _state = _sEmitting;
-                ProduceOuter();
+                ProduceOuter(tsMaxConcurrent);
 
                 if (token.CanBeCanceled)
                     _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
@@ -118,7 +119,7 @@
                 return this;
             }
 
-            public T Current { get; private set; }
+            public T Current { get; private set; } = default!;
 
             public ValueTask<bool> MoveNextAsync()
             {
@@ -139,6 +140,8 @@
                 if (state == _sEmitting) // make sure _tsEmitting gets released
                 {
                     var tsEmitting = Linx.Clear(ref _tsEmitting);
+                    Debug.Assert(tsEmitting is not null);
+                    Debug.Assert(_queue is not null);
 
                     if (_queue.Count > 0) // yield the next item from the queue
                     {
@@ -175,7 +178,7 @@
                         break;
 
                     case _sError:
-                        Debug.Assert(_queue.Count > 0);
+                        Debug.Assert(_queue is not null && _queue.Count > 0);
                         var (ts, item) = _queue.Dequeue();
                         Current = item;
                         if (_queue.Count == 0)
@@ -191,7 +194,7 @@
                         break;
 
                     case _sFinal:
-                        Current = default;
+                        Current = default!;
                         _state = _sFinal;
                         _tsAccepting.SetExceptionOrResult(_error, false);
                         break;
@@ -206,11 +209,11 @@
             public ValueTask DisposeAsync()
             {
                 SetFinal(AsyncEnumeratorDisposedException.Instance); ;
-                Current = default;
+                Current = default!;
                 return new(_atmbDisposed.Task);
             }
 
-            private void SetCompleted(Exception errorOrNot)
+            private void SetCompleted(Exception? errorOrNot)
             {
                 var state = Atomic.Lock(ref _state);
 
@@ -220,6 +223,8 @@
                 switch (state)
                 {
                     case _sEmitting:
+                        Debug.Assert(_tsEmitting is not null);
+                        Debug.Assert(_queue is not null);
                         if (errorOrNot is not null)
                         {
                             if (_queue.Count == 0)
@@ -256,7 +261,7 @@
                         }
                         else
                         {
-                            Current = default;
+                            Current = default!;
                             SetFinal(_sAccepting, errorOrNot);
                         }
                         break;
@@ -278,7 +283,7 @@
 
             private void SetFinal(Exception errorOrNot) => SetFinal(Atomic.Lock(ref _state), errorOrNot);
 
-            private void SetFinal(int state, Exception errorOrNot)
+            private void SetFinal(int state, Exception? errorOrNot)
             {
                 Debug.Assert((state & Atomic.LockBit) == 0 && _state == (state | Atomic.LockBit));
 
@@ -291,6 +296,7 @@
                     case _sEmitting:
                     case _sAccepting:
                     case _sError:
+                        Debug.Assert(_queue is not null);
                         _error = errorOrNot;
                         var tsMaxConcurrent = Linx.Clear(ref _tsMaxConcurrent);
                         var tsEmitting = Linx.Clear(ref _tsEmitting);
@@ -318,12 +324,11 @@
                 }
             }
 
-            private async void ProduceOuter()
+            private async void ProduceOuter(ManualResetValueTaskSource<bool> tsMaxConcurrent)
             {
-                Exception error = null;
+                Exception? error = null;
                 try
                 {
-                    var tsMaxConcurrent = _tsMaxConcurrent;
                     if (!await tsMaxConcurrent.Task.ConfigureAwait(false)) // completes on first call to MoveNext or SetFinal
                         return;
                     tsMaxConcurrent.Reset();
@@ -365,7 +370,7 @@
 
             private async void ProduceInner(IAsyncEnumerable<T> source)
             {
-                Exception error = null;
+                Exception? error = null;
                 try
                 {
                     ManualResetValueTaskSource<bool> tsEmitting = new();
@@ -375,12 +380,13 @@
                         switch (_state)
                         {
                             case _sEmitting:
+                                Debug.Assert(_queue is not null);
                                 try { _queue.Enqueue((tsEmitting, item)); }
                                 finally { _state = _sEmitting; }
                                 break;
 
                             case _sAccepting:
-                                Debug.Assert(_queue.Count == 0);
+                                Debug.Assert(_queue is not null && _queue.Count == 0);
                                 Current = item;
                                 _tsEmitting = tsEmitting;
                                 _state = _sEmitting;

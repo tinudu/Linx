@@ -14,14 +14,14 @@
             this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             CancellationToken token,
-            IEqualityComparer<TKey> comparer = null)
+            IEqualityComparer<TKey>? comparer = null) where TKey : notnull
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             token.ThrowIfCancellationRequested();
 
             var result = new Dictionary<TKey, TSource>(comparer);
-            await foreach(var item in source.WithCancellation(token).ConfigureAwait(false)) 
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
                 result.Add(keySelector(item), item);
             return result;
         }
@@ -34,7 +34,7 @@
             Func<TSource, TKey> keySelector,
             Func<TSource, TValue> valueSelector,
             CancellationToken token,
-            IEqualityComparer<TKey> comparer = null)
+            IEqualityComparer<TKey>? comparer = null) where TKey : notnull
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
@@ -53,7 +53,7 @@
         public static async Task<IDictionary<TKey, TValue>> ToDictionary<TKey, TValue>(
             this IAsyncEnumerable<KeyValuePair<TKey, TValue>> source,
             CancellationToken token,
-            IEqualityComparer<TKey> comparer = null)
+            IEqualityComparer<TKey>? comparer = null) where TKey : notnull
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             token.ThrowIfCancellationRequested();

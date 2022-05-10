@@ -9,12 +9,11 @@
         /// <summary>
         /// Returns the minimum element of a sequence, or a default value.
         /// </summary>
-        public static T? MinOrNull<T>(this IEnumerable<T> source, IComparer<T> comparer = null) where T : struct
+        public static T? MinOrNull<T>(this IEnumerable<T> source, IComparer<T>? comparer = null) where T : struct
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
 
-            // ReSharper disable once GenericEnumeratorNotDisposed
             using var e = source.GetEnumerator();
             if (!e.MoveNext()) return default;
             var min = e.Current;
@@ -29,34 +28,36 @@
         /// <summary>
         /// Returns the minimum element of a projection of a sequence, or a default value.
         /// </summary>
-        public static TResult? MinOrNull<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null) where TResult : struct
+        public static TResult? MinOrNull<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult>? comparer = null) where TResult : struct
             => source.Select(selector).MinOrNull(comparer);
 
         /// <summary>
         /// Returns the elements of a sequence witch have the minimum non-null key.
         /// </summary>
-        public static IList<TSource> MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer = null)
+        public static IList<TSource> MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey>? comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             if (comparer == null) comparer = Comparer<TKey>.Default;
 
-            TKey min = default;
-            var result = new List<TSource>();
-            foreach (var element in source)
+            using var e = source.Select(x => (key: keySelector(x), value: x)).Where(x => x.key is not null).GetEnumerator();
+            if(!e.MoveNext())
+                return Array.Empty<TSource>();
+
+            var item = e.Current;
+            TKey min = item.key;
+            var result = new List<TSource> { item.value };
+            while(e.MoveNext())
             {
-                var key = keySelector(element);
-                if (key == null) continue;
-                if (result.Count == 0)
-                    min = key;
-                else
+                item = e.Current;
+                var cmp = comparer.Compare(item.key, min);
+                if (cmp > 0) continue;
+                if (cmp < 0)
                 {
-                    var cmp = comparer.Compare(key, min);
-                    if (cmp > 0) continue;
-                    min = key;
-                    if (cmp < 0) result.Clear();
+                    min = item.key;
+                    result.Clear();
                 }
-                result.Add(element);
+                result.Add(item.value);
             }
             return result;
         }
@@ -64,12 +65,11 @@
         /// <summary>
         /// Returns the maximum element of a sequence, or a default value.
         /// </summary>
-        public static T? MaxOrNull<T>(this IEnumerable<T> source, IComparer<T> comparer = null) where T : struct
+        public static T? MaxOrNull<T>(this IEnumerable<T> source, IComparer<T>? comparer = null) where T : struct
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
 
-            // ReSharper disable once GenericEnumeratorNotDisposed
             using var e = source.GetEnumerator();
             if (!e.MoveNext()) return default;
             var max = e.Current;
@@ -84,34 +84,36 @@
         /// <summary>
         /// Returns the maximum element of a projection of a sequence, or a default value.
         /// </summary>
-        public static TResult? MaxOrNull<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null) where TResult : struct
+        public static TResult? MaxOrNull<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult>? comparer = null) where TResult : struct
             => source.Select(selector).MaxOrNull(comparer);
 
         /// <summary>
         /// Returns the elements of a sequence witch have the maximum non-null key.
         /// </summary>
-        public static IList<TSource> MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer = null)
+        public static IList<TSource> MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey>? comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             if (comparer == null) comparer = Comparer<TKey>.Default;
 
-            TKey max = default;
-            var result = new List<TSource>();
-            foreach (var element in source)
+            using var e = source.Select(x => (key: keySelector(x), value: x)).Where(x => x.key is not null).GetEnumerator();
+            if(!e.MoveNext())
+                return Array.Empty<TSource>();
+
+            var item = e.Current;
+            TKey max = item.key;
+            var result = new List<TSource> { item.value };
+            while(e.MoveNext())
             {
-                var key = keySelector(element);
-                if (key == null) continue;
-                if (result.Count == 0)
-                    max = key;
-                else
+                item = e.Current;
+                var cmp = comparer.Compare(item.key, max);
+                if (cmp < 0) continue;
+                if (cmp > 0)
                 {
-                    var cmp = comparer.Compare(key, max);
-                    if (cmp < 0) continue;
-                    max = key;
-                    if (cmp > 0) result.Clear();
+                    max = item.key;
+                    result.Clear();
                 }
-                result.Add(element);
+                result.Add(item.value);
             }
             return result;
         }

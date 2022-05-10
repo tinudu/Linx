@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Linx.AsyncEnumerable
 {
@@ -32,7 +33,7 @@ namespace Linx.AsyncEnumerable
         private sealed class LeastRecentOneQueue<T> : IQueue<T, Lossy<T>>
         {
             private bool _hasValue;
-            private T _item;
+            private T? _item;
             private int _ignoredCount;
 
             public bool Backpressure => false;
@@ -54,9 +55,9 @@ namespace Linx.AsyncEnumerable
             {
                 if (IsEmpty) throw new InvalidOperationException(Strings.QueueIsEmpty);
 
-                var result = new Lossy<T>(_item, _ignoredCount);
+                var result = new Lossy<T>(_item!, _ignoredCount);
                 _hasValue = false;
-                _item = default;
+                _item = default!;
                 _ignoredCount = 0;
                 return result;
             }
@@ -81,6 +82,7 @@ namespace Linx.AsyncEnumerable
             {
                 if (IsFull)
                 {
+                    Debug.Assert(Buffer is not null);
                     var ixLast = Offset - 1;
                     if (ixLast < 0) ixLast += Buffer.Length;
                     checked { Buffer[ixLast].Item2++; }

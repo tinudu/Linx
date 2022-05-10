@@ -39,8 +39,8 @@
         private sealed class CombineTuple<T1, T2>
         {
             private int _missing;
-            private T1 _value1;
-            private T2 _value2;
+            private T1 _value1 = default!;
+            private T2 _value2 = default!;
 
             public CombineTuple(bool startAtFirstElement)
             {
@@ -105,9 +105,9 @@
         private sealed class CombineTuple<T1, T2, T3>
         {
             private int _missing;
-            private T1 _value1;
-            private T2 _value2;
-            private T3 _value3;
+            private T1 _value1 = default!;
+            private T2 _value2 = default!;
+            private T3 _value3 = default!;
 
             public CombineTuple(bool startAtFirstElement)
             {
@@ -184,10 +184,10 @@
         private sealed class CombineTuple<T1, T2, T3, T4>
         {
             private int _missing;
-            private T1 _value1;
-            private T2 _value2;
-            private T3 _value3;
-            private T4 _value4;
+            private T1 _value1 = default!;
+            private T2 _value2 = default!;
+            private T3 _value3 = default!;
+            private T4 _value4 = default!;
 
             public CombineTuple(bool startAtFirstElement)
             {
@@ -276,11 +276,11 @@
         private sealed class CombineTuple<T1, T2, T3, T4, T5>
         {
             private int _missing;
-            private T1 _value1;
-            private T2 _value2;
-            private T3 _value3;
-            private T4 _value4;
-            private T5 _value5;
+            private T1 _value1 = default!;
+            private T2 _value2 = default!;
+            private T3 _value3 = default!;
+            private T4 _value4 = default!;
+            private T5 _value5 = default!;
 
             public CombineTuple(bool startAtFirstElement)
             {
@@ -381,12 +381,12 @@
         private sealed class CombineTuple<T1, T2, T3, T4, T5, T6>
         {
             private int _missing;
-            private T1 _value1;
-            private T2 _value2;
-            private T3 _value3;
-            private T4 _value4;
-            private T5 _value5;
-            private T6 _value6;
+            private T1 _value1 = default!;
+            private T2 _value2 = default!;
+            private T3 _value3 = default!;
+            private T4 _value4 = default!;
+            private T5 _value5 = default!;
+            private T6 _value6 = default!;
 
             public CombineTuple(bool startAtFirstElement)
             {
@@ -499,13 +499,13 @@
         private sealed class CombineTuple<T1, T2, T3, T4, T5, T6, T7>
         {
             private int _missing;
-            private T1 _value1;
-            private T2 _value2;
-            private T3 _value3;
-            private T4 _value4;
-            private T5 _value5;
-            private T6 _value6;
-            private T7 _value7;
+            private T1 _value1 = default!;
+            private T2 _value2 = default!;
+            private T3 _value3 = default!;
+            private T4 _value4 = default!;
+            private T5 _value5 = default!;
+            private T6 _value6 = default!;
+            private T7 _value7 = default!;
 
             public CombineTuple(bool startAtFirstElement)
             {

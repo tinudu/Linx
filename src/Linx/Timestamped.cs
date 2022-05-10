@@ -18,19 +18,28 @@
         /// <summary>
         /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="TimeInterval{T}"/> using the specified comparer for <typeparamref name="T"/>.
         /// </summary>
-        public static IEqualityComparer<Timestamped<T>> GetEqualityComparer<T>(IEqualityComparer<T> valueComparer) => TimestampedEqualityComparer<T>.Create(valueComparer);
+        public static IEqualityComparer<Timestamped<T>> GetEqualityComparer<T>(IEqualityComparer<T>? valueComparer) =>
+            valueComparer == null || valueComparer == EqualityComparer<Timestamped<T>>.Default
+                ? EqualityComparer<Timestamped<T>>.Default
+                : new TimestampedEqualityComparer<T>(valueComparer);
 
         private sealed class TimestampedEqualityComparer<T> : IEqualityComparer<Timestamped<T>>
         {
-            public static IEqualityComparer<Timestamped<T>> Create(IEqualityComparer<T> valueComparer)
-                => valueComparer == null || valueComparer == EqualityComparer<Timestamped<T>>.Default
-                    ? (IEqualityComparer<Timestamped<T>>)EqualityComparer<Timestamped<T>>.Default
-                    : new TimestampedEqualityComparer<T>(valueComparer);
-
             private readonly IEqualityComparer<T> _valueComparer;
-            private TimestampedEqualityComparer(IEqualityComparer<T> valueComparer) => _valueComparer = valueComparer;
-            public bool Equals(Timestamped<T> x, Timestamped<T> y) => x.Timestamp == y.Timestamp && _valueComparer.Equals(x.Value, y.Value);
-            public int GetHashCode(Timestamped<T> obj) => HashCode.Combine(obj.Timestamp, _valueComparer.GetHashCode(obj.Value));
+
+            public TimestampedEqualityComparer(IEqualityComparer<T> valueComparer) => _valueComparer = valueComparer;
+
+            public bool Equals(Timestamped<T> x, Timestamped<T> y) =>
+                x.Timestamp == y.Timestamp &&
+                _valueComparer.Equals(x.Value, y.Value);
+
+            public int GetHashCode(Timestamped<T> obj)
+            {
+                var hc = new HashCode();
+                hc.Add(obj.Timestamp);
+                hc.Add(obj.Value, _valueComparer);
+                return hc.ToHashCode();
+            }
         }
     }
 
@@ -63,7 +72,7 @@
         public bool Equals(Timestamped<T> other) => Timestamp == other.Timestamp && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
         /// <inheritdoc />
-        public override bool Equals(object obj) => obj is Timestamped<T> other && Equals(other);
+        public override bool Equals(object? obj) => obj is Timestamped<T> other && Equals(other);
 
         /// <summary>
         /// Equality.
@@ -76,7 +85,7 @@
         public static bool operator !=(Timestamped<T> left, Timestamped<T> right) => !left.Equals(right);
 
         /// <inheritdoc />
-        public override int GetHashCode() => HashCode.Combine(Timestamp, EqualityComparer<T>.Default.GetHashCode(Value));
+        public override int GetHashCode() => HashCode.Combine(Timestamp, Value);
 
         /// <inheritdoc />
         public override string ToString() => $"{Value}@{Timestamp}";

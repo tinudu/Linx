@@ -20,12 +20,11 @@ namespace Linx.Enumerable
         /// <summary>
         /// Returns the <#= mm.Op1 #>imum element of a sequence, or a default value.
         /// </summary>
-        public static T? <#= mm.Op #>OrNull<T>(this IEnumerable<T> source, IComparer<T> comparer = null) where T : struct
+        public static T? <#= mm.Op #>OrNull<T>(this IEnumerable<T> source, IComparer<T>? comparer = null) where T : struct
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = Comparer<T>.Default;
 
-            // ReSharper disable once GenericEnumeratorNotDisposed
             using var e = source.GetEnumerator();
             if (!e.MoveNext()) return default;
             var <#= mm.Op1 #> = e.Current;
@@ -40,34 +39,36 @@ namespace Linx.Enumerable
         /// <summary>
         /// Returns the <#= mm.Op1 #>imum element of a projection of a sequence, or a default value.
         /// </summary>
-        public static TResult? <#= mm.Op #>OrNull<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult> comparer = null) where TResult : struct
+        public static TResult? <#= mm.Op #>OrNull<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector, IComparer<TResult>? comparer = null) where TResult : struct
             => source.Select(selector).<#= mm.Op #>OrNull(comparer);
 
         /// <summary>
         /// Returns the elements of a sequence witch have the <#= mm.Op1 #>imum non-null key.
         /// </summary>
-        public static IList<TSource> <#= mm.Op #>By<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer = null)
+        public static IList<TSource> <#= mm.Op #>By<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey>? comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             if (comparer == null) comparer = Comparer<TKey>.Default;
 
-            TKey <#= mm.Op1 #> = default;
-            var result = new List<TSource>();
-            foreach (var element in source)
+            using var e = source.Select(x => (key: keySelector(x), value: x)).Where(x => x.key is not null).GetEnumerator();
+            if(!e.MoveNext())
+                return Array.Empty<TSource>();
+
+            var item = e.Current;
+            TKey <#= mm.Op1 #> = item.key;
+            var result = new List<TSource> { item.value };
+            while(e.MoveNext())
             {
-                var key = keySelector(element);
-                if (key == null) continue;
-                if (result.Count == 0)
-                    <#= mm.Op1 #> = key;
-                else
+                item = e.Current;
+                var cmp = comparer.Compare(item.key, <#= mm.Op1 #>);
+                if (cmp <#= mm.InvCmp #> 0) continue;
+                if (cmp <#= mm.Cmp #> 0)
                 {
-                    var cmp = comparer.Compare(key, <#= mm.Op1 #>);
-                    if (cmp <#= mm.InvCmp #> 0) continue;
-                    <#= mm.Op1 #> = key;
-                    if (cmp <#= mm.Cmp #> 0) result.Clear();
+                    <#= mm.Op1 #> = item.key;
+                    result.Clear();
                 }
-                result.Add(element);
+                result.Add(item.value);
             }
             return result;
         }

@@ -38,7 +38,7 @@
                         _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
                 }
 
-                public T Current => default;
+                public T Current => default!;
 
                 public ValueTask<bool> MoveNextAsync() => new(_atmbMoveNext.Task);
 

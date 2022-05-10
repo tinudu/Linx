@@ -15,7 +15,7 @@
         /// Create empty.
         /// </summary>
         /// <param name="comparer">Optional. Item comparer.</param>
-        public PriorityQueue(IComparer<T> comparer = null)
+        public PriorityQueue(IComparer<T>? comparer = null)
         {
             _heap = new List<T>();
             _comparer = comparer ?? Comparer<T>.Default;
@@ -26,9 +26,10 @@
         /// </summary>
         /// <param name="initial">Initial items.</param>
         /// <param name="comparer">Optional. Item comparer.</param>
-        public PriorityQueue(IEnumerable<T> initial, IComparer<T> comparer = null)
+        public PriorityQueue(IEnumerable<T> initial, IComparer<T>? comparer = null)
         {
             if (initial == null) throw new ArgumentNullException(nameof(initial));
+
             _heap = new List<T>(initial);
             _comparer = comparer ?? Comparer<T>.Default;
             for (var i = (_heap.Count - 1) >> 1; i >= 0; i--)

@@ -18,30 +18,36 @@
         /// <summary>
         /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="KeyValuePair{TKey,TValue}"/> using the specified individual comparers for <typeparamref name="TKey"/> and <typeparamref name="TValue"/>.
         /// </summary>
-        public static IEqualityComparer<KeyValuePair<TKey, TValue>> GetEqualityComparer<TKey, TValue>(IEqualityComparer<TKey> keyComparer, IEqualityComparer<TValue> valueComparer) => KeyValueEqualityComparer<TKey, TValue>.Create(keyComparer, valueComparer);
+        public static IEqualityComparer<KeyValuePair<TKey, TValue>> GetEqualityComparer<TKey, TValue>(IEqualityComparer<TKey>? keyComparer, IEqualityComparer<TValue>? valueComparer)
+        {
+            if (keyComparer == null) keyComparer = EqualityComparer<TKey>.Default;
+            if (valueComparer == null) valueComparer = EqualityComparer<TValue>.Default;
+            return keyComparer == EqualityComparer<TKey>.Default && valueComparer == EqualityComparer<TValue>.Default
+                ? EqualityComparer<KeyValuePair<TKey, TValue>>.Default
+                : new KeyValueEqualityComparer<TKey, TValue>(keyComparer, valueComparer);
+        }
 
         private sealed class KeyValueEqualityComparer<TKey, TValue> : IEqualityComparer<KeyValuePair<TKey, TValue>>
         {
-            public static IEqualityComparer<KeyValuePair<TKey, TValue>> Create(IEqualityComparer<TKey> keyComparer, IEqualityComparer<TValue> valueComparer)
-            {
-                if (keyComparer == null) keyComparer = EqualityComparer<TKey>.Default;
-                if (valueComparer == null) valueComparer = EqualityComparer<TValue>.Default;
-                return keyComparer == EqualityComparer<TKey>.Default && valueComparer == EqualityComparer<TValue>.Default
-                    ? (IEqualityComparer<KeyValuePair<TKey, TValue>>)EqualityComparer<KeyValuePair<TKey, TValue>>.Default
-                    : new KeyValueEqualityComparer<TKey, TValue>(keyComparer, valueComparer);
-            }
-
             private readonly IEqualityComparer<TKey> _keyComparer;
             private readonly IEqualityComparer<TValue> _valueComparer;
 
-            private KeyValueEqualityComparer(IEqualityComparer<TKey> keyComparer, IEqualityComparer<TValue> valueComparer)
+            public KeyValueEqualityComparer(IEqualityComparer<TKey> keyComparer, IEqualityComparer<TValue> valueComparer)
             {
                 _keyComparer = keyComparer;
                 _valueComparer = valueComparer;
             }
 
-            public bool Equals(KeyValuePair<TKey, TValue> x, KeyValuePair<TKey, TValue> y) => _keyComparer.Equals(x.Key, y.Key) && _valueComparer.Equals(x.Value, y.Value);
-            public int GetHashCode(KeyValuePair<TKey, TValue> obj) => HashCode.Combine(_keyComparer.GetHashCode(obj.Key), _valueComparer.GetHashCode(obj.Value));
+            public bool Equals(KeyValuePair<TKey, TValue> x, KeyValuePair<TKey, TValue> y) =>
+                _keyComparer.Equals(x.Key, y.Key) && _valueComparer.Equals(x.Value, y.Value);
+
+            public int GetHashCode(KeyValuePair<TKey, TValue> obj)
+            {
+                var hc = new HashCode();
+                hc.Add(obj.Key, _keyComparer);
+                hc.Add(obj.Value, _valueComparer);
+                return hc.ToHashCode();
+            }
         }
     }
 }

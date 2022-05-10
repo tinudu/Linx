@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
@@ -18,7 +19,8 @@
         /// <returns>The previous value at the location.</returns>
         [DebuggerNonUserCode]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T Clear<T>(ref T storageLocation)
+        [return: NotNullIfNotNull("storageLocation")]
+        public static T? Clear<T>(ref T? storageLocation)
         {
             var oldValue = storageLocation;
             storageLocation = default;

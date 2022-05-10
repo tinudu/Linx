@@ -20,7 +20,7 @@ namespace Linx.AsyncEnumerable
             T GetResult(short version);
         }
 
-        private readonly IProvider _provider;
+        private readonly IProvider? _provider;
         private readonly short _version;
 
         internal Deferred(IProvider provider, short version)
@@ -33,6 +33,6 @@ namespace Linx.AsyncEnumerable
         /// Gets the value.
         /// </summary>
         /// <exception cref="InvalidOperationException">The <see cref="Deferred{T}"/> has expired.</exception>
-        public T GetResult() => _provider is null ? default : _provider.GetResult(_version);
+        public T GetResult() => _provider is null ? default! : _provider.GetResult(_version);
     }
 }

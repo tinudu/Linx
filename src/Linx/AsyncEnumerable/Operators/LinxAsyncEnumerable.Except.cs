@@ -11,7 +11,7 @@
         /// <summary>
         /// Produces the set difference of two sequences.
         /// </summary>
-        public static IAsyncEnumerable<T> Except<T>(this IAsyncEnumerable<T> first, IEnumerable<T> second, IEqualityComparer<T> comparer = null)
+        public static IAsyncEnumerable<T> Except<T>(this IAsyncEnumerable<T> first, IEnumerable<T> second, IEqualityComparer<T>? comparer = null)
         {
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));

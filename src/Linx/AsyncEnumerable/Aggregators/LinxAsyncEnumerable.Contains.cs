@@ -10,7 +10,7 @@
         /// <summary>
         /// Determines whether a sequence contains a specified element.
         /// </summary>
-        public static async Task<bool> Contains<T>(this IAsyncEnumerable<T> source, T value, CancellationToken token, IEqualityComparer<T> comparer = null)
+        public static async Task<bool> Contains<T>(this IAsyncEnumerable<T> source, T value, CancellationToken token, IEqualityComparer<T>? comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = EqualityComparer<T>.Default;

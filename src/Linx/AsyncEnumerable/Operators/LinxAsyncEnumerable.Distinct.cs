@@ -11,7 +11,7 @@
         /// <summary>
         /// Returns distinct elements from a sequence
         /// </summary>
-        public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T> comparer = null)
+        public static IAsyncEnumerable<T> Distinct<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T>? comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 

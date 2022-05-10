@@ -37,7 +37,7 @@
             }
 
             IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken cancellationToken) => this;
-            T IAsyncEnumerator<T>.Current => default;
+            T IAsyncEnumerator<T>.Current => default!;
             ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync() => _failed;
             ValueTask IAsyncDisposable.DisposeAsync() => new(Task.CompletedTask);
         }

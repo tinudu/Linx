@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
     using Tasks;
@@ -14,8 +15,8 @@
         public ManualResetValueTaskSource<bool> TsAccepting = new();
         public ManualResetValueTaskSource<bool> TsEmitting = new();
         public EnumeratorState State;
-        public Exception Error;
-        public Task Disposed;
+        public Exception? Error;
+        public Task? Disposed;
 
         public Enumerator(ISubject<T> subject, CancellationToken token)
         {
@@ -23,7 +24,7 @@
             if (token.CanBeCanceled) _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
         }
 
-        public T Current { get; set; }
+        public T Current { get; set; } = default!;
 
         ValueTask<bool> IAsyncEnumerator<T>.MoveNextAsync()
         {
@@ -44,7 +45,7 @@
                     break;
 
                 case EnumeratorState.Final:
-                    Current = default;
+                    Current = default!;
                     _subject.Gate.Set();
                     TsAccepting.SetExceptionOrResult(Error, false);
                     break;
@@ -62,6 +63,7 @@
         ValueTask IAsyncDisposable.DisposeAsync()
         {
             SetFinal(AsyncEnumeratorDisposedException.Instance);
+            Debug.Assert(Disposed is not null);
             return new ValueTask(Disposed);
         }
 
@@ -82,7 +84,7 @@
                     Error = errorOpt;
                     Disposed = _subject.RemoveLocked(this);
                     State = EnumeratorState.Final;
-                    Current = default;
+                    Current = default!;
                     _subject.Gate.Set();
                     _ctr.Dispose();
                     TsAccepting.SetExceptionOrResult(errorOpt, false);

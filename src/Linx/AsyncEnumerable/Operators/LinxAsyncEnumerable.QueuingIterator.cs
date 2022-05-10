@@ -44,7 +44,7 @@ namespace Linx.AsyncEnumerable
             private readonly int _maxCapacity;
             private readonly int _initialCapacity;
 
-            private TQueue[] _buffer;
+            private TQueue[]? _buffer;
             private int _offset, _count;
 
             protected QueueBase(int maxCapacity, bool initialCapacity1)
@@ -63,7 +63,7 @@ namespace Linx.AsyncEnumerable
                 }
             }
 
-            protected TQueue[] Buffer => _buffer;
+            protected TQueue[]? Buffer => _buffer;
             protected int Offset => _offset;
             public bool IsEmpty => _count == 0;
             public bool IsFull => _count == _maxCapacity;
@@ -122,7 +122,8 @@ namespace Linx.AsyncEnumerable
             {
                 if (IsEmpty) throw new InvalidOperationException(Strings.QueueIsEmpty);
 
-                var result = Linx.Clear(ref _buffer[_offset++]);
+                Debug.Assert(_buffer is not null);
+                var result = Linx.Clear(ref _buffer[_offset++]!);
                 if (--_count == 0)
                 {
                     _offset = 0;
@@ -137,6 +138,7 @@ namespace Linx.AsyncEnumerable
             protected IReadOnlyCollection<TQueue> DequeueAll()
             {
                 if (IsEmpty) throw new InvalidOperationException(Strings.QueueIsEmpty);
+                Debug.Assert(_buffer is not null);
 
                 IReadOnlyCollection<TQueue> result;
                 if (_offset == 0)
@@ -171,7 +173,7 @@ namespace Linx.AsyncEnumerable
         private abstract class ListQueueBase<TSource, TResult> : IQueue<TSource, TResult>
         {
             private readonly int _maxCapacity;
-            private TSource[] _buffer;
+            private TSource[]? _buffer;
             private int _count;
 
             protected ListQueueBase(int maxCapacity)
@@ -221,6 +223,7 @@ namespace Linx.AsyncEnumerable
             protected IReadOnlyList<TSource> DequeueAll()
             {
                 if (IsEmpty) throw new InvalidOperationException(Strings.QueueIsEmpty);
+                Debug.Assert(_buffer is not null);
 
                 IReadOnlyList<TSource> result = _count == _buffer.Length ? _buffer : new ArraySegment<TSource>(_buffer, 0, _count);
                 _buffer = null;
@@ -289,12 +292,12 @@ namespace Linx.AsyncEnumerable
 
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private readonly CancellationTokenSource _cts = new();
-            private ManualResetValueTaskSource<bool> _tsProduce = new();
+            private ManualResetValueTaskSource<bool>? _tsProduce;
             private CancellationTokenRegistration _ctr;
             private AsyncTaskMethodBuilder _atmbDisposed;
             private int _state;
-            private Exception _error;
-            private IQueue<TSource, TResult> _queue;
+            private Exception? _error;
+            private IQueue<TSource, TResult>? _queue;
             private short _version;
             private bool _isVersionValid;
 
@@ -317,8 +320,9 @@ namespace Linx.AsyncEnumerable
                     return new QueueingIterator<TSource, TResult>(_source, _queueFactory).GetAsyncEnumerator(token);
                 }
 
+                var tsProduce = _tsProduce = new();
                 _state = _sEmitting;
-                Produce(_tsProduce, token);
+                Produce(tsProduce, token);
                 return this;
             }
 
@@ -333,6 +337,7 @@ namespace Linx.AsyncEnumerable
                         throw new InvalidOperationException();
 
                     case _sEmitting:
+                        Debug.Assert(_queue is not null);
                         if (_isVersionValid && !_queue.IsEmpty) // not dequeued
                             _queue.DequeueFailSafe();
 
@@ -374,7 +379,7 @@ namespace Linx.AsyncEnumerable
 
             TResult Deferred<TResult>.IProvider.GetResult(short version)
             {
-                ManualResetValueTaskSource<bool> tsProduce = null;
+                ManualResetValueTaskSource<bool>? tsProduce = null;
 
                 var state = Atomic.Lock(ref _state);
                 try
@@ -382,8 +387,9 @@ namespace Linx.AsyncEnumerable
                     if (version != _version || !_isVersionValid)
                         throw new InvalidOperationException();
 
+                    Debug.Assert(_queue is not null);
                     if (_queue.IsEmpty) // called before MoveNextAsync returned true
-                        return default;
+                        return default!;
 
                     var result = _queue.Dequeue();
                     _isVersionValid = false;
@@ -400,9 +406,9 @@ namespace Linx.AsyncEnumerable
 
             public Deferred<TResult> Current { get; private set; }
 
-            private void SetFinal(Exception errorOrNot)
+            private void SetFinal(Exception? errorOrNot)
             {
-                ManualResetValueTaskSource<bool> tsProduce;
+                ManualResetValueTaskSource<bool>? tsProduce;
 
                 var state = Atomic.Lock(ref _state);
                 switch (state)
@@ -445,7 +451,7 @@ namespace Linx.AsyncEnumerable
 
             private async void Produce(ManualResetValueTaskSource<bool> tsProduce, CancellationToken token)
             {
-                Exception error = null;
+                Exception? error = null;
                 try
                 {
                     if (token.CanBeCanceled)
@@ -465,6 +471,7 @@ namespace Linx.AsyncEnumerable
                             {
                                 case _sAccepting:
                                 case _sEmitting:
+                                    Debug.Assert(_queue is not null);
                                     if (_queue.Backpressure)
                                     {
                                         _tsProduce = tsProduce;

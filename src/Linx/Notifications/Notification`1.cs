@@ -1,6 +1,7 @@
 ﻿namespace Linx.Notifications
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
 
     /// <summary>
@@ -9,6 +10,9 @@
     [DebuggerNonUserCode]
     public struct Notification<T> : IEquatable<Notification<T>>
     {
+        private readonly T? _value;
+        private readonly Exception? _error;
+
         /// <summary>
         /// Gets the <see cref="NotificationKind"/>.
         /// </summary>
@@ -17,18 +21,18 @@
         /// <summary>
         /// Gets the value of a <see cref="NotificationKind.Next"/> notification.
         /// </summary>
-        public T Value { get; }
+        public T Value => Kind == NotificationKind.Next ? _value! : throw new InvalidOperationException();
 
         /// <summary>
         /// Gets the error of a <see cref="NotificationKind.Error"/> notification.
         /// </summary>
-        public Exception Error { get; }
+        public Exception Error => Kind == NotificationKind.Error ? _error! : throw new InvalidOperationException();
 
         internal Notification(T value)
         {
             Kind = NotificationKind.Next;
-            Value = value;
-            Error = null;
+            _value = value;
+            _error = null;
         }
 
         /// <summary>
@@ -37,8 +41,8 @@
         internal Notification(Exception error)
         {
             Kind = NotificationKind.Error;
-            Value = default;
-            Error = error ?? throw new ArgumentNullException(nameof(error));
+            _value = default;
+            _error = error ?? throw new ArgumentNullException(nameof(error));
         }
 
         /// <summary>
@@ -47,7 +51,7 @@
         public bool Equals(Notification<T> other) => NotificationComparer<T>.Default.Equals(this, other);
 
         /// <inheritdoc />
-        public override bool Equals(object obj) => obj is Notification<T> other && NotificationComparer<T>.Default.Equals(this, other);
+        public override bool Equals(object? obj) => obj is Notification<T> other && NotificationComparer<T>.Default.Equals(this, other);
 
         /// <summary>
         /// Equality.
@@ -63,13 +67,13 @@
         public override int GetHashCode() => NotificationComparer<T>.Default.GetHashCode(this);
 
         /// <inheritdoc />
-        public override string ToString()
+        public override string? ToString()
         {
             return Kind switch
             {
-                NotificationKind.Next => (Value?.ToString() ?? string.Empty),
+                NotificationKind.Next => _value?.ToString(),
                 NotificationKind.Completed => "Completed",
-                NotificationKind.Error => $"{Error.GetType().Name}({Error.Message})",
+                NotificationKind.Error => _error!.Message,
                 _ => throw new Exception(Kind + "???")
             };
         }

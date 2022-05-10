@@ -75,7 +75,7 @@
                 }
                 finally { _gate.Set(); }
 
-                Exception error = null;
+                Exception? error = null;
                 try
                 {
                     var ae = _source.WithCancellation(_tcs.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -166,8 +166,8 @@
                 public readonly ManualResetValueTaskSource<bool> TsEmitting = new();
                 private CancellationTokenRegistration _ctr;
                 public EnumeratorState State;
-                private Exception _error;
-                private Task _tDisposed;
+                private Exception? _error;
+                private Task? _tDisposed;
 
                 public Enumerator(ConnectableEnumerable<T> enumerable, CancellationToken token)
                 {
@@ -175,7 +175,7 @@
                     if (token.CanBeCanceled) _ctr = token.Register(() => Complete(new OperationCanceledException(token)));
                 }
 
-                public T Current { get; set; }
+                public T Current { get; set; } = default!;
 
                 public ValueTask<bool> MoveNextAsync()
                 {
@@ -216,7 +216,7 @@
                             break;
 
                         case EnumeratorState.Final:
-                            Current = default;
+                            Current = default!;
                             _e._gate.Set();
                             TsAccepting.SetExceptionOrResult(_error, false);
                             break;
@@ -233,10 +233,11 @@
                 public ValueTask DisposeAsync()
                 {
                     Complete(AsyncEnumeratorDisposedException.Instance);
+                    Debug.Assert(_tDisposed is not null);
                     return new ValueTask(_tDisposed);
                 }
 
-                public void Complete(Exception errorOpt)
+                public void Complete(Exception? errorOpt)
                 {
                     _e._gate.Wait();
                     switch (State)

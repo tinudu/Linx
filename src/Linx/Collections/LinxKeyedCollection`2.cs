@@ -7,7 +7,7 @@
     /// <summary>
     /// Implementation of a <see cref="KeyedCollection{TKey,TItem}"/> with a delegate to implement <see cref="KeyedCollection{TKey,TItem}.GetKeyForItem(TItem)"/>
     /// </summary>
-    public class LinxKeyedCollection<TKey, TItem> : KeyedCollection<TKey, TItem>
+    public class LinxKeyedCollection<TKey, TItem> : KeyedCollection<TKey, TItem> where TKey : notnull
     {
         private readonly Func<TItem, TKey> _keySelector;
 

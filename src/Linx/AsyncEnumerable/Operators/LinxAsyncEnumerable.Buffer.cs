@@ -47,15 +47,15 @@ namespace Linx.AsyncEnumerable
             private readonly int _maxCapacity, _initialCapacity;
 
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
-            private ManualResetValueTaskSource<bool> _tsProduce = new();
+            private ManualResetValueTaskSource<bool>? _tsProduce;
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private AsyncTaskMethodBuilder _atmbDisposed;
             private int _state;
-            private Exception _error;
+            private Exception? _error;
 
             private int _offset, _count;
-            private T[] _queue;
+            private T?[]? _queue;
 
             public BufferIterator(IAsyncEnumerable<T> source, int maxCapacity, bool runContinuationsAsyncronously)
             {
@@ -86,15 +86,17 @@ namespace Linx.AsyncEnumerable
                     return new BufferIterator<T>(this).GetAsyncEnumerator(token);
                 }
 
-                var tsProduce = _tsProduce;
+                var tsProduce = _tsProduce = new();
                 _state = _sEmitting;
                 Produce(tsProduce);
+
                 if (token.CanBeCanceled)
                     _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
+
                 return this;
             }
 
-            public T Current { get; private set; }
+            public T Current { get; private set; } = default!;
 
             public ValueTask<bool> MoveNextAsync()
             {
@@ -134,7 +136,7 @@ namespace Linx.AsyncEnumerable
                     case _sFinal:
                         _state = _sFinal;
                         _tsAccepting.Reset();
-                        Current = default;
+                        Current = default!;
                         _tsAccepting.SetExceptionOrResult(_error, false);
                         return _tsAccepting.Task;
 
@@ -152,16 +154,16 @@ namespace Linx.AsyncEnumerable
             public ValueTask DisposeAsync()
             {
                 SetFinal(AsyncEnumeratorDisposedException.Instance);
-                Current = default;
+                Current = default!;
                 return new(_atmbDisposed.Task);
             }
 
             private T Dequeue()
             {
-                Debug.Assert(_count > 0);
+                Debug.Assert(_queue is not null && _count > 0);
                 Debug.Assert((_state & Atomic.LockBit) != 0);
 
-                var result = Linx.Clear(ref _queue[_offset]);
+                T result = Linx.Clear(ref _queue[_offset])!;
                 if (--_count == 0)
                 {
                     _offset = 0;
@@ -173,7 +175,7 @@ namespace Linx.AsyncEnumerable
                 return result;
             }
 
-            private void SetFinal(Exception errorOrNot)
+            private void SetFinal(Exception? errorOrNot)
             {
                 var state = Atomic.Lock(ref _state);
                 switch (state)
@@ -193,7 +195,7 @@ namespace Linx.AsyncEnumerable
                         tsProduce?.SetResult(false);
                         if (state == _sAccepting)
                         {
-                            Current = default;
+                            Current = default!;
                             _tsAccepting.SetExceptionOrResult(errorOrNot, false);
                         }
                         _queue = null;
@@ -211,7 +213,7 @@ namespace Linx.AsyncEnumerable
 
             private async void Produce(ManualResetValueTaskSource<bool> tsProduce)
             {
-                Exception error = null;
+                Exception? error = null;
                 try
                 {
                     if (!await tsProduce.Task.ConfigureAwait(false))

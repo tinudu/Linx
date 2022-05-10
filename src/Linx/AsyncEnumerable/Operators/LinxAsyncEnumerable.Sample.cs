@@ -51,8 +51,8 @@ namespace Linx.AsyncEnumerable
             private AsyncTaskMethodBuilder _atmbDisposed = default;
             private CancellationTokenRegistration _ctr;
             private int _state, _active;
-            private TSource _next;
-            private Exception _error;
+            private TSource? _next;
+            private Exception? _error;
 
             public SampleEnumerator(IAsyncEnumerable<TSource> source, IAsyncEnumerable<TSample> sampler, CancellationToken token)
             {
@@ -65,7 +65,7 @@ namespace Linx.AsyncEnumerable
                     _ctr = token.Register(() => Dispose(new OperationCanceledException(token)));
             }
 
-            public TSource Current { get; private set; }
+            public TSource Current { get; private set; } = default!;
 
             public ValueTask<bool> MoveNextAsync()
             {
@@ -94,13 +94,13 @@ namespace Linx.AsyncEnumerable
                         break;
 
                     case _sNextEmitting:
-                        Current = _next;
+                        Current = _next!;
                         _state = _sEmitting;
                         _tsAccepting.SetResult(true);
                         break;
 
                     case _sLastEmitting:
-                        Current = Linx.Clear(ref _next);
+                        Current = Linx.Clear(ref _next)!;
                         _state = _sFinal;
                         _ctr.Dispose();
                         _tsAccepting.SetResult(true);
@@ -108,7 +108,7 @@ namespace Linx.AsyncEnumerable
 
                     default:
                         Debug.Assert(state == _sFinal);
-                        Current = default;
+                        Current = default!;
                         _state = _sFinal;
                         _tsAccepting.SetExceptionOrResult(_error, false);
                         break;
@@ -140,7 +140,7 @@ namespace Linx.AsyncEnumerable
                     case _sAccepting:
                     case _sSourceAccepting:
                     case _sSampleAccepting:
-                        Current = _next = default;
+                        Current = _next = default!;
                         _error = error;
                         _state = _sFinal;
                         _ctr.Dispose();
@@ -173,7 +173,7 @@ namespace Linx.AsyncEnumerable
                 }
             }
 
-            private void Complete(Exception errorOpt)
+            private void Complete(Exception? errorOpt)
             {
                 if (Interlocked.Decrement(ref _active) == 0)
                     _atmbDisposed.SetResult();
@@ -184,7 +184,7 @@ namespace Linx.AsyncEnumerable
                     case _sAccepting:
                     case _sSourceAccepting:
                     case _sSampleAccepting:
-                        Current = _next = default;
+                        Current = _next = default!;
                         _error = errorOpt;
                         _state = _sFinal;
                         _ctr.Dispose();
@@ -217,7 +217,7 @@ namespace Linx.AsyncEnumerable
 
             private async void ProduceSource()
             {
-                Exception error = null;
+                Exception? error = null;
                 try
                 {
                     await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
@@ -263,7 +263,7 @@ namespace Linx.AsyncEnumerable
 
             private async void ProduceSample()
             {
-                Exception error = null;
+                Exception? error = null;
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
@@ -278,7 +278,7 @@ namespace Linx.AsyncEnumerable
                                 break;
 
                             case _sSourceAccepting:
-                                Current = _next;
+                                Current = _next!;
                                 _state = _sEmitting;
                                 _tsAccepting.SetResult(true);
                                 _cts.Token.ThrowIfCancellationRequested();

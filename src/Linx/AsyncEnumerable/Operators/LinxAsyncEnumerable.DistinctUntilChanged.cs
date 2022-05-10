@@ -11,7 +11,7 @@
         /// <summary>
         /// Returns distinct elements from a sequence
         /// </summary>
-        public static IAsyncEnumerable<T> DistinctUntilChanged<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T> comparer = null)
+        public static IAsyncEnumerable<T> DistinctUntilChanged<T>(this IAsyncEnumerable<T> source, IEqualityComparer<T>? comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (comparer == null) comparer = EqualityComparer<T>.Default;

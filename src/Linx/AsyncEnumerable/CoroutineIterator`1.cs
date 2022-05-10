@@ -15,7 +15,7 @@ namespace Linx.AsyncEnumerable
         private const int _sFinal = 3;
 
         private readonly ProduceAsyncDelegate<T> _produceAsync;
-        private readonly string _displayName;
+        private readonly string? _displayName;
 
         private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
         private readonly ManualResetValueTaskSource<bool> _tsEmitting = new();
@@ -24,7 +24,7 @@ namespace Linx.AsyncEnumerable
         private CancellationTokenRegistration _ctr;
         private int _state;
 
-        public CoroutineIterator(ProduceAsyncDelegate<T> produceAsync, string displayName)
+        public CoroutineIterator(ProduceAsyncDelegate<T> produceAsync, string? displayName)
         {
             if (produceAsync is null) throw new ArgumentNullException(nameof(produceAsync));
 
@@ -56,7 +56,7 @@ namespace Linx.AsyncEnumerable
         }
 
         /// <inheritdoc />
-        public T Current { get; private set; }
+        public T Current { get; private set; } = default!;
 
         /// <inheritdoc />
         public ValueTask<bool> MoveNextAsync()
@@ -71,7 +71,7 @@ namespace Linx.AsyncEnumerable
                     return _tsAccepting.Task;
 
                 case _sFinal:
-                    Current = default;
+                    Current = default!;
                     _state = _sFinal;
                     return new(_atmbFinal.Task);
 
@@ -89,11 +89,11 @@ namespace Linx.AsyncEnumerable
         public ValueTask DisposeAsync()
         {
             SetFinal(AsyncEnumeratorDisposedException.Instance);
-            Current = default;
+            Current = default!;
             return new(_atmbDisposed.Task);
         }
 
-        private void SetFinal(Exception error)
+        private void SetFinal(Exception? error)
         {
             var state = Atomic.Lock(ref _state);
             switch (state)
@@ -110,7 +110,7 @@ namespace Linx.AsyncEnumerable
                     break;
 
                 case _sAccepting:
-                    Current = default;
+                    Current = default!;
                     _state = _sFinal;
                     _ctr.Dispose();
                     _atmbFinal.SetExceptionOrResult(error, false);
@@ -125,7 +125,7 @@ namespace Linx.AsyncEnumerable
 
         private async void Produce(CancellationToken token)
         {
-            Exception error = null;
+            Exception? error = null;
             try
             {
                 if (!await _tsEmitting.Task.ConfigureAwait(false))
@@ -163,6 +163,6 @@ namespace Linx.AsyncEnumerable
             }
         }
 
-        public override string ToString() => _displayName;
+        public override string? ToString() => _displayName;
     }
 }

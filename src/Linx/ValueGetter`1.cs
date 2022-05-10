@@ -16,13 +16,13 @@
             T GetValue(short version);
         }
 
-        private readonly IProvider _provider;
+        private readonly IProvider? _provider;
         private short _version;
 
         /// <summary>
         /// Initialize.
         /// </summary>
-        public ValueGetter(IProvider provider, short version)
+        public ValueGetter(IProvider? provider, short version)
         {
             _provider = provider;
             _version = version;
@@ -31,6 +31,6 @@
         /// <summary>
         /// Gets the value from the encapsulated provider.
         /// </summary>
-        public T GetValue() => _provider is not null ? _provider.GetValue(_version) : default;
+        public T GetValue() => _provider is not null ? _provider.GetValue(_version) : default!;
     }
 }

@@ -9,10 +9,10 @@ namespace Linx.Collections
     {
         private readonly int _initialCapacity;
         private readonly int _maxCapacity;
-        private T[] _buffer;
+        private T[]? _buffer;
         private int _offset, _count;
 
-        public T[] Buffer => _buffer;
+        public T[]? Buffer => _buffer;
         public int Offset => _offset;
         public int Count => _count;
         public bool IsEmpty => Count == 0;
@@ -99,8 +99,9 @@ namespace Linx.Collections
         public T Dequeue()
         {
             if (_count == 0) throw new InvalidOperationException(Strings.QueueIsEmpty);
+            Debug.Assert(_buffer is not null);
 
-            var result = Linx.Clear(ref _buffer[_offset]);
+            var result = Linx.Clear(ref _buffer[_offset]!);
             if (--_count == 0)
             {
                 _offset = 0;
@@ -120,6 +121,7 @@ namespace Linx.Collections
             if (_count == 0)
                 return Array.Empty<T>();
 
+            Debug.Assert(_buffer is not null);
             IReadOnlyCollection<T> result;
             if (_offset == 0)
             {

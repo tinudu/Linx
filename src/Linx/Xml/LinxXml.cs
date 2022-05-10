@@ -36,7 +36,7 @@
         /// </summary>
         /// <exception cref="Exception">There are multiple such elements.</exception>
         /// <remarks>Preferable over <see cref="XContainer.Element(XName)"/> since it makes sure there is only one.</remarks>
-        public static XElement SingleOrDefault(this XElement element, XName name)
+        public static XElement? SingleOrDefault(this XElement element, XName name)
         {
             // ReSharper disable once GenericEnumeratorNotDisposed
             using var e = element.Elements(name).GetEnumerator();
@@ -88,7 +88,7 @@
         /// Get the value from an attribute.
         /// </summary>
         /// <returns>The attribute value or null, if the attribute is absent.</returns>
-        public static string FromAttributeOrDefault(this XElement element, XName attributeName)
+        public static string? FromAttributeOrDefault(this XElement element, XName attributeName)
         {
             if (element == null) throw new ArgumentNullException(nameof(element));
             if (attributeName == null) throw new ArgumentNullException(nameof(attributeName));
@@ -99,7 +99,7 @@
         /// Get the value from an attribute.
         /// </summary>
         /// <returns>The converted attribute value or the default value of <typeparamref name="T"/>, if the attribute is absent.</returns>
-        public static T FromAttributeOrDefault<T>(this XElement element, XName attributeName, Func<string, T> converter)
+        public static T? FromAttributeOrDefault<T>(this XElement element, XName attributeName, Func<string, T> converter)
         {
             var attr = element.Attribute(attributeName);
             return attr != null ? converter(attr.Value) : default;
@@ -132,7 +132,7 @@
         /// </summary>
         /// <returns>The converted element value or the default of <typeparamref name="T"/>, if the element is absent.</returns>
         /// <exception cref="Exception">There are multiple such elements.</exception>
-        public static T FromElementOrDefault<T>(this XElement element, XName name, Func<XElement, T> converter)
+        public static T? FromElementOrDefault<T>(this XElement element, XName name, Func<XElement, T> converter)
         {
             var single = element.SingleOrDefault(name);
             return single != null ? converter(single) : default;

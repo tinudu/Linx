@@ -11,7 +11,7 @@
         /// <summary>
         /// Produces the set intersection of two sequences.
         /// </summary>
-        public static IAsyncEnumerable<T> Intersect<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second, IEqualityComparer<T> comparer = null)
+        public static IAsyncEnumerable<T> Intersect<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second, IEqualityComparer<T>? comparer = null)
         {
             if (first is null) throw new ArgumentNullException(nameof(first));
             if (second is null) throw new ArgumentNullException(nameof(second));

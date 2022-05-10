@@ -18,7 +18,7 @@
             Func<TOuter, TKey> outerKeySelector,
             Func<TInner, TKey> innerKeySelector,
             Func<TOuter, IEnumerable<TInner>, TResult> resultSelector,
-            IEqualityComparer<TKey> comparer = null)
+            IEqualityComparer<TKey>? comparer = null)
         {
             if (outer == null) throw new ArgumentNullException(nameof(outer));
             if (inner == null) throw new ArgumentNullException(nameof(inner));

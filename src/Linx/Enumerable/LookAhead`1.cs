@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
 
     /// <summary>
     /// A wrapper around a <see cref="IEnumerator{T}"/> that looks ahead one item.
@@ -10,17 +11,19 @@
     [DebuggerNonUserCode]
     public sealed class LookAhead<T> : IDisposable
     {
-        private IEnumerator<T> _enumerator;
+        private IEnumerator<T>? _enumerator;
 
         /// <summary>
         /// Gets whether there is a next item.
         /// </summary>
+        [MemberNotNullWhen(true, nameof(Next))]
+        [MemberNotNullWhen(true, nameof(_enumerator))]
         public bool HasNext { get; private set; }
 
         /// <summary>
         /// Gets the next item (if <see cref="HasNext"/> is true).
         /// </summary>
-        public T Next { get; private set; }
+        public T? Next { get; private set; }
 
         /// <summary>
         /// Initialize wit a <see cref="IEnumerable{T}"/>.
@@ -77,8 +80,8 @@
             if (!HasNext) return;
             HasNext = false;
             Next = default;
-            _enumerator.Dispose();
-            _enumerator = null;
+            _enumerator!.Dispose();
+            _enumerator = null!;
         }
     }
 }

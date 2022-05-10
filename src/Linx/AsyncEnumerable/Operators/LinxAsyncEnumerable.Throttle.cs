@@ -46,10 +46,10 @@ namespace Linx.AsyncEnumerable
             private CancellationTokenRegistration _ctr;
             private AsyncTaskMethodBuilder _atmbDisposed = default;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
-            private ManualResetValueTaskSource<bool> _tsThrottle;
+            private ManualResetValueTaskSource<bool>? _tsThrottle;
             private int _state, _active;
-            private Exception _error;
-            private T _next;
+            private Exception? _error;
+            private T? _next;
             private DateTimeOffset _due;
 
             public ThrottleEnumerator(IAsyncEnumerable<T> source, TimeSpan interval, ITime time, CancellationToken token)
@@ -64,7 +64,7 @@ namespace Linx.AsyncEnumerable
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            public T Current { get; private set; }
+            public T Current { get; private set; } = default!;
 
             public ValueTask<bool> MoveNextAsync()
             {
@@ -87,7 +87,7 @@ namespace Linx.AsyncEnumerable
                     case _sNextEmitting:
                         if (_due <= _time.Now)
                         {
-                            Current = _next;
+                            Current = _next!;
                             _state = _sEmitting;
                             _tsAccepting.SetResult(true);
                         }
@@ -96,7 +96,7 @@ namespace Linx.AsyncEnumerable
                         break;
 
                     case _sLast:
-                        Current = Linx.Clear(ref _next);
+                        Current = Linx.Clear(ref _next)!;
                         _state = _sFinal;
                         _ctr.Dispose();
                         _tsAccepting.SetResult(true);
@@ -104,7 +104,7 @@ namespace Linx.AsyncEnumerable
 
                     default:
                         Debug.Assert(state == _sFinal);
-                        Current = default;
+                        Current = default!;
                         _state = _sFinal;
                         _tsAccepting.SetExceptionOrResult(_error, false);
                         break;
@@ -136,7 +136,7 @@ namespace Linx.AsyncEnumerable
 
                     case _sAccepting:
                     case _sNextAccepting:
-                        Current = _next = default;
+                        Current = _next = default!;
                         _error = error;
                         _state = _sFinal;
                         _ctr.Dispose();
@@ -212,7 +212,7 @@ namespace Linx.AsyncEnumerable
                     switch (state)
                     {
                         case _sAccepting:
-                            Current = _next = default;
+                            Current = _next = default!;
                             _state = _sFinal;
                             _ctr.Dispose();
                             ts?.SetResult(false);
@@ -221,7 +221,7 @@ namespace Linx.AsyncEnumerable
                             break;
 
                         case _sNextAccepting:
-                            Current = Linx.Clear(ref _next);
+                            Current = Linx.Clear(ref _next)!;
                             _state = _sFinal;
                             _ctr.Dispose();
                             ts?.SetResult(false);
@@ -276,7 +276,7 @@ namespace Linx.AsyncEnumerable
                             case _sNextAccepting:
                                 if (_due <= _time.Now)
                                 {
-                                    Current = _next;
+                                    Current = _next!;
                                     _state = _sEmitting;
                                     _tsAccepting.SetResult(true);
                                 }

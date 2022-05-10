@@ -13,20 +13,33 @@
         /// <summary>
         /// <see cref="TimeInterval{T}"/> factory method.
         /// </summary>
-        public static TimeInterval<T> Create<T>(T value, TimeSpan interval) => new(interval, value);
+        public static TimeInterval<T> Create<T>(TimeSpan interval, T value) => new(interval, value);
 
         /// <summary>
         /// Get a <see cref="IEqualityComparer{T}"/> for <see cref="TimeInterval{T}"/> using the specified comparer for <typeparamref name="T"/>.
         /// </summary>
-        public static IEqualityComparer<TimeInterval<T>> GetEqualityComparer<T>(IEqualityComparer<T> valueComparer) => TimeIntervalEqualityComparer<T>.Create(valueComparer);
+        public static IEqualityComparer<TimeInterval<T>> GetEqualityComparer<T>(IEqualityComparer<T>? valueComparer = null) =>
+            valueComparer is null || ReferenceEquals(valueComparer, EqualityComparer<T>.Default) ?
+            EqualityComparer<TimeInterval<T>>.Default :
+            new TimeIntervalEqualityComparer<T>(valueComparer);
 
         private sealed class TimeIntervalEqualityComparer<T> : IEqualityComparer<TimeInterval<T>>
         {
-            public static IEqualityComparer<TimeInterval<T>> Create(IEqualityComparer<T> valueComparer) => valueComparer == null || valueComparer == EqualityComparer<T>.Default ? (IEqualityComparer<TimeInterval<T>>)EqualityComparer<TimeInterval<T>>.Default : new TimeIntervalEqualityComparer<T>(valueComparer);
             private readonly IEqualityComparer<T> _valueComparer;
-            private TimeIntervalEqualityComparer(IEqualityComparer<T> valueComparer) => _valueComparer = valueComparer;
-            public bool Equals(TimeInterval<T> x, TimeInterval<T> y) => x.Interval == y.Interval && _valueComparer.Equals(x.Value, y.Value);
-            public int GetHashCode(TimeInterval<T> obj) => HashCode.Combine(obj.Interval, _valueComparer.GetHashCode(obj.Value));
+
+            public TimeIntervalEqualityComparer(IEqualityComparer<T> valueComparer) => _valueComparer = valueComparer;
+
+            public bool Equals(TimeInterval<T> x, TimeInterval<T> y) =>
+                x.Interval == y.Interval &&
+                _valueComparer.Equals(x.Value, y.Value);
+
+            public int GetHashCode(TimeInterval<T> obj)
+            {
+                var hc = new HashCode();
+                hc.Add(obj.Interval);
+                hc.Add(obj.Value, _valueComparer);
+                return hc.ToHashCode();
+            }
         }
     }
 
@@ -56,10 +69,12 @@
         }
 
         /// <inheritdoc />
-        public bool Equals(TimeInterval<T> other) => Interval == other.Interval && EqualityComparer<T>.Default.Equals(Value, other.Value);
+        public bool Equals(TimeInterval<T> other) =>
+            Interval == other.Interval &&
+            EqualityComparer<T>.Default.Equals(Value, other.Value);
 
         /// <inheritdoc />
-        public override bool Equals(object obj) => obj is TimeInterval<T> other && Equals(other);
+        public override bool Equals(object? obj) => obj is TimeInterval<T> other && Equals(other);
 
         /// <summary>
         /// Equality.
@@ -72,7 +87,7 @@
         public static bool operator !=(TimeInterval<T> left, TimeInterval<T> right) => !left.Equals(right);
 
         /// <inheritdoc />
-        public override int GetHashCode() => HashCode.Combine(Interval, EqualityComparer<T>.Default.GetHashCode(Value));
+        public override int GetHashCode() => HashCode.Combine(Interval, Value);
 
         /// <inheritdoc />
         public override string ToString() => $"{Value}@{Interval}";

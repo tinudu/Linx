@@ -63,16 +63,16 @@
                 // ReSharper restore PossibleMultipleEnumeration
                 connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(multi._aggregate1, multi._aggregate2);
+                return resultSelector(multi._aggregate1!, multi._aggregate2!);
             }
 
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = 2;
-            private Exception _error;
+            private Exception? _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new();
-            private TAggregate1 _aggregate1;
-            private TAggregate2 _aggregate2;
+            private TAggregate1? _aggregate1;
+            private TAggregate2? _aggregate2;
 
             private MultiAggregator(CancellationToken token)
             {
@@ -183,17 +183,17 @@
                 // ReSharper restore PossibleMultipleEnumeration
                 connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3);
+                return resultSelector(multi._aggregate1!, multi._aggregate2!, multi._aggregate3!);
             }
 
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = 3;
-            private Exception _error;
+            private Exception? _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new();
-            private TAggregate1 _aggregate1;
-            private TAggregate2 _aggregate2;
-            private TAggregate3 _aggregate3;
+            private TAggregate1? _aggregate1;
+            private TAggregate2? _aggregate2;
+            private TAggregate3? _aggregate3;
 
             private MultiAggregator(CancellationToken token)
             {
@@ -310,18 +310,18 @@
                 // ReSharper restore PossibleMultipleEnumeration
                 connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4);
+                return resultSelector(multi._aggregate1!, multi._aggregate2!, multi._aggregate3!, multi._aggregate4!);
             }
 
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = 4;
-            private Exception _error;
+            private Exception? _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new();
-            private TAggregate1 _aggregate1;
-            private TAggregate2 _aggregate2;
-            private TAggregate3 _aggregate3;
-            private TAggregate4 _aggregate4;
+            private TAggregate1? _aggregate1;
+            private TAggregate2? _aggregate2;
+            private TAggregate3? _aggregate3;
+            private TAggregate4? _aggregate4;
 
             private MultiAggregator(CancellationToken token)
             {
@@ -444,19 +444,19 @@
                 // ReSharper restore PossibleMultipleEnumeration
                 connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4, multi._aggregate5);
+                return resultSelector(multi._aggregate1!, multi._aggregate2!, multi._aggregate3!, multi._aggregate4!, multi._aggregate5!);
             }
 
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = 5;
-            private Exception _error;
+            private Exception? _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new();
-            private TAggregate1 _aggregate1;
-            private TAggregate2 _aggregate2;
-            private TAggregate3 _aggregate3;
-            private TAggregate4 _aggregate4;
-            private TAggregate5 _aggregate5;
+            private TAggregate1? _aggregate1;
+            private TAggregate2? _aggregate2;
+            private TAggregate3? _aggregate3;
+            private TAggregate4? _aggregate4;
+            private TAggregate5? _aggregate5;
 
             private MultiAggregator(CancellationToken token)
             {
@@ -585,20 +585,20 @@
                 // ReSharper restore PossibleMultipleEnumeration
                 connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4, multi._aggregate5, multi._aggregate6);
+                return resultSelector(multi._aggregate1!, multi._aggregate2!, multi._aggregate3!, multi._aggregate4!, multi._aggregate5!, multi._aggregate6!);
             }
 
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = 6;
-            private Exception _error;
+            private Exception? _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new();
-            private TAggregate1 _aggregate1;
-            private TAggregate2 _aggregate2;
-            private TAggregate3 _aggregate3;
-            private TAggregate4 _aggregate4;
-            private TAggregate5 _aggregate5;
-            private TAggregate6 _aggregate6;
+            private TAggregate1? _aggregate1;
+            private TAggregate2? _aggregate2;
+            private TAggregate3? _aggregate3;
+            private TAggregate4? _aggregate4;
+            private TAggregate5? _aggregate5;
+            private TAggregate6? _aggregate6;
 
             private MultiAggregator(CancellationToken token)
             {
@@ -733,21 +733,21 @@
                 // ReSharper restore PossibleMultipleEnumeration
                 connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4, multi._aggregate5, multi._aggregate6, multi._aggregate7);
+                return resultSelector(multi._aggregate1!, multi._aggregate2!, multi._aggregate3!, multi._aggregate4!, multi._aggregate5!, multi._aggregate6!, multi._aggregate7!);
             }
 
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = 7;
-            private Exception _error;
+            private Exception? _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new();
-            private TAggregate1 _aggregate1;
-            private TAggregate2 _aggregate2;
-            private TAggregate3 _aggregate3;
-            private TAggregate4 _aggregate4;
-            private TAggregate5 _aggregate5;
-            private TAggregate6 _aggregate6;
-            private TAggregate7 _aggregate7;
+            private TAggregate1? _aggregate1;
+            private TAggregate2? _aggregate2;
+            private TAggregate3? _aggregate3;
+            private TAggregate4? _aggregate4;
+            private TAggregate5? _aggregate5;
+            private TAggregate6? _aggregate6;
+            private TAggregate7? _aggregate7;
 
             private MultiAggregator(CancellationToken token)
             {
@@ -888,22 +888,22 @@
                 // ReSharper restore PossibleMultipleEnumeration
                 connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(multi._aggregate1, multi._aggregate2, multi._aggregate3, multi._aggregate4, multi._aggregate5, multi._aggregate6, multi._aggregate7, multi._aggregate8);
+                return resultSelector(multi._aggregate1!, multi._aggregate2!, multi._aggregate3!, multi._aggregate4!, multi._aggregate5!, multi._aggregate6!, multi._aggregate7!, multi._aggregate8!);
             }
 
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = 8;
-            private Exception _error;
+            private Exception? _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new();
-            private TAggregate1 _aggregate1;
-            private TAggregate2 _aggregate2;
-            private TAggregate3 _aggregate3;
-            private TAggregate4 _aggregate4;
-            private TAggregate5 _aggregate5;
-            private TAggregate6 _aggregate6;
-            private TAggregate7 _aggregate7;
-            private TAggregate8 _aggregate8;
+            private TAggregate1? _aggregate1;
+            private TAggregate2? _aggregate2;
+            private TAggregate3? _aggregate3;
+            private TAggregate4? _aggregate4;
+            private TAggregate5? _aggregate5;
+            private TAggregate6? _aggregate6;
+            private TAggregate7? _aggregate7;
+            private TAggregate8? _aggregate8;
 
             private MultiAggregator(CancellationToken token)
             {

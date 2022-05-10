@@ -89,16 +89,16 @@ namespace Linx.AsyncEnumerable
                 // ReSharper restore PossibleMultipleEnumeration
                 connect();
                 await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(<#= string.Join(", ", names.Select(x => $"multi._{x.Aggregate}"))  #>);
+                return resultSelector(<#= string.Join(", ", names.Select(x => $"multi._{x.Aggregate}!"))  #>);
             }
 
             private readonly CancellationTokenSource _cts = new();
             private CancellationTokenRegistration _ctr;
             private int _active = <#= n #>;
-            private Exception _error;
+            private Exception? _error;
             private AsyncTaskMethodBuilder _atmbWhenAll = new();
 <# foreach(var x in names) { #>
-            private <#= x.GenArg #> _<#= x.Aggregate #>;
+            private <#= x.GenArg #>? _<#= x.Aggregate #>;
 <# } #>
 
             private MultiAggregator(CancellationToken token)

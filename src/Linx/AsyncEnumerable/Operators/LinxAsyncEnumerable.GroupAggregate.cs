@@ -14,7 +14,7 @@
             this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             Func<IAsyncGrouping<TKey, TSource>, CancellationToken, Task<TAggregate>> aggregator,
-            IEqualityComparer<TKey> keyComparer = null)
+            IEqualityComparer<TKey>? keyComparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (aggregator == null) throw new ArgumentNullException(nameof(aggregator));

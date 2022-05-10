@@ -11,7 +11,7 @@
         /// <summary>
         /// Compare two sequences for equality.
         /// </summary>
-        public static async Task<bool> SequenceEqual<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second, CancellationToken token, IEqualityComparer<T> comparer = null)
+        public static async Task<bool> SequenceEqual<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second, CancellationToken token, IEqualityComparer<T>? comparer = null)
         {
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));
@@ -20,7 +20,7 @@
             var m1 = first.Select(Notification.Next).Append(Notification.Completed<T>());
             var m2 = second.Select(Notification.Next).Append(Notification.Completed<T>());
             return await m1
-                .Zip(m2, NotificationComparer<T>.GetComparer(comparer).Equals)
+                .Zip(m2, NotificationComparer<T>.GetComparer(comparer, null).Equals)
                 .All(eq => eq, token)
                 .ConfigureAwait(false);
         }

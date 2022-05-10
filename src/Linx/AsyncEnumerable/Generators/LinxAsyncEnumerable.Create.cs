@@ -19,7 +19,7 @@
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProduceAsyncDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Create<T>(ProduceAsyncDelegate<T> produceAsync, [CallerMemberName] string displayName = default)
+        public static IAsyncEnumerable<T> Create<T>(ProduceAsyncDelegate<T> produceAsync, [CallerMemberName] string? displayName = default)
         {
             if (produceAsync == null) throw new ArgumentNullException(nameof(produceAsync));
             return new CoroutineIterator<T>(produceAsync, displayName);
@@ -28,7 +28,7 @@
         /// <summary>
         /// Create a <see cref="IAsyncEnumerable{T}"/> defined by a <see cref="ProduceAsyncDelegate{T}"/> coroutine.
         /// </summary>
-        public static IAsyncEnumerable<T> Create<T>(T _, ProduceAsyncDelegate<T> produceAsync, [CallerMemberName] string displayName = default)
+        public static IAsyncEnumerable<T> Create<T>(T _, ProduceAsyncDelegate<T> produceAsync, [CallerMemberName] string? displayName = default)
         {
             if (produceAsync == null) throw new ArgumentNullException(nameof(produceAsync));
             return new CoroutineIterator<T>(produceAsync, displayName);

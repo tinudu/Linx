@@ -16,7 +16,7 @@
             this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
             CancellationToken token,
-            IEqualityComparer<TKey> comparer = null)
+            IEqualityComparer<TKey>? comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
@@ -36,7 +36,7 @@
             Func<TSource, TKey> keySelector,
             Func<TSource, TElement> elementSelector,
             CancellationToken token,
-            IEqualityComparer<TKey> comparer = null)
+            IEqualityComparer<TKey>? comparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
@@ -54,7 +54,7 @@
         {
             private readonly Dictionary<Boxed<TKey>, Grouping> _groupings;
 
-            public Lookup(IEqualityComparer<TKey> comparer) => _groupings = new Dictionary<Boxed<TKey>, Grouping>(Boxed.GetEqualityComparer(comparer));
+            public Lookup(IEqualityComparer<TKey>? comparer) => _groupings = new Dictionary<Boxed<TKey>, Grouping>(Boxed.GetEqualityComparer(comparer));
 
             public int Count => _groupings.Count;
 

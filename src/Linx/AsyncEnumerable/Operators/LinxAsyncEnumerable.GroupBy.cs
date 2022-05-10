@@ -16,7 +16,7 @@
         public static IAsyncEnumerable<IAsyncGrouping<TKey, TSource>> GroupBy<TSource, TKey>(
             this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
-            IEqualityComparer<TKey> keyComparer = null)
+            IEqualityComparer<TKey>? keyComparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
@@ -29,7 +29,7 @@
         public static IAsyncEnumerable<IAsyncGrouping<TKey, TSource>> GroupByWhileEnumerated<TSource, TKey>(
             this IAsyncEnumerable<TSource> source,
             Func<TSource, TKey> keySelector,
-            IEqualityComparer<TKey> keyComparer = null)
+            IEqualityComparer<TKey>? keyComparer = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
@@ -55,7 +55,7 @@
             public GroupByEnumerator(
                 IAsyncEnumerable<TSource> source,
                 Func<TSource, TKey> keySelector,
-                IEqualityComparer<TKey> keyComparer,
+                IEqualityComparer<TKey>? keyComparer,
                 bool whileEnumerated,
                 CancellationToken token)
             {
@@ -76,10 +76,10 @@
             private readonly ManualResetValueTaskSource _tsEmitting = new();
             private CancellationTokenRegistration _ctr;
             private int _state = _sInitial;
-            private Exception _error;
-            private Task _tDisposed;
+            private Exception? _error;
+            private Task? _tDisposed;
 
-            public IAsyncGrouping<TKey, TSource> Current { get; private set; }
+            public IAsyncGrouping<TKey, TSource> Current { get; private set; } = default!;
 
             ValueTask<bool> IAsyncEnumerator<IAsyncGrouping<TKey, TSource>>.MoveNextAsync()
             {
@@ -115,10 +115,11 @@
             ValueTask IAsyncDisposable.DisposeAsync()
             {
                 Dispose(AsyncEnumeratorDisposedException.Instance);
+                Debug.Assert(_tDisposed is not null);
                 return new ValueTask(_tDisposed);
             }
 
-            private void Dispose(Exception errorOpt)
+            private void Dispose(Exception? errorOpt)
             {
                 var state = Atomic.Lock(ref _state);
                 switch (state)
@@ -128,7 +129,7 @@
                         break;
 
                     case _sAccepting:
-                        Current = default;
+                        Current = default!;
                         break;
 
                     case _sDisposed:
@@ -168,14 +169,14 @@
 
             private async void Produce()
             {
-                Exception error = null;
+                Exception? error = null;
                 try
                 {
                     await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
                     {
                         var key = new Boxed<TKey>(_keySelector(item));
 
-                        Group group;
+                        Group? group;
                         {
                             var state = Atomic.Lock(ref _state);
                             Debug.Assert(state == _sAccepting || state == _sDisposed);
@@ -267,11 +268,11 @@
                 public readonly ManualResetValueTaskSource TsEmitting = new();
                 public int State;
                 private CancellationTokenRegistration _ctr;
-                private Exception _error;
-                private Task _tDisposed;
+                private Exception? _error;
+                private Task? _tDisposed;
 
                 TKey IAsyncGrouping<TKey, TSource>.Key => _key.Value;
-                public TSource Current { get; set; }
+                public TSource Current { get; set; } = default!;
 
                 public Group(GroupByEnumerator<TSource, TKey> enumerator, Boxed<TKey> key)
                 {
@@ -321,7 +322,7 @@
                             break;
 
                         case _sDisposed:
-                            Current = default;
+                            Current = default!;
                             State = _sDisposed;
                             TsAccepting.SetExceptionOrResult(_error, false);
                             break;
@@ -336,10 +337,11 @@
                 ValueTask IAsyncDisposable.DisposeAsync()
                 {
                     Dispose(AsyncEnumeratorDisposedException.Instance);
+                    Debug.Assert(_tDisposed is not null);
                     return new ValueTask(_tDisposed);
                 }
 
-                public void Dispose(Exception errorOpt)
+                public void Dispose(Exception? errorOpt)
                 {
                     var state = Atomic.Lock(ref State);
                     switch (state)
@@ -350,7 +352,7 @@
                             break;
 
                         case _sAccepting:
-                            Current = default;
+                            Current = default!;
                             break;
 
                         case _sDisposed:

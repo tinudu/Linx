@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Linx.Notifications;
@@ -28,7 +29,8 @@ namespace Linx.AsyncEnumerable
                         case NotificationKind.Completed:
                             yield break;
                         case NotificationKind.Error:
-                            throw n.Error;
+                            ExceptionDispatchInfo.Throw(n.Error);
+                            yield break;
                         default:
                             throw new Exception(n.Kind + "???");
                     }

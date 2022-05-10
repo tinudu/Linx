@@ -14,7 +14,7 @@
             private readonly Func<ConfiguredValueTaskAwaitable<bool>>[] _moveNexts;
             private readonly ManualResetValueTaskSource<bool> _ts = new();
             private bool _completed;
-            private Exception _error;
+            private Exception? _error;
             private int _active;
 
             public ZipContext(CancellationTokenSource cts, params Func<ConfiguredValueTaskAwaitable<bool>>[] moveNexts)
@@ -56,7 +56,7 @@
             private async void MoveNextAsync(Func<ConfiguredValueTaskAwaitable<bool>> moveNext)
             {
                 bool completed;
-                Exception error;
+                Exception? error;
                 if (_completed)
                 {
                     completed = false;

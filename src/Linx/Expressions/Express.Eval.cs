@@ -10,7 +10,7 @@
         /// Evaluate an expression.
         /// </summary>
         /// <exception cref="NotSupportedException">Not a constant, field, property, delegate or quoted expression.</exception>
-        public static object Eval(this Expression x)
+        public static object? Eval(this Expression x)
         {
             // ReSharper disable once SwitchStatementMissingSomeCases
             switch (x.NodeType)

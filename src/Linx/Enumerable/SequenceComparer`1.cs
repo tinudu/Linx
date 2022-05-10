@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
 
     /// <summary>
@@ -17,7 +18,9 @@
         /// <summary>
         /// Gets an instance.
         /// </summary>
-        public static SequenceComparer<T> GetComparer(IEqualityComparer<T> elementComparer) => elementComparer == null || ReferenceEquals(elementComparer, EqualityComparer<T>.Default) ? Default : new SequenceComparer<T>(elementComparer);
+        public static SequenceComparer<T> GetComparer(IEqualityComparer<T>? elementComparer) =>
+            elementComparer == null || ReferenceEquals(elementComparer, EqualityComparer<T>.Default) ?
+            Default : new SequenceComparer<T>(elementComparer);
 
         /// <summary>
         /// Gets the element comparer.
@@ -27,13 +30,17 @@
         private SequenceComparer(IEqualityComparer<T> elementComparer) => ElementComparer = elementComparer;
 
         /// <inheritdoc />
-        public bool Equals(IEnumerable<T> x, IEnumerable<T> y) => x == null ? y == null : y != null && x.SequenceEqual(y, ElementComparer);
+        public bool Equals(IEnumerable<T>? x, IEnumerable<T>? y) => x == null ? y == null : y != null && x.SequenceEqual(y, ElementComparer);
 
         /// <inheritdoc />
-        public int GetHashCode(IEnumerable<T> obj) => obj.Aggregate(new HashCode(), (hc, item) =>
+        public int GetHashCode([DisallowNull] IEnumerable<T> obj)
         {
-            hc.Add(item, ElementComparer);
-            return hc;
-        }).ToHashCode();
+            if (obj is null) throw new ArgumentNullException(nameof(obj));
+
+            var hc = new HashCode();
+            foreach (var item in obj)
+                hc.Add(item);
+            return hc.ToHashCode();
+        }
     }
 }

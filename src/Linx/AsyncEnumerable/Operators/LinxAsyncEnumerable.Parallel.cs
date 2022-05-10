@@ -86,9 +86,9 @@
                 private CancellationTokenRegistration _ctr;
                 private AsyncTaskMethodBuilder _atmbDisposed = new();
                 private int _state, _active;
-                private ManualResetValueTaskSource<bool> _tsMaxConcurrent;
+                private ManualResetValueTaskSource<bool>? _tsMaxConcurrent;
                 private bool _incrementActive;
-                private Exception _error;
+                private Exception? _error;
 
                 public Enumerator(ParallelEnumerable<TSource, TResult> enumerable, CancellationToken token)
                 {
@@ -96,7 +96,7 @@
                     if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
                 }
 
-                public TResult Current { get; private set; }
+                public TResult Current { get; private set; } = default!;
 
                 public ValueTask<bool> MoveNextAsync()
                 {
@@ -138,7 +138,7 @@
 
                         case _sError:
                         case _sFinal:
-                            Current = default;
+                            Current = default!;
                             _state = state;
                             _tsAccepting.SetExceptionOrResult(_error, false);
                             break;
@@ -195,7 +195,7 @@
 
                         case _sAccepting:
                             Debug.Assert(_error == null && _active > 0 && _queue.Count == 0);
-                            Current = default;
+                            Current = default!;
                             _error = error;
                             _state = _sError;
                             _ctr.Dispose();
@@ -231,7 +231,7 @@
                             Debug.Assert(_error == null && _queue.Count == 0);
                             if (--_active == 0)
                             {
-                                Current = default;
+                                Current = default!;
                                 _state = _sFinal;
                                 _ctr.Dispose();
                                 Linx.Clear(ref _tsMaxConcurrent)?.SetResult(false);

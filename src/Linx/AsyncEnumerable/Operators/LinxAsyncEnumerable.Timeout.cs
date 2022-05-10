@@ -39,13 +39,13 @@
             private CancellationTokenRegistration _ctr;
             private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
             private readonly ManualResetValueTaskSource<bool> _tsEmitting = new();
-            private ManualResetValueTaskSource _tsTimer;
+            private ManualResetValueTaskSource? _tsTimer;
             private AsyncTaskMethodBuilder _atmbDisposed = new();
             private int _state;
-            private Exception _error;
+            private Exception? _error;
             private DateTimeOffset _due;
 
-            public TimeoutEnumerator(IAsyncEnumerable<T> source, TimeSpan interval,ITime time, CancellationToken token)
+            public TimeoutEnumerator(IAsyncEnumerable<T> source, TimeSpan interval, ITime time, CancellationToken token)
             {
                 Debug.Assert(source != null);
                 Debug.Assert(interval > TimeSpan.Zero);
@@ -56,7 +56,7 @@
                 if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
             }
 
-            public T Current { get; private set; }
+            public T Current { get; private set; } = default!;
 
             public ValueTask<bool> MoveNextAsync()
             {
@@ -81,7 +81,7 @@
                         break;
 
                     case _sCompleted:
-                        Current = default;
+                        Current = default!;
                         _state = state;
                         _tsAccepting.SetExceptionOrResult(_error, false);
                         break;
@@ -116,7 +116,7 @@
 
                     case _sAccepting:
                         _error = error;
-                        Current = default;
+                        Current = default!;
                         _state = _sCompleted;
                         _ctr.Dispose();
                         _cts.TryCancel();
@@ -178,7 +178,7 @@
                     {
                         case _sAccepting:
                             Debug.Assert(_error == null);
-                            Current = default;
+                            Current = default!;
                             _state = _sCompleted | _fProduce;
                             _ctr.Dispose();
                             _cts.TryCancel();

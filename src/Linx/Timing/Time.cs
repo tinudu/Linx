@@ -161,7 +161,7 @@ namespace Linx.Timing
                     }
                 }
 
-                private void TimerCallback(object _)
+                private void TimerCallback(object? _)
                 {
                     if (Atomic.CompareExchange(ref _state, _sInitial, _sWaiting) == _sWaiting)
                         _tsDelay.SetResult();
