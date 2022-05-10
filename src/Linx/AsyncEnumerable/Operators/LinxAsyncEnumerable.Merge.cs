@@ -285,7 +285,7 @@
 
             private void SetFinal(int state, Exception? errorOrNot)
             {
-                Debug.Assert((state & Atomic.LockBit) == 0 && _state == (state | Atomic.LockBit));
+                Debug.Assert(state >= 0 && _state == (state | int.MinValue));
 
                 switch (state)
                 {

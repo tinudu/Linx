@@ -161,7 +161,7 @@ namespace Linx.AsyncEnumerable
             private T Dequeue()
             {
                 Debug.Assert(_queue is not null && _count > 0);
-                Debug.Assert((_state & Atomic.LockBit) != 0);
+                Debug.Assert(_state < 0);
 
                 T result = Linx.Clear(ref _queue[_offset])!;
                 if (--_count == 0)
