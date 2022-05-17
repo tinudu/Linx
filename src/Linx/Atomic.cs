@@ -10,6 +10,27 @@
     public static class Atomic
     {
         /// <summary>
+        /// Spin wait until the lock is cleared, then return the unlocked state.
+        /// </summary>
+        /// <param name="state">The state to read.</param>
+        /// <returns>The state.</returns>
+        public static int Read(ref int state)
+        {
+            var result = state;
+            if (result >= 0)
+                return result;
+
+            var sw = new SpinWait();
+            while (true)
+            {
+                sw.SpinOnce();
+                result = state;
+                if (result >= 0)
+                    return result;
+            }
+        }
+
+        /// <summary>
         /// Spin wait until the lock is cleared, then aquire it.
         /// </summary>
         /// <param name="state">The state to update.</param>
@@ -53,16 +74,16 @@
         }
 
         /// <summary>
-        /// Spin wait until the lock is cleared, then set to <paramref name="value"/> iff the previous value is <paramref name="test"/>.
+        /// Spin wait until the lock is cleared, then set to <paramref name="value"/> iff the previous value is <paramref name="comparand"/>.
         /// </summary>
         /// <param name="state">The state to update.</param>
         /// <param name="value">The new state (may include the lock bit).</param>
-        /// <param name="test">The value <paramref name="state"/> must have in order for the state to be updated.</param>
+        /// <param name="comparand">The value <paramref name="state"/> must have in order for the state to be updated.</param>
         /// <returns>The previous state.</returns>
-        /// <remarks>Don't include the lock in <paramref name="test"/>, or it results in an infinite loop.</remarks>
-        public static int CompareExchange(ref int state, int value, int test)
+        /// <remarks>Don't include the lock in <paramref name="comparand"/>, or it results in an infinite loop.</remarks>
+        public static int CompareExchange(ref int state, int value, int comparand)
         {
-            var oldState = Interlocked.CompareExchange(ref state, value, test);
+            var oldState = Interlocked.CompareExchange(ref state, value, comparand);
             if (oldState >= 0)
                 return oldState;
 
@@ -70,7 +91,7 @@
             while (true)
             {
                 sw.SpinOnce();
-                oldState = Interlocked.CompareExchange(ref state, value, test);
+                oldState = Interlocked.CompareExchange(ref state, value, comparand);
                 if (oldState >= 0)
                     return oldState;
             }

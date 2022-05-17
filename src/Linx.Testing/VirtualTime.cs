@@ -137,7 +137,7 @@ namespace Linx.Testing
 
         private void Enqueue(Timer timer, DateTimeOffset due)
         {
-            Exception error = null;
+            Exception? error = null;
             lock (_queue)
             {
                 if (due > _now)
@@ -167,7 +167,7 @@ namespace Linx.Testing
         {
             while (true)
             {
-                Queue<Timer> timers;
+                Queue<Timer>? timers;
                 lock (_queue)
                 {
                     if (_queue.Count > 0)

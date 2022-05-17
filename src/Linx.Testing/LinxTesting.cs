@@ -21,7 +21,7 @@ namespace Linx.Testing
             this IAsyncEnumerable<char> source,
             string pattern,
             VirtualTime virtualTime,
-            Func<Exception, bool> exceptionEquals = null)
+            Func<Exception, bool>? exceptionEquals = null)
             => source.Expect(pattern, DefaultTimeFrame, virtualTime, (x, i, y) => x == y, exceptionEquals);
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace Linx.Testing
             string pattern,
             TimeSpan timeFrame,
             VirtualTime virtualTime,
-            Func<Exception, bool> exceptionEquals = null)
+            Func<Exception, bool>? exceptionEquals = null)
             => source.Expect(pattern, timeFrame, virtualTime, (x, i, y) => x == y, exceptionEquals);
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace Linx.Testing
             string pattern,
             VirtualTime virtualTime,
             Func<char, int, T, bool> equals,
-            Func<Exception, bool> exceptionEquals = null)
+            Func<Exception, bool>? exceptionEquals = null)
             => source.Expect(pattern, DefaultTimeFrame, virtualTime, equals, exceptionEquals);
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace Linx.Testing
             TimeSpan timeFrame,
             VirtualTime virtualTime,
             Func<char, int, T, bool> equals,
-            Func<Exception, bool> exceptionEquals = null)
+            Func<Exception, bool>? exceptionEquals = null)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
             if (pattern is null) throw new ArgumentNullException(nameof(pattern));

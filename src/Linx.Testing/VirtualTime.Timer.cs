@@ -21,7 +21,7 @@ namespace Linx.Testing
             private readonly VirtualTime _time;
             private CancellationTokenRegistration _ctr;
             private int _state;
-            private Exception _error;
+            private Exception? _error;
 
             public Timer(VirtualTime time, CancellationToken token)
             {
@@ -44,6 +44,7 @@ namespace Linx.Testing
                         return _tsDelay.Task;
 
                     case _tFinal:
+                        Debug.Assert(_error is not null);
                         _state = _tFinal;
                         _tsDelay.Reset();
                         _tsDelay.SetException(_error);
