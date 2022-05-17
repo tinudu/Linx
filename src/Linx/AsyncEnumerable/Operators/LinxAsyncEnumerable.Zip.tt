@@ -15,7 +15,7 @@
                 {
                     GenArg = "T" + j,
                     Source = "source" + j,
-                    Ae = "ae" + j
+                    Producer = "_p" + j
                 })
                 .ToList()
         })
@@ -26,14 +26,16 @@
             GenArgList = $"<{ string.Join(", ", i.Names.Select(n => n.GenArg)) }, TResult>"
         });
 #>
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
+using Linx.Tasks;
+
 namespace Linx.AsyncEnumerable
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
-    using System.Threading.Tasks;
-
     partial class LinxAsyncEnumerable
     {
 <# foreach(var arg in args) { #>
@@ -45,23 +47,248 @@ namespace Linx.AsyncEnumerable
             IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
 <# } #>
             Func<#= arg.GenArgList #> resultSelector)
-        {
+            => new ZipIterator<#= arg.GenArgList #>(
 <# foreach(var n in arg.Names) { #>
-            if (<#= n.Source #> == null) throw new ArgumentNullException(nameof(<#= n.Source #>));
+                <#= n.Source #> ?? throw new ArgumentNullException(nameof(<#= n.Source #>)),
 <# } #>
-            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-            return Iterator();
+                resultSelector ?? throw new ArgumentNullException(nameof(resultSelector)));
 
-            async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
-            {
-                var cts = new CancellationTokenSource();
-<# foreach(var n in arg.Names) { #>
-                await using var <#= n.Ae #> = <#= n.Source #>.WithCancellation(cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
 <# } #>
-                var ctx = new ZipContext(cts, ae1.MoveNextAsync, ae2.MoveNextAsync);
-                using (token.CanBeCanceled ? token.Register(() => ctx.SetError(new OperationCanceledException(token))) : default)
-                    while (await ctx.MoveNextAsync().ConfigureAwait(false))
-                        yield return resultSelector(<#= string.Join(", ", arg.Names.Select(n => n.Ae + ".Current")) #>);
+<# foreach(var arg in args) { #>
+        private sealed class ZipIterator<#= arg.GenArgList #> : IAsyncEnumerable<TResult>, IAsyncEnumerator<TResult>
+        {
+            private const int _n = <#= arg.N #>;
+            private const int _sInitial = 0;
+            private const int _sIdle = 1;
+            private const int _sMoveNext = 2;
+            private const int _sFinal = 3;
+
+<# foreach(var n in arg.Names) { #>
+            private readonly Producer<<#= n.GenArg #>> <#= n.Producer #>;
+<# } #>
+            private readonly Func<#= arg.GenArgList #> _resultSelector;
+
+            private readonly CancellationTokenSource _cts = new();
+            private readonly ManualResetValueTaskSource<bool> _tsMoveNext = new();
+            private readonly AsyncTaskMethodBuilder _atmbDisposed;
+            private CancellationTokenRegistration _ctr;
+            private int _state;
+            private TResult? _current;
+            private Exception? _error;
+            private int _nMoveNext;
+            private int _nDispose = _n;
+
+            public ZipIterator(
+<# foreach(var n in arg.Names) { #>
+                IAsyncEnumerable<<#= n.GenArg #>> <#= n.Source #>,
+<# } #>
+                Func<#= arg.GenArgList #> resultSelector)
+            {
+<# foreach(var n in arg.Names) { #>
+                <#= n.Producer #> = new Producer<<#= n.GenArg #>>(<#= n.Source #>, this);
+<# } #>
+                _resultSelector = resultSelector;
+            }
+
+            public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token)
+            {
+                if (Atomic.CompareExchange(ref _state, _sIdle, _sInitial) != _sInitial)
+                    return new ZipIterator<#= arg.GenArgList #>(
+<# foreach(var n in arg.Names) { #>
+                        <#= n.Producer #>.Source,
+<# } #>
+                        _resultSelector).GetAsyncEnumerator(token);
+
+                if (token.CanBeCanceled)
+                    _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
+                return this;
+            }
+
+            public TResult Current => _current!;
+
+            public ValueTask<bool> MoveNextAsync()
+            {
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sIdle:
+                        _tsMoveNext.Reset();
+                        _nMoveNext = _n;
+                        _state = _sMoveNext;
+                        Unblock();
+                        return _tsMoveNext.Task;
+
+                    case _sFinal:
+                        _tsMoveNext.Reset();
+                        _state = _sFinal;
+                        _tsMoveNext.SetExceptionOrResult(_error, false);
+                        return _tsMoveNext.Task;
+
+                    case _sInitial:
+                    case _sMoveNext:
+                        _state = state;
+                        throw new InvalidOperationException();
+
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+            }
+
+            public async ValueTask DisposeAsync()
+            {
+                SetFinal(AsyncEnumeratorDisposedException.Instance);
+                await _atmbDisposed.Task.ConfigureAwait(false);
+                _current = default;
+                _error = AsyncEnumeratorDisposedException.Instance;
+            }
+
+            private void Unblock()
+            {
+<# foreach(var n in arg.Names) { #>
+                <#= n.Producer #>.Unblock();
+<# } #>
+            }
+
+            private void SetFinal(Exception? error)
+            {
+                var state = Atomic.Lock(ref _state);
+                switch (state)
+                {
+                    case _sIdle:
+                        _error = error;
+                        _state = _sFinal;
+                        _ctr.Dispose();
+                        _cts.TryCancel();
+                        Unblock();
+                        break;
+
+                    case _sMoveNext:
+                        _error = error;
+                        _current = default;
+                        _state = _sFinal;
+                        _ctr.Dispose();
+                        _cts.TryCancel();
+                        Unblock();
+                        _tsMoveNext.SetExceptionOrResult(error, false);
+                        break;
+
+                    case _sFinal:
+                        _state = _sFinal;
+                        break;
+
+                    case _sInitial:
+                        _state = _sInitial;
+                        throw new InvalidOperationException();
+
+                    default:
+                        _state = state;
+                        throw new Exception(state + "???");
+                }
+            }
+
+            private sealed class Producer<T>
+            {
+                public readonly IAsyncEnumerable<T> Source;
+                private readonly ZipIterator<#= arg.GenArgList #> _parent;
+                private readonly ManualResetValueTaskSource<bool> _tsIdle = new();
+                private bool _isIdle = true;
+                private ConfiguredCancelableAsyncEnumerable<T>.Enumerator _enumerator;
+
+                public Producer(IAsyncEnumerable<T> source, ZipIterator<#= arg.GenArgList #> parent)
+                {
+                    Source = source;
+                    _parent = parent;
+                    Produce();
+                }
+
+                public T GetCurrent() => _enumerator.Current;
+
+                public void Unblock()
+                {
+                    var parentState = Atomic.Lock(ref _parent._state);
+                    Debug.Assert(parentState is _sMoveNext or _sFinal);
+                    if (_isIdle)
+                    {
+                        _isIdle = false;
+                        _parent._state = parentState;
+                        _tsIdle.SetResult(parentState == _sMoveNext);
+                    }
+                    else
+                        _parent._state = parentState;
+                }
+
+                private async void Produce()
+                {
+                    Exception? error = null;
+                    try
+                    {
+                        if (!await _tsIdle.Task.ConfigureAwait(false))
+                            return;
+
+                        await using var e = _enumerator = Source.WithCancellation(_parent._cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
+
+                        while (await e.MoveNextAsync())
+                        {
+                            if (Atomic.Read(ref _parent._state) != _sMoveNext)
+                                return;
+
+                            Debug.Assert(_parent._nMoveNext > 0);
+                            bool all;
+                            TResult? current;
+                            if (Interlocked.Decrement(ref _parent._nMoveNext) == 0)
+                            {
+                                all = true;
+                                current = _parent._resultSelector(<#= string.Join(", ", arg.Names.Select(n => $"_parent.{n.Producer}.GetCurrent()")) #>);
+                            }
+                            else
+                            {
+                                all = false;
+                                current = default;
+                            }
+
+                            var parentState = Atomic.Lock(ref _parent._state);
+                            switch (parentState)
+                            {
+                                case _sMoveNext:
+                                    _tsIdle.Reset();
+                                    _isIdle = true;
+                                    if (all)
+                                    {
+                                        _parent._current = current;
+                                        _parent._state = _sIdle;
+                                        _parent._tsMoveNext.SetResult(true);
+                                    }
+                                    else
+                                        _parent._state = _sMoveNext;
+
+                                    if (!await _tsIdle.Task.ConfigureAwait(false))
+                                        return;
+                                    break;
+
+                                case _sFinal:
+                                    _parent._state = _sFinal;
+                                    return;
+
+                                default:
+                                    _parent._state = parentState;
+                                    throw new Exception(parentState + "???");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        error = ex;
+                    }
+                    finally
+                    {
+                        _parent.SetFinal(error);
+                        _enumerator = default;
+                        Debug.Assert(_parent._nDispose > 0);
+                        if (Interlocked.Decrement(ref _parent._nDispose) == 0)
+                            _parent._atmbDisposed.SetResult();
+                    }
+                }
             }
         }
 

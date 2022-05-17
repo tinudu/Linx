@@ -51,9 +51,9 @@
             <DependentUpon>LinxAsyncEnumerable.Sum.tt</DependentUpon>
         </Compile>
         <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>LinxAsyncEnumerable.Zip.tt</DependentUpon>
+          <DesignTime>True</DesignTime>
+          <AutoGen>True</AutoGen>
+          <DependentUpon>LinxAsyncEnumerable.Zip.tt</DependentUpon>
         </Compile>
         <Compile Update="Enumerable\Aggregators\LinxEnumerable.MinMax.cs">
             <DesignTime>True</DesignTime>
@@ -99,8 +99,8 @@
             <LastGenOutput>LinxAsyncEnumerable.Sum.cs</LastGenOutput>
         </None>
         <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>LinxAsyncEnumerable.Zip.cs</LastGenOutput>
+          <Generator>TextTemplatingFileGenerator</Generator>
+          <LastGenOutput>LinxAsyncEnumerable.Zip.cs</LastGenOutput>
         </None>
         <None Update="Enumerable\Aggregators\LinxEnumerable.MinMax.tt">
             <Generator>TextTemplatingFileGenerator</Generator>
