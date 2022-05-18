@@ -1,24 +1,23 @@
-﻿namespace Linx.AsyncEnumerable
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Linx.AsyncEnumerable;
+
+partial class LinxAsyncEnumerable
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Threading;
-    using System.Threading.Tasks;
-
-    partial class LinxAsyncEnumerable
+    /// <summary>
+    /// Aggregate elements into a list.
+    /// </summary>
+    public static async Task<List<T>> ToList<T>(this IAsyncEnumerable<T> source, CancellationToken token)
     {
-        /// <summary>
-        /// Aggregate elements into a list.
-        /// </summary>
-        public static async Task<List<T>> ToList<T>(this IAsyncEnumerable<T> source, CancellationToken token)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
+        if (source == null) throw new ArgumentNullException(nameof(source));
 
-            var result = new List<T>();
-            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
-                result.Add(item);
+        var result = new List<T>();
+        await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+            result.Add(item);
 
-            return result;
-        }
+        return result;
     }
 }

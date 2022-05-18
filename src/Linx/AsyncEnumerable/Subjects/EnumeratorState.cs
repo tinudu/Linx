@@ -1,10 +1,9 @@
-﻿namespace Linx.AsyncEnumerable.Subjects
+﻿namespace Linx.AsyncEnumerable.Subjects;
+
+internal enum EnumeratorState : byte
 {
-    internal enum EnumeratorState : byte
-    {
-        Initial,
-        Accepting,
-        Emitting,
-        Final
-    }
+    Initial,
+    Accepting,
+    Emitting,
+    Final
 }

@@ -1,12 +1,11 @@
-﻿namespace Linx.AsyncEnumerable.Subjects
-{
-    using System.Threading;
-    using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
-    internal interface ISubject<T>
-    {
-        ManualResetEventSlim Gate { get; }
-        void AddLocked(Enumerator<T> enumerator);
-        Task RemoveLocked(Enumerator<T> enumerator);
-    }
+namespace Linx.AsyncEnumerable.Subjects;
+
+internal interface ISubject<T>
+{
+    ManualResetEventSlim Gate { get; }
+    void AddLocked(Enumerator<T> enumerator);
+    Task RemoveLocked(Enumerator<T> enumerator);
 }

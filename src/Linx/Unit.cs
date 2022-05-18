@@ -1,9 +1,8 @@
-﻿namespace Linx
+﻿namespace Linx;
+
+/// <summary>
+/// Empty structure.
+/// </summary>
+public struct Unit
 {
-    /// <summary>
-    /// Empty structure.
-    /// </summary>
-    public struct Unit
-    {
-    }
 }

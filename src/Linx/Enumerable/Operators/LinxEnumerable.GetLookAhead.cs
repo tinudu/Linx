@@ -1,12 +1,11 @@
 ﻿using System.Collections.Generic;
 
-namespace Linx.Enumerable
+namespace Linx.Enumerable;
+
+partial class LinxEnumerable
 {
-    partial class LinxEnumerable
-    {
-        /// <summary>
-        /// Gets a <see cref="LookAhead{T}"/> from <paramref name="source"/>.
-        /// </summary>
-        public static LookAhead<T> GetLookAhead<T>(this IEnumerable<T> source) => new(source);
-    }
+    /// <summary>
+    /// Gets a <see cref="LookAhead{T}"/> from <paramref name="source"/>.
+    /// </summary>
+    public static LookAhead<T> GetLookAhead<T>(this IEnumerable<T> source) => new(source);
 }

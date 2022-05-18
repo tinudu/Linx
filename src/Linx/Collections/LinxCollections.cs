@@ -1,9 +1,8 @@
-﻿namespace Linx.Collections
+﻿namespace Linx.Collections;
+
+/// <summary>
+/// Collection extension methods.
+/// </summary>
+public static partial class LinxCollections
 {
-    /// <summary>
-    /// Collection extension methods.
-    /// </summary>
-    public static partial class LinxCollections
-    {
-    }
 }
