@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
+using Linx.Tasks;
 
 namespace Linx.AsyncEnumerable;
 
@@ -306,7 +306,7 @@ partial class LinxAsyncEnumerable
 
                     while (await e.MoveNextAsync())
                     {
-                        if (Atomic.Read(ref _parent._state) != _sMoveNext)
+                        if (Atomic.Read(in _parent._state) != _sMoveNext)
                             return;
 
                         Debug.Assert(_parent._nMoveNext > 0);
@@ -543,7 +543,7 @@ partial class LinxAsyncEnumerable
 
                     while (await e.MoveNextAsync())
                     {
-                        if (Atomic.Read(ref _parent._state) != _sMoveNext)
+                        if (Atomic.Read(in _parent._state) != _sMoveNext)
                             return;
 
                         Debug.Assert(_parent._nMoveNext > 0);
@@ -785,7 +785,7 @@ partial class LinxAsyncEnumerable
 
                     while (await e.MoveNextAsync())
                     {
-                        if (Atomic.Read(ref _parent._state) != _sMoveNext)
+                        if (Atomic.Read(in _parent._state) != _sMoveNext)
                             return;
 
                         Debug.Assert(_parent._nMoveNext > 0);
@@ -1032,7 +1032,7 @@ partial class LinxAsyncEnumerable
 
                     while (await e.MoveNextAsync())
                     {
-                        if (Atomic.Read(ref _parent._state) != _sMoveNext)
+                        if (Atomic.Read(in _parent._state) != _sMoveNext)
                             return;
 
                         Debug.Assert(_parent._nMoveNext > 0);
@@ -1284,7 +1284,7 @@ partial class LinxAsyncEnumerable
 
                     while (await e.MoveNextAsync())
                     {
-                        if (Atomic.Read(ref _parent._state) != _sMoveNext)
+                        if (Atomic.Read(in _parent._state) != _sMoveNext)
                             return;
 
                         Debug.Assert(_parent._nMoveNext > 0);
@@ -1541,7 +1541,7 @@ partial class LinxAsyncEnumerable
 
                     while (await e.MoveNextAsync())
                     {
-                        if (Atomic.Read(ref _parent._state) != _sMoveNext)
+                        if (Atomic.Read(in _parent._state) != _sMoveNext)
                             return;
 
                         Debug.Assert(_parent._nMoveNext > 0);
@@ -1803,7 +1803,7 @@ partial class LinxAsyncEnumerable
 
                     while (await e.MoveNextAsync())
                     {
-                        if (Atomic.Read(ref _parent._state) != _sMoveNext)
+                        if (Atomic.Read(in _parent._state) != _sMoveNext)
                             return;
 
                         Debug.Assert(_parent._nMoveNext > 0);

@@ -14,7 +14,7 @@ public static class Atomic
     /// </summary>
     /// <param name="state">The state to read.</param>
     /// <returns>The state.</returns>
-    public static int Read(ref int state)
+    public static int Read(in int state)
     {
         var result = state;
         if (result >= 0)
@@ -80,7 +80,7 @@ public static class Atomic
     /// <param name="value">The new state (may include the lock bit).</param>
     /// <param name="comparand">The value <paramref name="state"/> must have in order for the state to be updated.</param>
     /// <returns>The previous state.</returns>
-    /// <remarks>Don't include the lock in <paramref name="comparand"/>, or it results in an infinite loop.</remarks>
+    /// <remarks>Don't include the lock in <paramref name="comparand"/>, or it will result  in an infinite loop.</remarks>
     public static int CompareExchange(ref int state, int value, int comparand)
     {
         var oldState = Interlocked.CompareExchange(ref state, value, comparand);
