@@ -155,8 +155,8 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse();
-            _p2.Pulse();
+            _p1.Pulse(this);
+            _p2.Pulse(this);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent());
@@ -190,9 +190,9 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse();
-            _p2.Pulse();
-            _p3.Pulse();
+            _p1.Pulse(this);
+            _p2.Pulse(this);
+            _p3.Pulse(this);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent());
@@ -230,10 +230,10 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse();
-            _p2.Pulse();
-            _p3.Pulse();
-            _p4.Pulse();
+            _p1.Pulse(this);
+            _p2.Pulse(this);
+            _p3.Pulse(this);
+            _p4.Pulse(this);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent());
@@ -275,11 +275,11 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse();
-            _p2.Pulse();
-            _p3.Pulse();
-            _p4.Pulse();
-            _p5.Pulse();
+            _p1.Pulse(this);
+            _p2.Pulse(this);
+            _p3.Pulse(this);
+            _p4.Pulse(this);
+            _p5.Pulse(this);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent(), _p5.GetCurrent());
@@ -325,12 +325,12 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse();
-            _p2.Pulse();
-            _p3.Pulse();
-            _p4.Pulse();
-            _p5.Pulse();
-            _p6.Pulse();
+            _p1.Pulse(this);
+            _p2.Pulse(this);
+            _p3.Pulse(this);
+            _p4.Pulse(this);
+            _p5.Pulse(this);
+            _p6.Pulse(this);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent(), _p5.GetCurrent(), _p6.GetCurrent());
@@ -380,13 +380,13 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse();
-            _p2.Pulse();
-            _p3.Pulse();
-            _p4.Pulse();
-            _p5.Pulse();
-            _p6.Pulse();
-            _p7.Pulse();
+            _p1.Pulse(this);
+            _p2.Pulse(this);
+            _p3.Pulse(this);
+            _p4.Pulse(this);
+            _p5.Pulse(this);
+            _p6.Pulse(this);
+            _p7.Pulse(this);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent(), _p5.GetCurrent(), _p6.GetCurrent(), _p7.GetCurrent());
@@ -440,14 +440,14 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse();
-            _p2.Pulse();
-            _p3.Pulse();
-            _p4.Pulse();
-            _p5.Pulse();
-            _p6.Pulse();
-            _p7.Pulse();
-            _p8.Pulse();
+            _p1.Pulse(this);
+            _p2.Pulse(this);
+            _p3.Pulse(this);
+            _p4.Pulse(this);
+            _p5.Pulse(this);
+            _p6.Pulse(this);
+            _p7.Pulse(this);
+            _p8.Pulse(this);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent(), _p5.GetCurrent(), _p6.GetCurrent(), _p7.GetCurrent(), _p8.GetCurrent());

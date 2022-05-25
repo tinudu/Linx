@@ -159,7 +159,6 @@ partial class LinxAsyncEnumerable
         protected struct Producer<T>
         {
             public readonly IAsyncEnumerable<T> Source;
-            private readonly ZipIteratorBase<TResult> _parent;
             private readonly ManualResetValueTaskSource<bool> _tsIdle;
             private bool _isIdle;
             private ConfiguredCancelableAsyncEnumerable<T>.Enumerator _enumerator;
@@ -167,30 +166,29 @@ partial class LinxAsyncEnumerable
             public Producer(IAsyncEnumerable<T> source, ZipIteratorBase<TResult> parent)
             {
                 Source = source;
-                _parent = parent;
                 _tsIdle = new();
                 _isIdle = true;
                 _enumerator = default;
 
-                Produce();
+                Produce(parent);
             }
 
             public T GetCurrent() => _enumerator.Current;
 
-            public void Pulse()
+            public void Pulse(ZipIteratorBase<TResult> parent)
             {
-                var parentState = Atomic.Lock(ref _parent._state);
+                var parentState = Atomic.Lock(ref parent._state);
                 if (_isIdle)
                 {
                     _isIdle = false;
-                    _parent._state = parentState;
+                    parent._state = parentState;
                     _tsIdle.SetResult(parentState == _sMoveNext);
                 }
                 else
-                    _parent._state = parentState;
+                    parent._state = parentState;
             }
 
-            private async void Produce()
+            private async void Produce(ZipIteratorBase<TResult> parent)
             {
                 Exception? error = null;
                 try
@@ -198,16 +196,16 @@ partial class LinxAsyncEnumerable
                     if (!await _tsIdle.Task.ConfigureAwait(false))
                         return;
 
-                    await using var e = _enumerator = Source.WithCancellation(_parent._cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
+                    await using var e = _enumerator = Source.WithCancellation(parent._cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
 
                     while (await e.MoveNextAsync())
                     {
-                        if (Atomic.Read(in _parent._state) != _sMoveNext)
+                        if (Atomic.Read(in parent._state) != _sMoveNext)
                             return;
 
                         bool all;
                         TResult? current;
-                        if (Interlocked.Decrement(ref _parent._nMoveNext) > 0)
+                        if (Interlocked.Decrement(ref parent._nMoveNext) > 0)
                         {
                             all = false;
                             current = default;
@@ -215,10 +213,10 @@ partial class LinxAsyncEnumerable
                         else
                         {
                             all = true;
-                            current = _parent.GetCurrent();
+                            current = parent.GetCurrent();
                         }
 
-                        var parentState = Atomic.Lock(ref _parent._state);
+                        var parentState = Atomic.Lock(ref parent._state);
                         switch (parentState)
                         {
                             case _sMoveNext:
@@ -226,22 +224,22 @@ partial class LinxAsyncEnumerable
                                 _isIdle = true;
                                 if (all)
                                 {
-                                    _parent._current = current;
-                                    _parent._state = _sIdle;
-                                    _parent._tsMoveNext.SetResult(true);
+                                    parent._current = current;
+                                    parent._state = _sIdle;
+                                    parent._tsMoveNext.SetResult(true);
                                 }
                                 else
-                                    _parent._state = _sMoveNext;
+                                    parent._state = _sMoveNext;
                                 break;
 
                             case _sCanceled:
                             case _sDisposing:
                             case _sDisposed:
-                                _parent._state = parentState;
+                                parent._state = parentState;
                                 return;
 
                             default:
-                                _parent._state = parentState;
+                                parent._state = parentState;
                                 throw new Exception(parentState + "???");
                         }
 
@@ -256,8 +254,8 @@ partial class LinxAsyncEnumerable
                 finally
                 {
                     _enumerator = default;
-                    Interlocked.Decrement(ref _parent._nProducers);
-                    _parent.Cancel(error, false);
+                    Interlocked.Decrement(ref parent._nProducers);
+                    parent.Cancel(error, false);
                 }
             }
         }

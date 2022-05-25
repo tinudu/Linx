@@ -79,7 +79,7 @@ partial class LinxAsyncEnumerable
         protected override void PulseAll()
         {
 <# foreach(var n in arg.Names) { #>
-            <#= n.Producer #>.Pulse();
+            <#= n.Producer #>.Pulse(this);
 <# } #>
         }
 
