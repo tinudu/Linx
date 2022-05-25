@@ -53,7 +53,7 @@ partial class LinxAsyncEnumerable
     private sealed class ZipIterator<#= arg.GenArgList #> : ZipIteratorBase<TResult>
     {
 <# foreach(var n in arg.Names) { #>
-        private readonly Producer<<#= n.GenArg #>> <#= n.Producer #>;
+        private Producer<<#= n.GenArg #>> <#= n.Producer #>;
 <# } #>
         private readonly Func<#= arg.GenArgList #> _resultSelector;
 
@@ -64,7 +64,7 @@ partial class LinxAsyncEnumerable
             Func<#= arg.GenArgList #> resultSelector) : base(<#= arg.N #>)
         {
 <# foreach(var n in arg.Names) { #>
-            <#= n.Producer #> = new Producer<<#= n.GenArg #>>(<#= n.Source #>, this);
+            Producer<<#= n.GenArg #>>.Init(out <#= n.Producer #>, <#= n.Source #>, this);
 <# } #>
             _resultSelector = resultSelector;
         }
@@ -79,7 +79,7 @@ partial class LinxAsyncEnumerable
         protected override void PulseAll()
         {
 <# foreach(var n in arg.Names) { #>
-            <#= n.Producer #>.Pulse(this);
+            Pulse(ref <#= n.Producer #>.TsIdle);
 <# } #>
         }
 

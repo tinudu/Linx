@@ -133,8 +133,8 @@ partial class LinxAsyncEnumerable
 
     private sealed class ZipIterator<T1, T2, TResult> : ZipIteratorBase<TResult>
     {
-        private readonly Producer<T1> _p1;
-        private readonly Producer<T2> _p2;
+        private Producer<T1> _p1;
+        private Producer<T2> _p2;
         private readonly Func<T1, T2, TResult> _resultSelector;
 
         public ZipIterator(
@@ -142,8 +142,8 @@ partial class LinxAsyncEnumerable
             IAsyncEnumerable<T2> source2,
             Func<T1, T2, TResult> resultSelector) : base(2)
         {
-            _p1 = new Producer<T1>(source1, this);
-            _p2 = new Producer<T2>(source2, this);
+            Producer<T1>.Init(out _p1, source1, this);
+            Producer<T2>.Init(out _p2, source2, this);
             _resultSelector = resultSelector;
         }
 
@@ -155,8 +155,8 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse(this);
-            _p2.Pulse(this);
+            Pulse(ref _p1.TsIdle);
+            Pulse(ref _p2.TsIdle);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent());
@@ -164,9 +164,9 @@ partial class LinxAsyncEnumerable
 
     private sealed class ZipIterator<T1, T2, T3, TResult> : ZipIteratorBase<TResult>
     {
-        private readonly Producer<T1> _p1;
-        private readonly Producer<T2> _p2;
-        private readonly Producer<T3> _p3;
+        private Producer<T1> _p1;
+        private Producer<T2> _p2;
+        private Producer<T3> _p3;
         private readonly Func<T1, T2, T3, TResult> _resultSelector;
 
         public ZipIterator(
@@ -175,9 +175,9 @@ partial class LinxAsyncEnumerable
             IAsyncEnumerable<T3> source3,
             Func<T1, T2, T3, TResult> resultSelector) : base(3)
         {
-            _p1 = new Producer<T1>(source1, this);
-            _p2 = new Producer<T2>(source2, this);
-            _p3 = new Producer<T3>(source3, this);
+            Producer<T1>.Init(out _p1, source1, this);
+            Producer<T2>.Init(out _p2, source2, this);
+            Producer<T3>.Init(out _p3, source3, this);
             _resultSelector = resultSelector;
         }
 
@@ -190,9 +190,9 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse(this);
-            _p2.Pulse(this);
-            _p3.Pulse(this);
+            Pulse(ref _p1.TsIdle);
+            Pulse(ref _p2.TsIdle);
+            Pulse(ref _p3.TsIdle);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent());
@@ -200,10 +200,10 @@ partial class LinxAsyncEnumerable
 
     private sealed class ZipIterator<T1, T2, T3, T4, TResult> : ZipIteratorBase<TResult>
     {
-        private readonly Producer<T1> _p1;
-        private readonly Producer<T2> _p2;
-        private readonly Producer<T3> _p3;
-        private readonly Producer<T4> _p4;
+        private Producer<T1> _p1;
+        private Producer<T2> _p2;
+        private Producer<T3> _p3;
+        private Producer<T4> _p4;
         private readonly Func<T1, T2, T3, T4, TResult> _resultSelector;
 
         public ZipIterator(
@@ -213,10 +213,10 @@ partial class LinxAsyncEnumerable
             IAsyncEnumerable<T4> source4,
             Func<T1, T2, T3, T4, TResult> resultSelector) : base(4)
         {
-            _p1 = new Producer<T1>(source1, this);
-            _p2 = new Producer<T2>(source2, this);
-            _p3 = new Producer<T3>(source3, this);
-            _p4 = new Producer<T4>(source4, this);
+            Producer<T1>.Init(out _p1, source1, this);
+            Producer<T2>.Init(out _p2, source2, this);
+            Producer<T3>.Init(out _p3, source3, this);
+            Producer<T4>.Init(out _p4, source4, this);
             _resultSelector = resultSelector;
         }
 
@@ -230,10 +230,10 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse(this);
-            _p2.Pulse(this);
-            _p3.Pulse(this);
-            _p4.Pulse(this);
+            Pulse(ref _p1.TsIdle);
+            Pulse(ref _p2.TsIdle);
+            Pulse(ref _p3.TsIdle);
+            Pulse(ref _p4.TsIdle);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent());
@@ -241,11 +241,11 @@ partial class LinxAsyncEnumerable
 
     private sealed class ZipIterator<T1, T2, T3, T4, T5, TResult> : ZipIteratorBase<TResult>
     {
-        private readonly Producer<T1> _p1;
-        private readonly Producer<T2> _p2;
-        private readonly Producer<T3> _p3;
-        private readonly Producer<T4> _p4;
-        private readonly Producer<T5> _p5;
+        private Producer<T1> _p1;
+        private Producer<T2> _p2;
+        private Producer<T3> _p3;
+        private Producer<T4> _p4;
+        private Producer<T5> _p5;
         private readonly Func<T1, T2, T3, T4, T5, TResult> _resultSelector;
 
         public ZipIterator(
@@ -256,11 +256,11 @@ partial class LinxAsyncEnumerable
             IAsyncEnumerable<T5> source5,
             Func<T1, T2, T3, T4, T5, TResult> resultSelector) : base(5)
         {
-            _p1 = new Producer<T1>(source1, this);
-            _p2 = new Producer<T2>(source2, this);
-            _p3 = new Producer<T3>(source3, this);
-            _p4 = new Producer<T4>(source4, this);
-            _p5 = new Producer<T5>(source5, this);
+            Producer<T1>.Init(out _p1, source1, this);
+            Producer<T2>.Init(out _p2, source2, this);
+            Producer<T3>.Init(out _p3, source3, this);
+            Producer<T4>.Init(out _p4, source4, this);
+            Producer<T5>.Init(out _p5, source5, this);
             _resultSelector = resultSelector;
         }
 
@@ -275,11 +275,11 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse(this);
-            _p2.Pulse(this);
-            _p3.Pulse(this);
-            _p4.Pulse(this);
-            _p5.Pulse(this);
+            Pulse(ref _p1.TsIdle);
+            Pulse(ref _p2.TsIdle);
+            Pulse(ref _p3.TsIdle);
+            Pulse(ref _p4.TsIdle);
+            Pulse(ref _p5.TsIdle);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent(), _p5.GetCurrent());
@@ -287,12 +287,12 @@ partial class LinxAsyncEnumerable
 
     private sealed class ZipIterator<T1, T2, T3, T4, T5, T6, TResult> : ZipIteratorBase<TResult>
     {
-        private readonly Producer<T1> _p1;
-        private readonly Producer<T2> _p2;
-        private readonly Producer<T3> _p3;
-        private readonly Producer<T4> _p4;
-        private readonly Producer<T5> _p5;
-        private readonly Producer<T6> _p6;
+        private Producer<T1> _p1;
+        private Producer<T2> _p2;
+        private Producer<T3> _p3;
+        private Producer<T4> _p4;
+        private Producer<T5> _p5;
+        private Producer<T6> _p6;
         private readonly Func<T1, T2, T3, T4, T5, T6, TResult> _resultSelector;
 
         public ZipIterator(
@@ -304,12 +304,12 @@ partial class LinxAsyncEnumerable
             IAsyncEnumerable<T6> source6,
             Func<T1, T2, T3, T4, T5, T6, TResult> resultSelector) : base(6)
         {
-            _p1 = new Producer<T1>(source1, this);
-            _p2 = new Producer<T2>(source2, this);
-            _p3 = new Producer<T3>(source3, this);
-            _p4 = new Producer<T4>(source4, this);
-            _p5 = new Producer<T5>(source5, this);
-            _p6 = new Producer<T6>(source6, this);
+            Producer<T1>.Init(out _p1, source1, this);
+            Producer<T2>.Init(out _p2, source2, this);
+            Producer<T3>.Init(out _p3, source3, this);
+            Producer<T4>.Init(out _p4, source4, this);
+            Producer<T5>.Init(out _p5, source5, this);
+            Producer<T6>.Init(out _p6, source6, this);
             _resultSelector = resultSelector;
         }
 
@@ -325,12 +325,12 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse(this);
-            _p2.Pulse(this);
-            _p3.Pulse(this);
-            _p4.Pulse(this);
-            _p5.Pulse(this);
-            _p6.Pulse(this);
+            Pulse(ref _p1.TsIdle);
+            Pulse(ref _p2.TsIdle);
+            Pulse(ref _p3.TsIdle);
+            Pulse(ref _p4.TsIdle);
+            Pulse(ref _p5.TsIdle);
+            Pulse(ref _p6.TsIdle);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent(), _p5.GetCurrent(), _p6.GetCurrent());
@@ -338,13 +338,13 @@ partial class LinxAsyncEnumerable
 
     private sealed class ZipIterator<T1, T2, T3, T4, T5, T6, T7, TResult> : ZipIteratorBase<TResult>
     {
-        private readonly Producer<T1> _p1;
-        private readonly Producer<T2> _p2;
-        private readonly Producer<T3> _p3;
-        private readonly Producer<T4> _p4;
-        private readonly Producer<T5> _p5;
-        private readonly Producer<T6> _p6;
-        private readonly Producer<T7> _p7;
+        private Producer<T1> _p1;
+        private Producer<T2> _p2;
+        private Producer<T3> _p3;
+        private Producer<T4> _p4;
+        private Producer<T5> _p5;
+        private Producer<T6> _p6;
+        private Producer<T7> _p7;
         private readonly Func<T1, T2, T3, T4, T5, T6, T7, TResult> _resultSelector;
 
         public ZipIterator(
@@ -357,13 +357,13 @@ partial class LinxAsyncEnumerable
             IAsyncEnumerable<T7> source7,
             Func<T1, T2, T3, T4, T5, T6, T7, TResult> resultSelector) : base(7)
         {
-            _p1 = new Producer<T1>(source1, this);
-            _p2 = new Producer<T2>(source2, this);
-            _p3 = new Producer<T3>(source3, this);
-            _p4 = new Producer<T4>(source4, this);
-            _p5 = new Producer<T5>(source5, this);
-            _p6 = new Producer<T6>(source6, this);
-            _p7 = new Producer<T7>(source7, this);
+            Producer<T1>.Init(out _p1, source1, this);
+            Producer<T2>.Init(out _p2, source2, this);
+            Producer<T3>.Init(out _p3, source3, this);
+            Producer<T4>.Init(out _p4, source4, this);
+            Producer<T5>.Init(out _p5, source5, this);
+            Producer<T6>.Init(out _p6, source6, this);
+            Producer<T7>.Init(out _p7, source7, this);
             _resultSelector = resultSelector;
         }
 
@@ -380,13 +380,13 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse(this);
-            _p2.Pulse(this);
-            _p3.Pulse(this);
-            _p4.Pulse(this);
-            _p5.Pulse(this);
-            _p6.Pulse(this);
-            _p7.Pulse(this);
+            Pulse(ref _p1.TsIdle);
+            Pulse(ref _p2.TsIdle);
+            Pulse(ref _p3.TsIdle);
+            Pulse(ref _p4.TsIdle);
+            Pulse(ref _p5.TsIdle);
+            Pulse(ref _p6.TsIdle);
+            Pulse(ref _p7.TsIdle);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent(), _p5.GetCurrent(), _p6.GetCurrent(), _p7.GetCurrent());
@@ -394,14 +394,14 @@ partial class LinxAsyncEnumerable
 
     private sealed class ZipIterator<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : ZipIteratorBase<TResult>
     {
-        private readonly Producer<T1> _p1;
-        private readonly Producer<T2> _p2;
-        private readonly Producer<T3> _p3;
-        private readonly Producer<T4> _p4;
-        private readonly Producer<T5> _p5;
-        private readonly Producer<T6> _p6;
-        private readonly Producer<T7> _p7;
-        private readonly Producer<T8> _p8;
+        private Producer<T1> _p1;
+        private Producer<T2> _p2;
+        private Producer<T3> _p3;
+        private Producer<T4> _p4;
+        private Producer<T5> _p5;
+        private Producer<T6> _p6;
+        private Producer<T7> _p7;
+        private Producer<T8> _p8;
         private readonly Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> _resultSelector;
 
         public ZipIterator(
@@ -415,14 +415,14 @@ partial class LinxAsyncEnumerable
             IAsyncEnumerable<T8> source8,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> resultSelector) : base(8)
         {
-            _p1 = new Producer<T1>(source1, this);
-            _p2 = new Producer<T2>(source2, this);
-            _p3 = new Producer<T3>(source3, this);
-            _p4 = new Producer<T4>(source4, this);
-            _p5 = new Producer<T5>(source5, this);
-            _p6 = new Producer<T6>(source6, this);
-            _p7 = new Producer<T7>(source7, this);
-            _p8 = new Producer<T8>(source8, this);
+            Producer<T1>.Init(out _p1, source1, this);
+            Producer<T2>.Init(out _p2, source2, this);
+            Producer<T3>.Init(out _p3, source3, this);
+            Producer<T4>.Init(out _p4, source4, this);
+            Producer<T5>.Init(out _p5, source5, this);
+            Producer<T6>.Init(out _p6, source6, this);
+            Producer<T7>.Init(out _p7, source7, this);
+            Producer<T8>.Init(out _p8, source8, this);
             _resultSelector = resultSelector;
         }
 
@@ -440,14 +440,14 @@ partial class LinxAsyncEnumerable
 
         protected override void PulseAll()
         {
-            _p1.Pulse(this);
-            _p2.Pulse(this);
-            _p3.Pulse(this);
-            _p4.Pulse(this);
-            _p5.Pulse(this);
-            _p6.Pulse(this);
-            _p7.Pulse(this);
-            _p8.Pulse(this);
+            Pulse(ref _p1.TsIdle);
+            Pulse(ref _p2.TsIdle);
+            Pulse(ref _p3.TsIdle);
+            Pulse(ref _p4.TsIdle);
+            Pulse(ref _p5.TsIdle);
+            Pulse(ref _p6.TsIdle);
+            Pulse(ref _p7.TsIdle);
+            Pulse(ref _p8.TsIdle);
         }
 
         protected override TResult GetCurrent() => _resultSelector(_p1.GetCurrent(), _p2.GetCurrent(), _p3.GetCurrent(), _p4.GetCurrent(), _p5.GetCurrent(), _p6.GetCurrent(), _p7.GetCurrent(), _p8.GetCurrent());
