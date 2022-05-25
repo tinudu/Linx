@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Linx.Tasks;
 
 namespace Linx.AsyncEnumerable;
+
 partial class LinxAsyncEnumerable
 {
     private abstract class ZipIteratorBase<TResult> : IAsyncEnumerable<TResult>, IAsyncEnumerator<TResult>
@@ -28,10 +29,7 @@ partial class LinxAsyncEnumerable
         private int _nMoveNext;
         private int _nProducers;
 
-        protected ZipIteratorBase(int nProducers)
-        {
-            _nProducers = nProducers;
-        }
+        protected ZipIteratorBase(int nProducers) => _nProducers = nProducers;
 
         protected abstract ZipIteratorBase<TResult> Clone();
 
