@@ -1,99 +1,125 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Linx;
 
 /// <summary>
-/// Supports atomic state updates using the sign bit as a lock.
+/// Supports atomic state updates.
 /// </summary>
 [DebuggerStepThrough]
 public static class Atomic
 {
     /// <summary>
-    /// Spin wait until the lock is cleared, then return the unlocked state.
+    /// Spin wait until the state is non-negative.
     /// </summary>
-    /// <param name="state">The state to read.</param>
-    /// <returns>The state.</returns>
+    /// <returns>The non-negative state.</returns>
     public static int Read(in int state)
     {
         var result = state;
-        if (result >= 0)
-            return result;
-
-        var sw = new SpinWait();
-        while (true)
+        if (result < 0)
         {
-            sw.SpinOnce();
-            result = state;
-            if (result >= 0)
-                return result;
+            var sw = new SpinWait();
+            do
+            {
+                sw.SpinOnce();
+                result = state;
+            } while (result < 0);
         }
+        return result;
     }
 
     /// <summary>
-    /// Spin wait until the lock is cleared, then aquire it.
+    /// Spin wait until the state is non-negative, then update it to its one's complement.
     /// </summary>
-    /// <param name="state">The state to update.</param>
-    /// <returns>The previous state.</returns>
+    /// <returns>The state before the update.</returns>
     public static int Lock(ref int state)
     {
-        var oldState = state;
-        if (oldState >= 0 && Interlocked.CompareExchange(ref state, oldState | int.MinValue, oldState) == oldState)
-            return oldState;
+        var result = state;
+        while (result >= 0)
+        {
+            var changed = Interlocked.CompareExchange(ref state, ~result, result);
+            if (changed == result)
+                return result;
+            result = changed;
+        }
 
         var sw = new SpinWait();
         while (true)
         {
-            sw.SpinOnce();
-            oldState = state;
-            if (oldState >= 0 && Interlocked.CompareExchange(ref state, oldState | int.MinValue, oldState) == oldState)
-                return oldState;
+            do
+            {
+                sw.SpinOnce();
+                result = state;
+            } while (result < 0);
+
+            do
+            {
+                var changed = Interlocked.CompareExchange(ref state, ~result, result);
+                if (changed == result)
+                    return result;
+                result = changed;
+            } while (result >= 0);
+
+            sw.Reset();
         }
     }
 
     /// <summary>
-    /// Spin wait until the lock  is cleared, then set to <paramref name="value"/>.
+    /// Spin wait until the state is non-negative, then update it to the specified <paramref name="value"/>.
     /// </summary>
-    /// <param name="state">The state to update.</param>
-    /// <param name="value">The new state (may include the lock bit).</param>
-    /// <returns>The previous state.</returns>
+    /// <returns>The state before the update.</returns>
     public static int Exchange(ref int state, int value)
     {
-        var oldState = state;
-        if (oldState >= 0 && Interlocked.CompareExchange(ref state, value, oldState) == oldState)
-            return oldState;
+        var result = state;
+        while (result >= 0)
+        {
+            var changed = Interlocked.CompareExchange(ref state, value, result);
+            if (changed == result)
+                return result;
+            result = changed;
+        }
 
         var sw = new SpinWait();
         while (true)
         {
-            sw.SpinOnce();
-            oldState = state;
-            if (oldState >= 0 && Interlocked.CompareExchange(ref state, value, oldState) == oldState)
-                return oldState;
+            do
+            {
+                sw.SpinOnce();
+                result = state;
+            } while (result < 0);
+
+            do
+            {
+                var changed = Interlocked.CompareExchange(ref state, value, result);
+                if (changed == result)
+                    return result;
+                result = changed;
+            } while (result >= 0);
+
+            sw.Reset();
         }
     }
 
     /// <summary>
-    /// Spin wait until the lock is cleared, then set to <paramref name="value"/> iff the previous value is <paramref name="comparand"/>.
+    /// Spin wait until the state is non-negative, then update it to the specified <paramref name="value"/> iff the previous value is <paramref name="comparand"/>.
     /// </summary>
-    /// <param name="state">The state to update.</param>
-    /// <param name="value">The new state (may include the lock bit).</param>
-    /// <param name="comparand">The value <paramref name="state"/> must have in order for the state to be updated.</param>
     /// <returns>The previous state.</returns>
-    /// <remarks>Don't include the lock in <paramref name="comparand"/>, or it will result  in an infinite loop.</remarks>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="comparand"/> is negative.</exception>
     public static int CompareExchange(ref int state, int value, int comparand)
     {
-        var oldState = Interlocked.CompareExchange(ref state, value, comparand);
-        if (oldState >= 0)
-            return oldState;
+        if (comparand < 0) throw new ArgumentOutOfRangeException(nameof(comparand), "Is negative.");
 
-        var sw = new SpinWait();
-        while (true)
+        var result = Interlocked.CompareExchange(ref state, value, comparand);
+        if (result < 0)
         {
-            sw.SpinOnce();
-            oldState = Interlocked.CompareExchange(ref state, value, comparand);
-            if (oldState >= 0)
-                return oldState;
+            var sw = new SpinWait();
+            do
+            {
+                sw.SpinOnce();
+                result = Interlocked.CompareExchange(ref state, value, comparand);
+            } while (result < 0);
         }
+        return result;
     }
 }
