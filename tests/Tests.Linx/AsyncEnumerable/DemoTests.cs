@@ -1,7 +1,6 @@
-﻿using global::Linx.AsyncEnumerable;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
+using Linx.AsyncEnumerable;
 using Xunit;
 
 namespace Tests.Linx.AsyncEnumerable;
@@ -32,7 +31,7 @@ public sealed class DemoTests
         const string colors = "grrbrggbr";
         var src = colors.ToAsyncEnumerable()
             .GroupBy(c => c)
-            .Parallel(async (g, t) => (g.Key, Value: await g.Count(t)));
+            .SelectAwait(async (g, t) => (g.Key, Value: await g.Count(t)), false);
 
         var result = await src.ToDictionary(kv => kv.Key, kv => kv.Value, default);
         Assert.Equal(3, result['g']);
@@ -47,7 +46,7 @@ public sealed class DemoTests
         const string colors = "grrrrbrrrggggbrgrgrrg";
         var src = colors.ToAsyncEnumerable()
             .GroupByWhileEnumerated(c => c)
-            .Parallel(async (g, t) => $"{g.Key}{await g.Take(3).Count(default)}", true);
+            .SelectAwait(async (g, t) => $"{g.Key}{await g.Take(3).Count(default)}", true);
 
         var result = await src.ToList(default);
         Assert.True(new[] { "g3", "r3", "r3", "b2", "r3", "g3", "g2", "r2" }.SequenceEqual(result));

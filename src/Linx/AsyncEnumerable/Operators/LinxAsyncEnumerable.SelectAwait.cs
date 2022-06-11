@@ -19,7 +19,7 @@ partial class LinxAsyncEnumerable
     /// <exception cref="ArgumentNullException"><paramref name="resultSelector"/> is null.</exception>
     public static IAsyncEnumerable<TResult> SelectAwait<TSource, TResult>(
         this IAsyncEnumerable<TSource> source,
-        Func<TSource, CancellationToken, Task<TResult>> resultSelector)
+        Func<TSource, CancellationToken, ValueTask<TResult>> resultSelector)
         => new SelectAwaitIterator<TSource, TResult>(
             source ?? throw new ArgumentNullException(nameof(source)),
             resultSelector ?? throw new ArgumentNullException(nameof(resultSelector)),
@@ -41,7 +41,7 @@ partial class LinxAsyncEnumerable
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxConcurrent"/> is non-positive.</exception>
     public static IAsyncEnumerable<TResult> SelectAwait<TSource, TResult>(
         this IAsyncEnumerable<TSource> source,
-        Func<TSource, CancellationToken, Task<TResult>> resultSelector,
+        Func<TSource, CancellationToken, ValueTask<TResult>> resultSelector,
         bool preserveOrder,
         int maxConcurrent = int.MaxValue)
         => new SelectAwaitIterator<TSource, TResult>(
@@ -61,7 +61,7 @@ partial class LinxAsyncEnumerable
         private const int _sDisposed = 6; // source enumeration and all result selectors completed
 
         private readonly IAsyncEnumerable<TSource> _source;
-        private readonly Func<TSource, CancellationToken, Task<TResult>> _resultSelector;
+        private readonly Func<TSource, CancellationToken, ValueTask<TResult>> _resultSelector;
         private readonly bool _preserveOrder;
         private readonly int _maxConcurrent;
 
@@ -87,7 +87,7 @@ partial class LinxAsyncEnumerable
 
         public SelectAwaitIterator(
             IAsyncEnumerable<TSource> source,
-            Func<TSource, CancellationToken, Task<TResult>> resultSelector,
+            Func<TSource, CancellationToken, ValueTask<TResult>> resultSelector,
             bool preserveOrder,
             int maxConcurrent)
         {
@@ -392,7 +392,7 @@ loop:
 
             private readonly SelectAwaitIterator<TSource, TResult> _parent;
             private Action? _continuation;
-            private ConfiguredTaskAwaitable<TResult>.ConfiguredTaskAwaiter _awaiter;
+            private ConfiguredValueTaskAwaitable<TResult>.ConfiguredValueTaskAwaiter _awaiter;
 
             public Node(SelectAwaitIterator<TSource, TResult> parent) => _parent = parent;
 
@@ -402,7 +402,9 @@ loop:
 
                 try
                 {
+#pragma warning disable CA2012 // Use ValueTasks correctly
                     var awaiter = _parent._resultSelector(item, _parent._cts.Token).ConfigureAwait(false).GetAwaiter();
+#pragma warning restore CA2012 // Use ValueTasks correctly
                     if (awaiter.IsCompleted)
                         OnCompleted(null, awaiter.GetResult());
                     else

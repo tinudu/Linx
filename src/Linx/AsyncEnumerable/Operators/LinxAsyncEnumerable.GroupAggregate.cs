@@ -21,6 +21,6 @@ partial class LinxAsyncEnumerable
 
         return source
             .GroupBy(keySelector, keyComparer)
-            .Parallel(async (g, t) => new KeyValuePair<TKey, TAggregate>(g.Key, await aggregator(g, t).ConfigureAwait(false)));
+            .SelectAwait(async (g, t) => new KeyValuePair<TKey, TAggregate>(g.Key, await aggregator(g, t).ConfigureAwait(false)));
     }
 }
