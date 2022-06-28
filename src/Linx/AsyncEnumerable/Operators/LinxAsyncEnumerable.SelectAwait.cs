@@ -23,8 +23,7 @@ partial class LinxAsyncEnumerable
         => new SelectAwaitIterator<TSource, TResult>(
             source ?? throw new ArgumentNullException(nameof(source)),
             resultSelector ?? throw new ArgumentNullException(nameof(resultSelector)),
-            true, // doesn't matter
-            1);
+            true, 1);
 
     /// <summary>
     /// Projects each element of a sequence into a new form, using a async result selector.
@@ -33,7 +32,7 @@ partial class LinxAsyncEnumerable
     /// <param name="resultSelector">Async result selector.</param>
     /// <param name="preserveOrder">
     /// If true, output items appear in order of their corresponding input item.
-    /// If false, output items appear in order of completion of the result.
+    /// If false, output items appear in order of completion.
     /// </param>
     /// <param name="maxConcurrent">Specifies the maximum number of concurrent invocations of the <paramref name="resultSelector"/>.</param>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
@@ -52,38 +51,38 @@ partial class LinxAsyncEnumerable
 
     private sealed class SelectAwaitIterator<TSource, TResult> : IAsyncEnumerable<TResult>, IAsyncEnumerator<TResult>
     {
-        private const int _sEnumerator = 0; // GetEnumeratorAsync has not been called yet
+        private const int _sEnumerator = 0; // GetEnumeratorAsync has not been called
         private const int _sIdle = 1; // no pending async operation
         private const int _sMoving = 2; // pending MoveNextAsync
-        private const int _sCanceled = 3; // idle, but the sequence has completed
+        private const int _sCanceled = 3; // idle but no more items
         private const int _sDisposing = 4; // canceled and pending DisposeAsync
         private const int _sDisposingMoving = 5; // canceled and pending MoveNextAsync
-        private const int _sDisposed = 6; // source enumeration and all result selectors completed
+        private const int _sDisposed = 6; // final state
 
         private readonly IAsyncEnumerable<TSource> _source;
         private readonly Func<TSource, CancellationToken, ValueTask<TResult>> _resultSelector;
         private readonly bool _preserveOrder;
         private readonly int _maxConcurrent;
 
-        private readonly CancellationTokenSource _cts = new(); // cancel source enumeration and result selectors
+        private readonly CancellationTokenSource _cts = new(); // cancels source enumeration and result selectors
         private readonly ManualResetValueTaskSource<bool> _tsMoving = new(); // returned by MoveNextAsync
         private TResult? _current;
         private CancellationTokenRegistration _ctr;
 
         private int _state;
         private Exception? _error; // final error when canceled, temporary when source enumeration completed
-        private AsyncTaskMethodBuilder _atmbDisposed = Linx.CreateAsyncTaskMethodBuilder(); // completed when disposed
+        private AsyncTaskMethodBuilder _atmbDisposed = AsyncTaskMethodBuilder.Create(); // returned by DisposeAsync
 
         // source enumeration control
-        private ManualResetValueTaskSource<bool>? _tsProducer; // Produce() awaits this when starting or _maxConcurrent reached
+        private ManualResetValueTaskSource<bool>? _tsProducer; // Produce() awaits this
         private bool _queueHasErrors; // stop creating new nodes
         private bool _producerIsCompleted;
 
-        // queue of nodes
-        private Node? _first, _last; // FIFO queue of nodes
-        private int _nConcurrent; // # of Nodes in the queue + incomplete nodes not in the queue
+        // FIFO queue of nodes
+        private Node? _first, _last;
+        private int _count;
 
-        private Node? _pool; // recicled nodes
+        private Node? _nodePool; // recicled nodes
 
         public SelectAwaitIterator(
             IAsyncEnumerable<TSource> source,
@@ -101,10 +100,18 @@ partial class LinxAsyncEnumerable
             _maxConcurrent = maxConcurrent;
         }
 
+        private SelectAwaitIterator(SelectAwaitIterator<TSource, TResult> parent)
+        {
+            _source = parent._source;
+            _resultSelector = parent._resultSelector;
+            _preserveOrder = parent._preserveOrder;
+            _maxConcurrent = parent._maxConcurrent;
+        }
+
         public IAsyncEnumerator<TResult> GetAsyncEnumerator(CancellationToken token)
         {
             if (Atomic.CompareExchange(ref _state, _sIdle, _sEnumerator) != _sEnumerator) // already enumerating
-                return new SelectAwaitIterator<TSource, TResult>(_source, _resultSelector, _preserveOrder, _maxConcurrent).GetAsyncEnumerator(token);
+                return new SelectAwaitIterator<TSource, TResult>(this).GetAsyncEnumerator(token);
 
             Produce();
             if (token.CanBeCanceled)
@@ -186,8 +193,8 @@ partial class LinxAsyncEnumerable
             else
                 node.Next = null;
 
-            Debug.Assert(_nConcurrent > 0);
-            _nConcurrent--;
+            Debug.Assert(_count > 0);
+            _count--;
             return node;
         }
 
@@ -203,14 +210,14 @@ partial class LinxAsyncEnumerable
                     break;
 
                 case _sMoving:
-                    if (_nConcurrent > 0 || !_producerIsCompleted) // pulling from queue
+                    if (_count > 0 || !_producerIsCompleted) // pulling from queue
                     {
                         var node = TryDequeue();
                         if (node is null) // no completed item at head of the queue
                         {
-                            var ts = _nConcurrent < _maxConcurrent ? Linx.Clear(ref _tsProducer) : null;
-                            if (_nConcurrent == 0) // consumer has cought up, so give nodes to the garbage collector
-                                _pool = null;
+                            var ts = _count < _maxConcurrent ? Linx.Clear(ref _tsProducer) : null;
+                            if (_count == 0 && _nodePool is not null) // consumer has cought up, prune the pool
+                                _nodePool.Next = null;
                             _state = _sMoving;
                             ts?.SetResult(true);
                         }
@@ -238,7 +245,7 @@ partial class LinxAsyncEnumerable
                 case _sDisposing:
                 case _sDisposingMoving:
                     while (TryDequeue() is not null) { }
-                    if (_nConcurrent > 0 || !_producerIsCompleted)
+                    if (_count > 0 || !_producerIsCompleted)
                         _state = state;
                     else
                     {
@@ -265,7 +272,7 @@ partial class LinxAsyncEnumerable
             _error = error;
             _ctr.Dispose();
             var ts = Linx.Clear(ref _tsProducer);
-            _pool = null;
+            _nodePool = null;
             Pulse(destinationState);
             ts?.SetResult(false);
             _cts.Cancel();
@@ -309,64 +316,103 @@ partial class LinxAsyncEnumerable
 
         private async void Produce()
         {
+            // wait for 1st _sMoving
             var ts = _tsProducer = new();
+            if (!await ts.Task.ConfigureAwait(false))
+                return;
+
             Exception? error = null;
             try
             {
-                if (!await ts.Task.ConfigureAwait(false))
-                    return;
-
                 await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
                 {
-                    var state = Atomic.Lock(ref _state);
-loop:
-                    switch (state)
+                    // wait for _sMoving and start a node
+                    while (true)
                     {
-                        case _sIdle:
-                        case _sMoving:
-                            if (_queueHasErrors)
-                            {
+                        var state = Atomic.Lock(ref _state);
+                        if (_queueHasErrors)
+                        {
+                            _state = state;
+                            return;
+                        }
+
+                        switch (state)
+                        {
+                            case _sIdle: // await sMoving
+                                ts.Reset();
+                                _tsProducer = ts;
+                                _state = _sIdle;
+                                if (!await ts.Task.ConfigureAwait(false))
+                                    return;
+                                continue;
+
+                            case _sMoving:
+                                Debug.Assert(_count < _maxConcurrent);
+
+                                Node? node;
+                                if (_nodePool is null)
+                                    try
+                                    {
+                                        node = new(this);
+                                    }
+                                    catch
+                                    {
+                                        _state = _sMoving;
+                                        throw;
+                                    }
+                                else
+                                {
+                                    node = _nodePool;
+                                    _nodePool = node.Next;
+                                    node.Next = null;
+                                }
+
+                                if (_preserveOrder)
+                                    Enqueue(node);
+                                _count++;
+                                _state = _sMoving;
+                                node.Start(item);
+                                break;
+
+                            default:
                                 _state = state;
                                 return;
-                            }
+                        }
+                        break;
+                    }
 
-                            if (_nConcurrent >= _maxConcurrent)
-                            {
+                    // wait for _sMoving and _count < _maxConcurrent
+                    while (true)
+                    {
+                        var state = Atomic.Lock(ref _state);
+                        if (_queueHasErrors)
+                        {
+                            _state = state;
+                            return;
+                        }
+
+                        switch (state)
+                        {
+                            case _sMoving when _count < _maxConcurrent:
+                                _state = _sMoving;
+                                break;
+
+                            case _sIdle:
+                            case _sMoving:
                                 ts.Reset();
                                 _tsProducer = ts;
                                 _state = state;
                                 if (!await ts.Task.ConfigureAwait(false))
                                     return;
-                                state = Atomic.Lock(ref _state);
-                                goto loop;
-                            }
-                            break;
+                                continue;
 
-                        default:
-                            _state = state;
-                            return;
-                    }
-
-                    Node node;
-                    try
-                    {
-                        if (_pool is null)
-                            node = new(this);
-                        else
-                        {
-                            node = _pool;
-                            _pool = node.Next;
-                            node.Next = null;
+                            default:
+                                _state = state;
+                                return;
                         }
-                        _nConcurrent++;
-                        if (_preserveOrder) // enqueue pending
-                            Enqueue(node);
+
+                        break;
                     }
-                    finally
-                    {
-                        _state = state;
-                    }
-                    node.Start(item);
                 }
             }
             catch (Exception ex)
@@ -398,7 +444,7 @@ loop:
 
             public void Start(TSource item)
             {
-                Debug.Assert(!IsCompleted);
+                Debug.Assert(!IsCompleted && _parent._count > 0);
 
                 try
                 {
@@ -438,36 +484,33 @@ loop:
                 IsCompleted = false;
                 Exception = null;
                 Result = default;
-                Next = _parent._pool;
-                _parent._pool = this;
+                Next = _parent._nodePool;
+                _parent._nodePool = this;
             }
 
             private void OnCompleted(Exception? exception, TResult? result)
             {
-                Debug.Assert(!IsCompleted);
+                Debug.Assert(!IsCompleted && _parent._count > 0);
 
                 var state = Atomic.Lock(ref _parent._state);
-                Debug.Assert(_parent._nConcurrent > 0);
-
                 IsCompleted = true;
                 Exception = exception;
                 Result = result;
-                ManualResetValueTaskSource<bool>? ts;
-                if (exception is null)
-                    ts = null;
+                if (!_parent._preserveOrder) // only enqueue when completed (otherwise already in queue)
+                    _parent.Enqueue(this);
+
+                if (_parent._first == this)
+                    _parent.Pulse(state);
+                else if (exception is null)
+                    _parent._state = state;
                 else
                 {
                     _parent._queueHasErrors = true;
-                    _parent._pool = null;
-                    ts = Linx.Clear(ref _parent._tsProducer);
-                }
-                if (!_parent._preserveOrder) // only enqueue when completed (otherwise already in queue)
-                    _parent.Enqueue(this);
-                if (_parent._first == this)
-                    _parent.Pulse(state);
-                else
+                    _parent._nodePool = null;
+                    var ts = Linx.Clear(ref _parent._tsProducer);
                     _parent._state = state;
-                ts?.SetResult(false);
+                    ts?.SetResult(false);
+                }
             }
         }
     }
