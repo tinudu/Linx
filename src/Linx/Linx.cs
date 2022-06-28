@@ -65,7 +65,7 @@ public static partial class Linx
     /// </example>
     public static Task<OperationCanceledException> WhenCancellationRequested(this CancellationToken token)
     {
-        var atmb = new AsyncTaskMethodBuilder<OperationCanceledException>();
+        var atmb = AsyncTaskMethodBuilder<OperationCanceledException>.Create();
         try
         {
             if (token.IsCancellationRequested)
@@ -79,26 +79,6 @@ public static partial class Linx
         }
         catch (Exception ex) { atmb.SetException(ex); }
         return atmb.Task;
-    }
-
-    /// <summary>
-    /// Create a <see cref="AsyncTaskMethodBuilder"/> and ensure the <see cref="AsyncTaskMethodBuilder.Task"/> is initialized.
-    /// </summary>
-    public static AsyncTaskMethodBuilder CreateAsyncTaskMethodBuilder()
-    {
-        var atmb = AsyncTaskMethodBuilder.Create();
-        _ = atmb.Task;
-        return atmb;
-    }
-
-    /// <summary>
-    /// Create a <see cref="AsyncTaskMethodBuilder{TResult}"/> and ensure the <see cref="AsyncTaskMethodBuilder{TResult}.Task"/> is initialized.
-    /// </summary>
-    public static AsyncTaskMethodBuilder<T> CreateAsyncTaskMethodBuilder<T>()
-    {
-        var atmb = AsyncTaskMethodBuilder<T>.Create();
-        _ = atmb.Task;
-        return atmb;
     }
 
     /// <summary>

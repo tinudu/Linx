@@ -22,7 +22,7 @@ partial class LinxAsyncEnumerable
 
         private readonly CancellationTokenSource _cts = new();
         private readonly ManualResetValueTaskSource<bool> _tsMoving = new();
-        private readonly AsyncTaskMethodBuilder _atmbDisposed = Linx.CreateAsyncTaskMethodBuilder();
+        private readonly AsyncTaskMethodBuilder _atmbDisposed = AsyncTaskMethodBuilder.Create();
         private CancellationTokenRegistration _ctr;
         private int _state;
         private TResult? _current;
