@@ -6,6 +6,9 @@ namespace Linx.AsyncEnumerable;
 
 partial class LinxAsyncEnumerable
 {
+    /// <summary>
+    /// Sort <paramref name="source"/>.
+    /// </summary>
     public static async Task<List<T>> Sort<T>(this IOrderedAsyncEnumerable<T> source, CancellationToken token)
     {
         var result = await source.Source.ToList(token).ConfigureAwait(false);
@@ -13,7 +16,10 @@ partial class LinxAsyncEnumerable
         return result;
     }
 
-    public static async Task<List<KeyValuePair<int, T>>> SortStable<T>(this IOrderedAsyncEnumerable<T> source, CancellationToken token)
+    /// <summary>
+    /// Sort <paramref name="source"/>, preserving the order on items comparing equal.
+    /// </summary>
+    public static async Task<List<KeyValuePair<int, T>>> StableSort<T>(this IOrderedAsyncEnumerable<T> source, CancellationToken token)
     {
         return await source.Source
             .Index()
