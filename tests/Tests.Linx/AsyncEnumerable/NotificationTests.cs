@@ -1,5 +1,5 @@
 ﻿using System;
-using global::Linx.Notifications;
+using Linx.Notifications;
 using Xunit;
 
 namespace Tests.Linx.AsyncEnumerable;

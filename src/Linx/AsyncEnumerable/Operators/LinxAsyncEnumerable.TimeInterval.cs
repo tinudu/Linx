@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Timing;
+using Linx.Timing;
 
 namespace Linx.AsyncEnumerable;
 

@@ -20,7 +20,9 @@ public sealed class DemoTests
     public async Task GroupIndexMerge()
     {
         const string colors = "grrbrggbr";
-        var src = colors.ToAsyncEnumerable().GroupBy(c => c).Select(g => g.Select((_, i) => $"{g.Key}{i + 1}")).Merge();
+        var src = colors.ToAsyncEnumerable()
+            .GroupBy(c => c)
+            .Select(g => g.RunningCount32().Select(i => $"{g.Key}{i + 1}")).Merge();
         var result = await src.ToList(default);
         Assert.True(new[] { "g1", "r1", "r2", "b1", "r3", "g2", "g3", "b2", "r4" }.SequenceEqual(result));
     }

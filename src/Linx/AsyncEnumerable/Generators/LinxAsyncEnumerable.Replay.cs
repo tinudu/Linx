@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using global::Linx.Notifications;
-using global::Linx.Timing;
+using Linx.Notifications;
+using Linx.Timing;
 
 namespace Linx.AsyncEnumerable;
 

@@ -2,8 +2,8 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
-using global::Linx.Timing;
+using Linx.Tasking;
+using Linx.Timing;
 
 namespace Linx.Testing;
 
@@ -41,14 +41,14 @@ partial class VirtualTime
                     _tsDelay.Reset();
                     _state = _tWaiting;
                     _time.Enqueue(this, due);
-                    return _tsDelay.Task;
+                    return _tsDelay.ValueTask;
 
                 case _tFinal:
                     Debug.Assert(_error is not null);
                     _state = _tFinal;
                     _tsDelay.Reset();
                     _tsDelay.SetException(_error);
-                    return _tsDelay.Task;
+                    return _tsDelay.ValueTask;
 
                 case _tWaiting:
                     throw new InvalidOperationException("Not reentrant.");

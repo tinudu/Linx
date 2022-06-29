@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx.AsyncEnumerable;
 
@@ -109,7 +109,7 @@ partial class LinxAsyncEnumerable
                     throw new Exception(state + "???");
             }
 
-            return _tsAccepting.Task;
+            return _tsAccepting.ValueTask;
         }
 
         ValueTask IAsyncDisposable.DisposeAsync()
@@ -201,7 +201,7 @@ partial class LinxAsyncEnumerable
                                 Current = group;
                                 _state = state = _sEmitting;
                                 _tsAccepting.SetResult(true);
-                                await _tsEmitting.Task.ConfigureAwait(false);
+                                await _tsEmitting.ValueTask.ConfigureAwait(false);
                             }
                             else // Disposed, ignore item
                             {
@@ -231,7 +231,7 @@ partial class LinxAsyncEnumerable
                                 group.Current = item;
                                 group.State = _sEmitting;
                                 group.TsAccepting.SetResult(true);
-                                await group.TsEmitting.Task.ConfigureAwait(false);
+                                await group.TsEmitting.ValueTask.ConfigureAwait(false);
                                 break;
 
                             case _sDisposed:
@@ -331,7 +331,7 @@ partial class LinxAsyncEnumerable
                         _enumerator._state = state;
                         throw new Exception(State + "???");
                 }
-                return TsAccepting.Task;
+                return TsAccepting.ValueTask;
             }
 
             ValueTask IAsyncDisposable.DisposeAsync()

@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
-using global::Linx.Timing;
+using Linx.Tasking;
+using Linx.Timing;
 
 namespace Linx.AsyncEnumerable;
 
@@ -110,7 +110,7 @@ partial class LinxAsyncEnumerable
                     break;
             }
 
-            return _tsAccepting.Task;
+            return _tsAccepting.ValueTask;
         }
 
         public ValueTask DisposeAsync()
@@ -269,7 +269,7 @@ partial class LinxAsyncEnumerable
                             ts.Reset();
                             _tsThrottle = ts;
                             _state = state;
-                            if (!await ts.Task.ConfigureAwait(false))
+                            if (!await ts.ValueTask.ConfigureAwait(false))
                                 return;
                             break;
 
@@ -294,7 +294,7 @@ partial class LinxAsyncEnumerable
                                 ts.Reset();
                                 _tsThrottle = ts;
                                 _state = _sNextEmitting;
-                                if (!await ts.Task.ConfigureAwait(false))
+                                if (!await ts.ValueTask.ConfigureAwait(false))
                                     return;
                             }
                             else

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx.AsyncEnumerable;
 
@@ -351,7 +351,7 @@ partial class LinxAsyncEnumerable
                         _state = _sEmitting;
                         _tsAccepting.SetResult(true);
                     }
-                    return _tsAccepting.Task;
+                    return _tsAccepting.ValueTask;
 
                 case _sFinal:
                     _isVersionValid = false;
@@ -360,7 +360,7 @@ partial class LinxAsyncEnumerable
                     _state = _sFinal;
                     _tsAccepting.Reset();
                     _tsAccepting.SetExceptionOrResult(_error, false);
-                    return _tsAccepting.Task;
+                    return _tsAccepting.ValueTask;
 
                 default:
                     _state = state;
@@ -457,7 +457,7 @@ partial class LinxAsyncEnumerable
                 if (token.CanBeCanceled)
                     _ctr = token.Register(() => SetFinal(new OperationCanceledException(token)));
 
-                if (!await tsProduce.Task.ConfigureAwait(false))
+                if (!await tsProduce.ValueTask.ConfigureAwait(false))
                     return;
                 tsProduce.Reset();
 
@@ -476,7 +476,7 @@ partial class LinxAsyncEnumerable
                                 {
                                     _tsProduce = tsProduce;
                                     _state = state;
-                                    if (!await tsProduce.Task.ConfigureAwait(false))
+                                    if (!await tsProduce.ValueTask.ConfigureAwait(false))
                                         return;
                                     tsProduce.Reset();
                                     loop = true;

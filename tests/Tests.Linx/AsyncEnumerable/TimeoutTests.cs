@@ -1,6 +1,6 @@
 ﻿using System;
-using global::Linx.AsyncEnumerable;
-using global::Linx.Testing;
+using Linx.AsyncEnumerable;
+using Linx.Testing;
 using Xunit;
 
 namespace Tests.Linx.AsyncEnumerable;

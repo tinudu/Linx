@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx.AsyncEnumerable;
 
@@ -123,7 +123,7 @@ partial class LinxAsyncEnumerable
                         while (i < _enumerators.Count)
                         {
                             var e = _enumerators[i];
-                            if (await e.TsEmitting.Task.ConfigureAwait(false))
+                            if (await e.TsEmitting.ValueTask.ConfigureAwait(false))
                                 i++;
                             else
                                 _enumerators.RemoveAt(i);
@@ -204,7 +204,7 @@ partial class LinxAsyncEnumerable
                             catch (Exception ex)
                             {
                                 _e._gate.Set();
-                                Complete(ex); 
+                                Complete(ex);
                             }
                         }
                         break;
@@ -227,7 +227,7 @@ partial class LinxAsyncEnumerable
                         _e._gate.Set();
                         throw new Exception(State + "???");
                 }
-                return TsAccepting.Task;
+                return TsAccepting.ValueTask;
             }
 
             public ValueTask DisposeAsync()

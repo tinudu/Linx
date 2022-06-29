@@ -1,9 +1,9 @@
-﻿using global::Linx.Tasks;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Linx.Tasking;
 
 namespace Linx.AsyncEnumerable;
 
@@ -68,7 +68,7 @@ internal sealed class CoroutineIterator<T> : IAsyncEnumerator<T>, IAsyncEnumerab
                 _tsAccepting.Reset();
                 _state = _sAccepting;
                 _tsEmitting.SetResult(true);
-                return _tsAccepting.Task;
+                return _tsAccepting.ValueTask;
 
             case _sFinal:
                 Current = default!;
@@ -128,7 +128,7 @@ internal sealed class CoroutineIterator<T> : IAsyncEnumerator<T>, IAsyncEnumerab
         Exception? error = null;
         try
         {
-            if (!await _tsEmitting.Task.ConfigureAwait(false))
+            if (!await _tsEmitting.ValueTask.ConfigureAwait(false))
                 return;
 
             await _produceAsync(YieldAsync, token).ConfigureAwait(false);
@@ -151,7 +151,7 @@ internal sealed class CoroutineIterator<T> : IAsyncEnumerator<T>, IAsyncEnumerab
                 _tsEmitting.Reset();
                 _state = _sEmitting;
                 _tsAccepting.SetResult(true);
-                return _tsEmitting.Task;
+                return _tsEmitting.ValueTask;
 
             case _sFinal:
                 _state = _sFinal;

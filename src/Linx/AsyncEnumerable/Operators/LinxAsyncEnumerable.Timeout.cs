@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
-using global::Linx.Timing;
+using Linx.Tasking;
+using Linx.Timing;
 
 namespace Linx.AsyncEnumerable;
 
@@ -91,7 +91,7 @@ partial class LinxAsyncEnumerable
                     throw new Exception(state + "???");
             }
 
-            return _tsAccepting.Task;
+            return _tsAccepting.ValueTask;
         }
 
         public ValueTask DisposeAsync()
@@ -157,7 +157,7 @@ partial class LinxAsyncEnumerable
                             _tsEmitting.Reset();
                             _state = _sEmitting;
                             _tsAccepting.SetResult(true);
-                            if (!await _tsEmitting.Task.ConfigureAwait(false)) return;
+                            if (!await _tsEmitting.ValueTask.ConfigureAwait(false)) return;
                             break;
 
                         case _sCompleted:
@@ -229,7 +229,7 @@ partial class LinxAsyncEnumerable
                         case _sEmitting:
                             _tsTimer = ts;
                             _state = _sEmitting;
-                            await ts.Task.ConfigureAwait(false);
+                            await ts.ValueTask.ConfigureAwait(false);
                             break;
 
                         case _sCompleted:

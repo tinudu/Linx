@@ -15,7 +15,7 @@ public static class LinxXml
     /// <summary>
     /// Convert a xml string to a <see cref="DateTimeOffset"/>.
     /// </summary>
-    /// <remarks>Makes sure the timezone is explicit (as opposed to <see cref="System.Xml.XmlConvert"/>, which assumes the local timezone).</remarks>
+    /// <remarks>Makes sure the timezone is explicit (as opposed to <see cref="XmlConvert"/>, which assumes the local timezone).</remarks>
     public static DateTimeOffset ToDateTimeOffset(string s)
     {
         var result = XmlConvert.ToDateTimeOffset(s);

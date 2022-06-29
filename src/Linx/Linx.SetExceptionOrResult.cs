@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx;
 
@@ -10,7 +10,7 @@ partial class Linx
     /// <summary>
     /// Complete with an error or the specified result.
     /// </summary>
-    public static void SetExceptionOrResult<T>(this ManualResetValueTaskSource<T> ts, Exception? exceptionOrNot, T result)
+    public static void SetExceptionOrResult<T>(this ILinxValueTaskSource<T> ts, Exception? exceptionOrNot, T result)
     {
         if (ts is null) throw new ArgumentNullException(nameof(ts));
 
@@ -23,7 +23,7 @@ partial class Linx
     /// <summary>
     /// Complete with or without an error.
     /// </summary>
-    public static void SetExceptionOrResult(this ManualResetValueTaskSource ts, Exception? exceptionOrNot)
+    public static void SetExceptionOrResult(this ILinxValueTaskSource ts, Exception? exceptionOrNot)
     {
         if (ts is null) throw new ArgumentNullException(nameof(ts));
 

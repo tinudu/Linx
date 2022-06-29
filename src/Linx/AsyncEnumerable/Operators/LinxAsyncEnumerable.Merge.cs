@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx.AsyncEnumerable;
 
@@ -152,7 +152,7 @@ partial class LinxAsyncEnumerable
                     tsEmitting.SetResult(true);
 
                     _tsAccepting.SetResult(true);
-                    return _tsAccepting.Task;
+                    return _tsAccepting.ValueTask;
                 }
 
                 // go _sAccepting and check later
@@ -203,7 +203,7 @@ partial class LinxAsyncEnumerable
                     _state = state;
                     throw new Exception(state + "???");
             }
-            return _tsAccepting.Task;
+            return _tsAccepting.ValueTask;
         }
 
         public ValueTask DisposeAsync()
@@ -329,7 +329,7 @@ partial class LinxAsyncEnumerable
             Exception? error = null;
             try
             {
-                if (!await tsMaxConcurrent.Task.ConfigureAwait(false)) // completes on first call to MoveNext or SetFinal
+                if (!await tsMaxConcurrent.ValueTask.ConfigureAwait(false)) // completes on first call to MoveNext or SetFinal
                     return;
                 tsMaxConcurrent.Reset();
 
@@ -342,7 +342,7 @@ partial class LinxAsyncEnumerable
                     {
                         _tsMaxConcurrent = tsMaxConcurrent;
                         _state = state;
-                        if (!await tsMaxConcurrent.Task.ConfigureAwait(false))
+                        if (!await tsMaxConcurrent.ValueTask.ConfigureAwait(false))
                             return;
                         tsMaxConcurrent.Reset();
 
@@ -398,7 +398,7 @@ partial class LinxAsyncEnumerable
                             return;
                     }
 
-                    if (!await tsEmitting.Task.ConfigureAwait(false))
+                    if (!await tsEmitting.ValueTask.ConfigureAwait(false))
                         return;
                     tsEmitting.Reset();
                 }

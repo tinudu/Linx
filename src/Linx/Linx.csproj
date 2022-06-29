@@ -1,123 +1,123 @@
 ﻿<!--EXTERNAL_PROPERTIES: TargetFramework-->
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
-        <OutputType>Library</OutputType>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <None Remove="Linx.csproj.DotSettings" />
-    </ItemGroup>
+  <ItemGroup>
+    <None Remove="Linx.csproj.DotSettings" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <None Include="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.cs">
-        <DesignTime>True</DesignTime>
-        <AutoGen>True</AutoGen>
-        <DependentUpon>LinxAsyncEnumerable.FirstLastSingle.tt</DependentUpon>
-      </None>
-    </ItemGroup>
+  <ItemGroup>
+    <None Include="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.FirstLastSingle.tt</DependentUpon>
+    </None>
+  </ItemGroup>
 
-    <ItemGroup>
-        <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-    </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.cs">
-          <DesignTime>True</DesignTime>
-          <AutoGen>True</AutoGen>
-          <DependentUpon>LinxAsyncEnumerable.FirstLastSingle.tt</DependentUpon>
-        </Compile>
-        <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>LinxAsyncEnumerable.Combine.tt</DependentUpon>
-        </Compile>
-        <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MinMax.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>LinxAsyncEnumerable.MinMax.tt</DependentUpon>
-        </Compile>
-        <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MultiAggregate.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>LinxAsyncEnumerable.MultiAggregate.tt</DependentUpon>
-        </Compile>
-        <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Sum.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>LinxAsyncEnumerable.Sum.tt</DependentUpon>
-        </Compile>
-        <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.cs">
-          <DesignTime>True</DesignTime>
-          <AutoGen>True</AutoGen>
-          <DependentUpon>LinxAsyncEnumerable.Zip.tt</DependentUpon>
-        </Compile>
-        <Compile Update="Enumerable\Aggregators\LinxEnumerable.MinMax.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>LinxEnumerable.MinMax.tt</DependentUpon>
-        </Compile>
-        <Compile Update="Expressions\Express.Func.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>Express.Func.tt</DependentUpon>
-        </Compile>
-        <Compile Update="Expressions\Express.Inject.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>Express.Inject.tt</DependentUpon>
-        </Compile>
-        <Compile Update="Expressions\Reflect.Generated.cs">
-            <DesignTime>True</DesignTime>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>Reflect.Generated.tt</DependentUpon>
-        </Compile>
-    </ItemGroup>
+  <ItemGroup>
+    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.FirstLastSingle.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.Combine.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MinMax.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.MinMax.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MultiAggregate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.MultiAggregate.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Sum.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.Sum.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxAsyncEnumerable.Zip.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Enumerable\Aggregators\LinxEnumerable.MinMax.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxEnumerable.MinMax.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Expressions\Express.Func.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Express.Func.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Expressions\Express.Inject.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Express.Inject.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Expressions\Reflect.Generated.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Reflect.Generated.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
 
-    <ItemGroup>
-        <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.tt">
-          <Generator>TextTemplatingFileGenerator</Generator>
-          <LastGenOutput>LinxAsyncEnumerable.FirstLastSingle.cs</LastGenOutput>
-        </None>
-        <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>LinxAsyncEnumerable.Combine.cs</LastGenOutput>
-        </None>
-        <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MinMax.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>LinxAsyncEnumerable.MinMax.cs</LastGenOutput>
-        </None>
-        <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MultiAggregate.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>LinxAsyncEnumerable.MultiAggregate.cs</LastGenOutput>
-        </None>
-        <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Sum.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>LinxAsyncEnumerable.Sum.cs</LastGenOutput>
-        </None>
-        <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.tt">
-          <Generator>TextTemplatingFileGenerator</Generator>
-          <LastGenOutput>LinxAsyncEnumerable.Zip.cs</LastGenOutput>
-        </None>
-        <None Update="Enumerable\Aggregators\LinxEnumerable.MinMax.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>LinxEnumerable.MinMax.cs</LastGenOutput>
-        </None>
-        <None Update="Expressions\Express.Func.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>Express.Func.cs</LastGenOutput>
-        </None>
-        <None Update="Expressions\Express.Inject.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>Express.Inject.cs</LastGenOutput>
-        </None>
-        <None Update="Expressions\Reflect.Generated.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
-            <LastGenOutput>Reflect.Generated.cs</LastGenOutput>
-        </None>
-    </ItemGroup>
+  <ItemGroup>
+    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.FirstLastSingle.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.Combine.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MinMax.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.MinMax.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.MultiAggregate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.MultiAggregate.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.Sum.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.Sum.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Zip.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxAsyncEnumerable.Zip.cs</LastGenOutput>
+    </None>
+    <None Update="Enumerable\Aggregators\LinxEnumerable.MinMax.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxEnumerable.MinMax.cs</LastGenOutput>
+    </None>
+    <None Update="Expressions\Express.Func.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Express.Func.cs</LastGenOutput>
+    </None>
+    <None Update="Expressions\Express.Inject.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Express.Inject.cs</LastGenOutput>
+    </None>
+    <None Update="Expressions\Reflect.Generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Reflect.Generated.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
 
 </Project>

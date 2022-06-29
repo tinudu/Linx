@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using global::Linx.AsyncEnumerable;
+using Linx.AsyncEnumerable;
 using Xunit;
 
 namespace Tests.Linx.AsyncEnumerable;

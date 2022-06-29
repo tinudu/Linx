@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Collections;
-using global::Linx.Timing;
+using Linx.Collections;
+using Linx.Timing;
 
 namespace Linx.Testing;
 

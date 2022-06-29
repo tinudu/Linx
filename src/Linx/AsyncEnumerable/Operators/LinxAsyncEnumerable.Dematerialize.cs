@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Notifications;
+using Linx.Notifications;
 
 namespace Linx.AsyncEnumerable;
 

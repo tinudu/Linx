@@ -22,7 +22,7 @@ partial class LinxAsyncEnumerable
     public static async Task<List<KeyValuePair<int, T>>> StableSort<T>(this IOrderedAsyncEnumerable<T> source, CancellationToken token)
     {
         return await source.Source
-            .Index()
+            .Index32()
             .OrderBy(kv => kv.Value, source.Comparison)
             .ThenBy(kv => kv.Key)
             .Sort(token);

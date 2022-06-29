@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx.AsyncEnumerable;
 
@@ -115,7 +115,7 @@ partial class LinxAsyncEnumerable
                         _tsAccepting.SetResult(true);
                     }
                     tsProduce?.SetResult(true);
-                    return _tsAccepting.Task;
+                    return _tsAccepting.ValueTask;
 
                 case _sCompleted:
                     Debug.Assert(_count > 0);
@@ -131,14 +131,14 @@ partial class LinxAsyncEnumerable
                         _queue = null;
                     }
                     _tsAccepting.SetResult(true);
-                    return _tsAccepting.Task;
+                    return _tsAccepting.ValueTask;
 
                 case _sFinal:
                     _state = _sFinal;
                     _tsAccepting.Reset();
                     Current = default!;
                     _tsAccepting.SetExceptionOrResult(_error, false);
-                    return _tsAccepting.Task;
+                    return _tsAccepting.ValueTask;
 
                 case _sInitial:
                 case _sAccepting:
@@ -163,7 +163,7 @@ partial class LinxAsyncEnumerable
             Debug.Assert(_queue is not null && _count > 0);
             Debug.Assert(_state < 0);
 
-            T result = Linx.Clear(ref _queue[_offset])!;
+            var result = Linx.Clear(ref _queue[_offset])!;
             if (--_count == 0)
             {
                 _offset = 0;
@@ -216,7 +216,7 @@ partial class LinxAsyncEnumerable
             Exception? error = null;
             try
             {
-                if (!await tsProduce.Task.ConfigureAwait(false))
+                if (!await tsProduce.ValueTask.ConfigureAwait(false))
                     return;
 
                 await foreach (var item in _source.WithCancellation(_cts.Token).ConfigureAwait(false))
@@ -233,7 +233,7 @@ partial class LinxAsyncEnumerable
                                     tsProduce.Reset();
                                     _tsProduce = tsProduce;
                                     _state = _sEmitting;
-                                    if (!await tsProduce.Task.ConfigureAwait(false))
+                                    if (!await tsProduce.ValueTask.ConfigureAwait(false))
                                         return;
                                     loop = true;
                                 }

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using global::Linx.AsyncEnumerable;
-using global::Linx.Enumerable;
-using global::Linx.Notifications;
+using Linx.AsyncEnumerable;
+using Linx.Enumerable;
+using Linx.Notifications;
 
 namespace Linx.Testing;
 

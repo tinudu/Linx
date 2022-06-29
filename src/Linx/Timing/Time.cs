@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx.Timing;
 
@@ -111,11 +111,11 @@ public static class Time
                             _state = _sInitial;
                             _tsDelay.SetResult();
                         }
-                        return _tsDelay.Task;
+                        return _tsDelay.ValueTask;
 
                     case _sFinal:
                         _state = _sFinal;
-                        return _tsDelay.Task;
+                        return _tsDelay.ValueTask;
 
                     case _sWaiting:
                         _state = _sWaiting;

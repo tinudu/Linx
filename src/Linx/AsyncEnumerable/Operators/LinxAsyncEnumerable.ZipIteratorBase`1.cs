@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx.AsyncEnumerable;
 
@@ -74,17 +74,17 @@ partial class LinxAsyncEnumerable
                     _nMoving = _nProducers;
                     _state = _sMoving;
                     PulseAll();
-                    return _tsMoving.Task;
+                    return _tsMoving.ValueTask;
 
                 case _sCanceled:
                 case _sDisposing:
                     _tsMoving.Reset();
                     SetDisposingMoving();
-                    return _tsMoving.Task;
+                    return _tsMoving.ValueTask;
 
                 case _sDisposed:
                     _state = _sDisposed;
-                    return _tsMoving.Task;
+                    return _tsMoving.ValueTask;
 
                 default:
                     _state = state;
@@ -206,7 +206,7 @@ partial class LinxAsyncEnumerable
                 try
                 {
                     var ts = TsIdle = new();
-                    if (!await ts.Task.ConfigureAwait(false))
+                    if (!await ts.ValueTask.ConfigureAwait(false))
                         return;
 
                     await using var e = _enumerator = Source.WithCancellation(parent._cts.Token).ConfigureAwait(false).GetAsyncEnumerator();
@@ -256,7 +256,7 @@ partial class LinxAsyncEnumerable
                                 throw new Exception(parentState + "???");
                         }
 
-                        if (!await ts.Task.ConfigureAwait(false))
+                        if (!await ts.ValueTask.ConfigureAwait(false))
                             return;
                     }
                 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Tasks;
+using Linx.Tasking;
 
 namespace Linx.AsyncEnumerable.Subjects;
 
@@ -57,7 +57,7 @@ internal sealed class Enumerator<T> : IAsyncEnumerator<T>
                 throw new Exception(State + "???");
         }
 
-        return TsAccepting.Task;
+        return TsAccepting.ValueTask;
     }
 
     ValueTask IAsyncDisposable.DisposeAsync()

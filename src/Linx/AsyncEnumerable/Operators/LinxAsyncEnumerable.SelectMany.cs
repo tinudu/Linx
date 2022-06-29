@@ -114,22 +114,6 @@ partial class LinxAsyncEnumerable
     }
 
     /// <summary>
-    /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/> and flattens the resulting sequences into one sequence.
-    /// </summary>
-    public static IAsyncEnumerable<TResult> SelectMany<TSource, TResult>(
-        this IAsyncEnumerable<TSource> source,
-        Func<TSource, int, IAsyncEnumerable<TResult>> collectionSelector,
-        int maxConcurrent = int.MaxValue)
-    {
-        if (source == null) throw new ArgumentNullException(nameof(source));
-        if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
-
-        return source
-            .Select(collectionSelector)
-            .Merge(maxConcurrent);
-    }
-
-    /// <summary>
     /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/>, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
     /// </summary>
     public static IAsyncEnumerable<TResult> SelectMany<TSource, TCollection, TResult>(
@@ -144,25 +128,6 @@ partial class LinxAsyncEnumerable
 
         return source
             .Select(s => collectionSelector(s).Select(c => (s, c)))
-            .Merge(maxConcurrent)
-            .Select(t => resultSelector(t.s, t.c));
-    }
-
-    /// <summary>
-    /// Projects each element of a sequence to an <see cref="IAsyncEnumerable{T}"/>, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
-    /// </summary>
-    public static IAsyncEnumerable<TResult> SelectMany<TSource, TCollection, TResult>(
-        this IAsyncEnumerable<TSource> source,
-        Func<TSource, int, IAsyncEnumerable<TCollection>> collectionSelector,
-        Func<TSource, TCollection, TResult> resultSelector,
-        int maxConcurrent = int.MaxValue)
-    {
-        if (source == null) throw new ArgumentNullException(nameof(source));
-        if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
-        if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
-        return source
-            .Select((s, i) => collectionSelector(s, i).Select(c => (s, c)))
             .Merge(maxConcurrent)
             .Select(t => resultSelector(t.s, t.c));
     }

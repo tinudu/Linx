@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using global::Linx;
-using global::Linx.AsyncEnumerable;
+using Linx;
+using Linx.AsyncEnumerable;
 using Xunit;
 
 namespace Tests.Linx.AsyncEnumerable;

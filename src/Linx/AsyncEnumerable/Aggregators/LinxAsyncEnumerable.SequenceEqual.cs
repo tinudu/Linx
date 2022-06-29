@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using global::Linx.Notifications;
+using Linx.Notifications;
 
 namespace Linx.AsyncEnumerable;
 

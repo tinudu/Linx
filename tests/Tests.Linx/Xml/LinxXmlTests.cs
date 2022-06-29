@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Xml;
 using System.Xml.Linq;
-using global::Linx.Xml;
+using Linx.Xml;
 using Xunit;
 
 namespace Tests.Linx.Xml;

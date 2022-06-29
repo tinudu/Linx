@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using global::Linx.Timing;
+using Linx.Timing;
 
 namespace Linx.AsyncEnumerable;
 
