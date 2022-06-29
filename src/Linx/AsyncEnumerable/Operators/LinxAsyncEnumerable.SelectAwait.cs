@@ -11,7 +11,7 @@ namespace Linx.AsyncEnumerable;
 partial class LinxAsyncEnumerable
 {
     /// <summary>
-    /// Projects each element of a sequence into a new form, using a async result selector.
+    /// Projects each element of a sequence into a new form, using an async result selector.
     /// </summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="resultSelector">Async result selector.</param>
@@ -19,14 +19,21 @@ partial class LinxAsyncEnumerable
     /// <exception cref="ArgumentNullException"><paramref name="resultSelector"/> is null.</exception>
     public static IAsyncEnumerable<TResult> SelectAwait<TSource, TResult>(
         this IAsyncEnumerable<TSource> source,
-        Func<TSource, CancellationToken, ValueTask<TResult>> resultSelector)
-        => new SelectAwaitIterator<TSource, TResult>(
-            source ?? throw new ArgumentNullException(nameof(source)),
-            resultSelector ?? throw new ArgumentNullException(nameof(resultSelector)),
-            true, 1);
+        Func<TSource, CancellationToken, Task<TResult>> resultSelector)
+    {
+        if (source is null) throw new ArgumentNullException(nameof(source));
+        if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
+        return Iterator();
+
+        async IAsyncEnumerable<TResult> Iterator([EnumeratorCancellation] CancellationToken token = default)
+        {
+            await foreach (var item in source.WithCancellation(token).ConfigureAwait(false))
+                yield return await resultSelector(item, token).ConfigureAwait(false);
+        }
+    }
 
     /// <summary>
-    /// Projects each element of a sequence into a new form, using a async result selector.
+    /// Projects each element of a sequence into a new form, using an async result selector.
     /// </summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="resultSelector">Async result selector.</param>
@@ -40,14 +47,19 @@ partial class LinxAsyncEnumerable
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxConcurrent"/> is non-positive.</exception>
     public static IAsyncEnumerable<TResult> SelectAwait<TSource, TResult>(
         this IAsyncEnumerable<TSource> source,
-        Func<TSource, CancellationToken, ValueTask<TResult>> resultSelector,
+        Func<TSource, CancellationToken, Task<TResult>> resultSelector,
         bool preserveOrder,
         int maxConcurrent = int.MaxValue)
-        => new SelectAwaitIterator<TSource, TResult>(
-            source ?? throw new ArgumentNullException(nameof(source)),
-            resultSelector ?? throw new ArgumentNullException(nameof(resultSelector)),
-            preserveOrder,
-            maxConcurrent > 0 ? maxConcurrent : throw new ArgumentOutOfRangeException(nameof(maxConcurrent), "Must be positive."));
+        => maxConcurrent switch
+        {
+            1 => source.SelectAwait(resultSelector),
+            > 1 => new SelectAwaitIterator<TSource, TResult>(
+                source ?? throw new ArgumentNullException(nameof(source)),
+                resultSelector ?? throw new ArgumentNullException(nameof(resultSelector)),
+                preserveOrder,
+                maxConcurrent),
+            _ => throw new ArgumentOutOfRangeException(nameof(maxConcurrent), "Must be positive.")
+        };
 
     private sealed class SelectAwaitIterator<TSource, TResult> : IAsyncEnumerable<TResult>, IAsyncEnumerator<TResult>
     {
@@ -60,7 +72,7 @@ partial class LinxAsyncEnumerable
         private const int _sDisposed = 6; // final state
 
         private readonly IAsyncEnumerable<TSource> _source;
-        private readonly Func<TSource, CancellationToken, ValueTask<TResult>> _resultSelector;
+        private readonly Func<TSource, CancellationToken, Task<TResult>> _resultSelector;
         private readonly bool _preserveOrder;
         private readonly int _maxConcurrent;
 
@@ -86,7 +98,7 @@ partial class LinxAsyncEnumerable
 
         public SelectAwaitIterator(
             IAsyncEnumerable<TSource> source,
-            Func<TSource, CancellationToken, ValueTask<TResult>> resultSelector,
+            Func<TSource, CancellationToken, Task<TResult>> resultSelector,
             bool preserveOrder,
             int maxConcurrent)
         {
@@ -438,7 +450,7 @@ partial class LinxAsyncEnumerable
 
             private readonly SelectAwaitIterator<TSource, TResult> _parent;
             private Action? _continuation;
-            private ConfiguredValueTaskAwaitable<TResult>.ConfiguredValueTaskAwaiter _awaiter;
+            private ConfiguredTaskAwaitable<TResult>.ConfiguredTaskAwaiter _awaiter;
 
             public Node(SelectAwaitIterator<TSource, TResult> parent) => _parent = parent;
 
@@ -448,9 +460,7 @@ partial class LinxAsyncEnumerable
 
                 try
                 {
-#pragma warning disable CA2012 // Use ValueTasks correctly
                     var awaiter = _parent._resultSelector(item, _parent._cts.Token).ConfigureAwait(false).GetAwaiter();
-#pragma warning restore CA2012 // Use ValueTasks correctly
                     if (awaiter.IsCompleted)
                         OnCompleted(null, awaiter.GetResult());
                     else
