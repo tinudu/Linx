@@ -42,7 +42,7 @@ partial class LinxAsyncEnumerable
         if (aggregator2 == null) throw new ArgumentNullException(nameof(aggregator2));
         if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-        return MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, resultSelector, token);
+        return MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>.Aggregate(source.ToAsync(), aggregator1, aggregator2, resultSelector, token);
     }
 
     private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TResult>
@@ -160,7 +160,7 @@ partial class LinxAsyncEnumerable
         if (aggregator3 == null) throw new ArgumentNullException(nameof(aggregator3));
         if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, resultSelector, token);
+        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>.Aggregate(source.ToAsync(), aggregator1, aggregator2, aggregator3, resultSelector, token);
     }
 
     private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TResult>
@@ -285,7 +285,7 @@ partial class LinxAsyncEnumerable
         if (aggregator4 == null) throw new ArgumentNullException(nameof(aggregator4));
         if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, resultSelector, token);
+        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>.Aggregate(source.ToAsync(), aggregator1, aggregator2, aggregator3, aggregator4, resultSelector, token);
     }
 
     private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TResult>
@@ -417,7 +417,7 @@ partial class LinxAsyncEnumerable
         if (aggregator5 == null) throw new ArgumentNullException(nameof(aggregator5));
         if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, resultSelector, token);
+        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>.Aggregate(source.ToAsync(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, resultSelector, token);
     }
 
     private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TResult>
@@ -556,7 +556,7 @@ partial class LinxAsyncEnumerable
         if (aggregator6 == null) throw new ArgumentNullException(nameof(aggregator6));
         if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, resultSelector, token);
+        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>.Aggregate(source.ToAsync(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, resultSelector, token);
     }
 
     private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TResult>
@@ -702,7 +702,7 @@ partial class LinxAsyncEnumerable
         if (aggregator7 == null) throw new ArgumentNullException(nameof(aggregator7));
         if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, resultSelector, token);
+        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>.Aggregate(source.ToAsync(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, resultSelector, token);
     }
 
     private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TResult>
@@ -855,7 +855,7 @@ partial class LinxAsyncEnumerable
         if (aggregator8 == null) throw new ArgumentNullException(nameof(aggregator8));
         if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>.Aggregate(source.ToAsyncEnumerable(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, aggregator8, resultSelector, token);
+        return MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>.Aggregate(source.ToAsync(), aggregator1, aggregator2, aggregator3, aggregator4, aggregator5, aggregator6, aggregator7, aggregator8, resultSelector, token);
     }
 
     private sealed class MultiAggregator<TSource, TAggregate1, TAggregate2, TAggregate3, TAggregate4, TAggregate5, TAggregate6, TAggregate7, TAggregate8, TResult>

@@ -13,7 +13,7 @@ public sealed class ConnectableTests
     public async Task Success()
     {
         var src = new[] {1, 2, 3};
-        var connectable = src.ToAsyncEnumerable().Connectable(out var connect);
+        var connectable = src.ToAsync().Connectable(out var connect);
         // ReSharper disable PossibleMultipleEnumeration
         var t1 = connectable.ToList(default);
         var t2 = connectable.Skip(1).First(default);
@@ -28,7 +28,7 @@ public sealed class ConnectableTests
     [Fact]
     public async Task TestTooLate()
     {
-        var connectable = new[] { 1, 2, 3 }.ToAsyncEnumerable().Connectable(out var connect);
+        var connectable = new[] { 1, 2, 3 }.ToAsync().Connectable(out var connect);
 
         // ReSharper disable PossibleMultipleEnumeration
         var e = connectable.ConfigureAwait(false).GetAsyncEnumerator();

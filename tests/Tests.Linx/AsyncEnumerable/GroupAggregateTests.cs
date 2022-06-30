@@ -9,7 +9,7 @@ public sealed class GroupAggregateTests
     [Fact]
     public async Task Success()
     {
-        var result = await "Abracadabra".ToAsyncEnumerable()
+        var result = await "Abracadabra".ToAsync()
             .GroupAggregate(char.ToUpperInvariant, (g, t) => g.Count(t))
             .ToDictionary(default);
         Assert.Equal(5, result['A']);

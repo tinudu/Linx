@@ -36,7 +36,7 @@ partial class LinxAsyncEnumerable
         return maxConcurrent switch
         {
             1 => sources.Concat(),
-            > 1 => new MergeIterator<T>(sources.ToAsyncEnumerable(), maxConcurrent),
+            > 1 => new MergeIterator<T>(sources.ToAsync(), maxConcurrent),
             _ => throw new ArgumentOutOfRangeException(nameof(maxConcurrent)),
         };
     }
@@ -48,7 +48,7 @@ partial class LinxAsyncEnumerable
     {
         if (first is null) throw new ArgumentNullException(nameof(first));
         if (second is null) throw new ArgumentNullException(nameof(second));
-        return new MergeIterator<T>(new[] { first, second }.ToAsyncEnumerable(), int.MaxValue);
+        return new MergeIterator<T>(new[] { first, second }.ToAsync(), int.MaxValue);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ partial class LinxAsyncEnumerable
         if (first is null) throw new ArgumentNullException(nameof(first));
         if (second is null) throw new ArgumentNullException(nameof(second));
         if (sources is null) throw new ArgumentNullException(nameof(sources));
-        return new MergeIterator<T>(sources.Prepend(second).Prepend(first).ToAsyncEnumerable(), int.MaxValue);
+        return new MergeIterator<T>(sources.Prepend(second).Prepend(first).ToAsync(), int.MaxValue);
     }
 
     private sealed class MergeIterator<T> : IAsyncEnumerable<T>, IAsyncEnumerator<T>

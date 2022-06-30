@@ -11,7 +11,7 @@ public sealed class DemoTests
     public async Task GroupMerge()
     {
         const string colors = "grrbrggbr";
-        var src = colors.ToAsyncEnumerable().GroupBy(c => c).Merge();
+        var src = colors.ToAsync().GroupBy(c => c).Merge();
         var result = new string(await src.ToArray(default));
         Assert.Equal(colors, result);
     }
@@ -20,7 +20,7 @@ public sealed class DemoTests
     public async Task GroupIndexMerge()
     {
         const string colors = "grrbrggbr";
-        var src = colors.ToAsyncEnumerable()
+        var src = colors.ToAsync()
             .GroupBy(c => c)
             .Select(g => g.RunningCount32().Select(i => $"{g.Key}{i + 1}")).Merge();
         var result = await src.ToList(default);
@@ -31,7 +31,7 @@ public sealed class DemoTests
     public async Task GroupAggregate()
     {
         const string colors = "grrbrggbr";
-        var src = colors.ToAsyncEnumerable()
+        var src = colors.ToAsync()
             .GroupBy(c => c)
             .SelectAwait(async (g, t) => (g.Key, Value: await g.Count(t)), false);
 
@@ -46,7 +46,7 @@ public sealed class DemoTests
     {
         //                     112311231231222331122
         const string colors = "grrrrbrrrggggbrgrgrrg";
-        var src = colors.ToAsyncEnumerable()
+        var src = colors.ToAsync()
             .GroupByWhileEnumerated(c => c)
             .SelectAwait(async (g, t) => $"{g.Key}{await g.Take(3).Count(default)}", true);
 

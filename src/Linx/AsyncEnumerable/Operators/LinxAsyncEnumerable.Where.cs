@@ -100,7 +100,7 @@ partial class LinxAsyncEnumerable
         {
             1 => source.WhereAwait(predicate),
             > 1 => source
-                .ToAsyncEnumerable()
+                .ToAsync()
                 .SelectAwait(async (x, t) => (item: x, isInFilter: await predicate(x, t).ConfigureAwait(false)), preserveOrder, maxConcurrent)
                 .Where(xb => xb.isInFilter)
                 .Select(xb => xb.item),

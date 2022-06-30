@@ -102,7 +102,7 @@ partial class LinxAsyncEnumerable
         {
             1 => source.SelectAwait(resultSelector),
             > 1 => new SelectAwaitIterator<TSource, TResult>(
-                source.ToAsyncEnumerable(),
+                source.ToAsync(),
                 resultSelector,
                 preserveOrder,
                 maxConcurrent),
