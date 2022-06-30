@@ -12,6 +12,15 @@ namespace Linx.Timing;
 public static class Time
 {
     /// <summary>
+    /// Gets the current <see cref="ITime"/> implementation.
+    /// </summary>
+    /// <value>
+    /// <see cref="SynchronizationContext.Current"/> if it implements <see cref="ITime"/>.
+    /// <see cref="RealTime"/> otherwise.
+    /// </value>
+    public static ITime Current => SynchronizationContext.Current is ITime t ? t : RealTime;
+
+    /// <summary>
     /// Gets the real <see cref="ITime"/>.
     /// </summary>
     public static ITime RealTime { get; } = new RealTimeImpl();
