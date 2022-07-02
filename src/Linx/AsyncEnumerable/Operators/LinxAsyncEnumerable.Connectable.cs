@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable;
 
@@ -162,8 +162,8 @@ partial class LinxAsyncEnumerable
         private sealed class Enumerator : IAsyncEnumerator<T>
         {
             private readonly ConnectableEnumerable<T> _e;
-            public readonly ManualResetValueTaskSource<bool> TsAccepting = new();
-            public readonly ManualResetValueTaskSource<bool> TsEmitting = new();
+            public readonly ManualResetValueTaskCompleter<bool> TsAccepting = new();
+            public readonly ManualResetValueTaskCompleter<bool> TsEmitting = new();
             private readonly CancellationTokenRegistration _ctr;
             public EnumeratorState State;
             private Exception? _error;

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable;
 
@@ -290,9 +290,9 @@ partial class LinxAsyncEnumerable
         private readonly IAsyncEnumerable<TSource> _source;
         private readonly Func<IQueue<TSource, TResult>> _queueFactory;
 
-        private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
+        private readonly ManualResetValueTaskCompleter<bool> _tsAccepting = new();
         private readonly CancellationTokenSource _cts = new();
-        private ManualResetValueTaskSource<bool>? _tsProduce;
+        private ManualResetValueTaskCompleter<bool>? _tsProduce;
         private CancellationTokenRegistration _ctr;
         private AsyncTaskMethodBuilder _atmbDisposed;
         private int _state;
@@ -379,7 +379,7 @@ partial class LinxAsyncEnumerable
 
         TResult Deferred<TResult>.IProvider.GetResult(short version)
         {
-            ManualResetValueTaskSource<bool>? tsProduce = null;
+            ManualResetValueTaskCompleter<bool>? tsProduce = null;
 
             var state = Atomic.Lock(ref _state);
             try
@@ -408,7 +408,7 @@ partial class LinxAsyncEnumerable
 
         private void SetFinal(Exception? errorOrNot)
         {
-            ManualResetValueTaskSource<bool>? tsProduce;
+            ManualResetValueTaskCompleter<bool>? tsProduce;
 
             var state = Atomic.Lock(ref _state);
             switch (state)
@@ -449,7 +449,7 @@ partial class LinxAsyncEnumerable
             }
         }
 
-        private async void Produce(ManualResetValueTaskSource<bool> tsProduce, CancellationToken token)
+        private async void Produce(ManualResetValueTaskCompleter<bool> tsProduce, CancellationToken token)
         {
             Exception? error = null;
             try

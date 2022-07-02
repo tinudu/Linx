@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable;
 
@@ -126,7 +126,7 @@ partial class LinxAsyncEnumerable
         private readonly int _maxConcurrent;
 
         private readonly CancellationTokenSource _cts = new(); // cancels source enumeration and result selectors
-        private readonly ManualResetValueTaskSource<bool> _tsMoving = new(); // returned by MoveNextAsync
+        private readonly ManualResetValueTaskCompleter<bool> _tsMoving = new(); // returned by MoveNextAsync
         private TResult? _current;
         private CancellationTokenRegistration _ctr;
 
@@ -135,7 +135,7 @@ partial class LinxAsyncEnumerable
         private AsyncTaskMethodBuilder _atmbDisposed = AsyncTaskMethodBuilder.Create(); // returned by DisposeAsync
 
         // source enumeration control
-        private ManualResetValueTaskSource<bool>? _tsProducer; // Produce() awaits this
+        private ManualResetValueTaskCompleter<bool>? _tsProducer; // Produce() awaits this
         private bool _queueHasErrors; // stop creating new nodes
         private bool _producerIsCompleted;
 

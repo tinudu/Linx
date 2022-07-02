@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 using Linx.Timing;
 
 namespace Linx.Testing;
@@ -17,7 +17,7 @@ partial class VirtualTime
 
         private static readonly ObjectDisposedException _timerDisposedException = new(nameof(ITimer));
 
-        private readonly ManualResetValueTaskSource _tsDelay = new();
+        private readonly ManualResetValueTaskCompleter _tsDelay = new();
         private readonly VirtualTime _time;
         private readonly CancellationTokenRegistration _ctr;
         private int _state;

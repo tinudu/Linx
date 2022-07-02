@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable;
 
@@ -74,15 +74,15 @@ partial class LinxAsyncEnumerable
         private readonly int _maxConcurrent;
 
         private readonly CancellationTokenSource _cts = new();
-        private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
-        private ManualResetValueTaskSource<bool>? _tsMaxConcurrent;
-        private ManualResetValueTaskSource<bool>? _tsEmitting;
+        private readonly ManualResetValueTaskCompleter<bool> _tsAccepting = new();
+        private ManualResetValueTaskCompleter<bool>? _tsMaxConcurrent;
+        private ManualResetValueTaskCompleter<bool>? _tsEmitting;
         private CancellationTokenRegistration _ctr;
         private AsyncTaskMethodBuilder _atmbDisposed;
         private int _state;
         private Exception? _error;
         private int _active;
-        private Queue<(ManualResetValueTaskSource<bool>, T)>? _queue = new();
+        private Queue<(ManualResetValueTaskCompleter<bool>, T)>? _queue = new();
 
         public MergeIterator(IAsyncEnumerable<IAsyncEnumerable<T>> sources, int maxConcurrent)
         {
@@ -324,7 +324,7 @@ partial class LinxAsyncEnumerable
             }
         }
 
-        private async void ProduceOuter(ManualResetValueTaskSource<bool> tsMaxConcurrent)
+        private async void ProduceOuter(ManualResetValueTaskCompleter<bool> tsMaxConcurrent)
         {
             Exception? error = null;
             try
@@ -373,7 +373,7 @@ partial class LinxAsyncEnumerable
             Exception? error = null;
             try
             {
-                ManualResetValueTaskSource<bool> tsEmitting = new();
+                ManualResetValueTaskCompleter<bool> tsEmitting = new();
                 await foreach (var item in source.WithCancellation(_cts.Token).ConfigureAwait(false))
                 {
                     var state = Atomic.Lock(ref _state);

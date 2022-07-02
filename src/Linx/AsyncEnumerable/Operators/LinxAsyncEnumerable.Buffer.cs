@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable;
 
@@ -15,11 +15,11 @@ partial class LinxAsyncEnumerable
     /// Buffer all items.
     /// </summary>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
-    public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source, bool runContinuationsAsynchronously = false)
+    public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source)
     {
         if (source is null) throw new ArgumentNullException(nameof(source));
 
-        return new BufferIterator<T>(source, int.MaxValue, runContinuationsAsynchronously);
+        return new BufferIterator<T>(source, int.MaxValue);
     }
 
     /// <summary>
@@ -27,12 +27,12 @@ partial class LinxAsyncEnumerable
     /// </summary>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxCapacity"/> is non-positive.</exception>
-    public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source, int maxCapacity, bool runContinuationsAsynchronously = false)
+    public static IAsyncEnumerable<T> Buffer<T>(this IAsyncEnumerable<T> source, int maxCapacity)
     {
         if (source is null) throw new ArgumentNullException(nameof(source));
         if (maxCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(maxCapacity), "Must be positive.");
 
-        return new BufferIterator<T>(source, maxCapacity, runContinuationsAsynchronously);
+        return new BufferIterator<T>(source, maxCapacity);
     }
 
     private sealed class BufferIterator<T> : IAsyncEnumerable<T>, IAsyncEnumerator<T>
@@ -46,8 +46,8 @@ partial class LinxAsyncEnumerable
         private readonly IAsyncEnumerable<T> _source;
         private readonly int _maxCapacity, _initialCapacity;
 
-        private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
-        private ManualResetValueTaskSource<bool>? _tsProduce;
+        private readonly ManualResetValueTaskCompleter<bool> _tsAccepting = new();
+        private ManualResetValueTaskCompleter<bool>? _tsProduce;
         private readonly CancellationTokenSource _cts = new();
         private CancellationTokenRegistration _ctr;
         private AsyncTaskMethodBuilder _atmbDisposed;
@@ -57,7 +57,7 @@ partial class LinxAsyncEnumerable
         private int _offset, _count;
         private T?[]? _queue;
 
-        public BufferIterator(IAsyncEnumerable<T> source, int maxCapacity, bool runContinuationsAsyncronously)
+        public BufferIterator(IAsyncEnumerable<T> source, int maxCapacity)
         {
             Debug.Assert(source is not null);
             Debug.Assert(maxCapacity > 0);
@@ -65,7 +65,6 @@ partial class LinxAsyncEnumerable
             _source = source;
             _maxCapacity = maxCapacity;
             _initialCapacity = Linx.Capacities(maxCapacity).Last();
-            _tsAccepting.RunContinuationsAsynchronously = runContinuationsAsyncronously;
         }
 
         private BufferIterator(BufferIterator<T> parent)
@@ -73,7 +72,6 @@ partial class LinxAsyncEnumerable
             _source = parent._source;
             _maxCapacity = parent._maxCapacity;
             _initialCapacity = parent._initialCapacity;
-            _tsAccepting.RunContinuationsAsynchronously = parent._tsAccepting.RunContinuationsAsynchronously;
         }
 
         public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token)
@@ -211,7 +209,7 @@ partial class LinxAsyncEnumerable
             }
         }
 
-        private async void Produce(ManualResetValueTaskSource<bool> tsProduce)
+        private async void Produce(ManualResetValueTaskCompleter<bool> tsProduce)
         {
             Exception? error = null;
             try

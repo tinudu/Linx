@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 using Linx.Timing;
 
 namespace Linx.AsyncEnumerable;
@@ -45,8 +45,8 @@ partial class LinxAsyncEnumerable
         private readonly CancellationTokenSource _cts = new();
         private readonly CancellationTokenRegistration _ctr;
         private AsyncTaskMethodBuilder _atmbDisposed = default;
-        private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
-        private ManualResetValueTaskSource<bool>? _tsThrottle;
+        private readonly ManualResetValueTaskCompleter<bool> _tsAccepting = new();
+        private ManualResetValueTaskCompleter<bool>? _tsThrottle;
         private int _state, _active;
         private Exception? _error;
         private T? _next;
@@ -257,7 +257,7 @@ partial class LinxAsyncEnumerable
         {
             try
             {
-                var ts = new ManualResetValueTaskSource<bool>();
+                var ts = new ManualResetValueTaskCompleter<bool>();
                 using var timer = _time.GetTimer(_cts.Token);
                 while (true)
                 {

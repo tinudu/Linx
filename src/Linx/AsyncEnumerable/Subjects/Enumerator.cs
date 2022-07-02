@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable.Subjects;
 
@@ -12,8 +12,8 @@ internal sealed class Enumerator<T> : IAsyncEnumerator<T>
     private readonly ISubject<T> _subject;
     private readonly CancellationTokenRegistration _ctr;
 
-    public ManualResetValueTaskSource<bool> TsAccepting = new();
-    public ManualResetValueTaskSource<bool> TsEmitting = new();
+    public ManualResetValueTaskCompleter<bool> TsAccepting = new();
+    public ManualResetValueTaskCompleter<bool> TsEmitting = new();
     public EnumeratorState State;
     public Exception? Error;
     public Task? Disposed;

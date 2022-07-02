@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable;
 
@@ -72,8 +72,8 @@ partial class LinxAsyncEnumerable
 
         #region outer enumerator context
 
-        private readonly ManualResetValueTaskSource<bool> _tsAccepting = new();
-        private readonly ManualResetValueTaskSource _tsEmitting = new();
+        private readonly ManualResetValueTaskCompleter<bool> _tsAccepting = new();
+        private readonly ManualResetValueTaskCompleter _tsEmitting = new();
         private readonly CancellationTokenRegistration _ctr;
         private int _state = _sInitial;
         private Exception? _error;
@@ -264,8 +264,8 @@ partial class LinxAsyncEnumerable
             private readonly GroupByEnumerator<TSource, TKey> _enumerator;
             private readonly Boxed<TKey> _key;
 
-            public readonly ManualResetValueTaskSource<bool> TsAccepting = new();
-            public readonly ManualResetValueTaskSource TsEmitting = new();
+            public readonly ManualResetValueTaskCompleter<bool> TsAccepting = new();
+            public readonly ManualResetValueTaskCompleter TsEmitting = new();
             public int State;
             private CancellationTokenRegistration _ctr;
             private Exception? _error;

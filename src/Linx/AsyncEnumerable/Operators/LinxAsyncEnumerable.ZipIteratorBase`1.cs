@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable;
 
@@ -21,7 +21,7 @@ partial class LinxAsyncEnumerable
         private const int _sDisposed = 6;
 
         private readonly CancellationTokenSource _cts = new();
-        private readonly ManualResetValueTaskSource<bool> _tsMoving = new();
+        private readonly ManualResetValueTaskCompleter<bool> _tsMoving = new();
         private readonly AsyncTaskMethodBuilder _atmbDisposed = AsyncTaskMethodBuilder.Create();
         private CancellationTokenRegistration _ctr;
         private int _state;
@@ -36,7 +36,7 @@ partial class LinxAsyncEnumerable
 
         protected abstract void PulseAll();
 
-        protected void Pulse(ref ManualResetValueTaskSource<bool>? tsIdle)
+        protected void Pulse(ref ManualResetValueTaskCompleter<bool>? tsIdle)
         {
             var state = Atomic.Lock(ref _state);
             var ts = Linx.Clear(ref tsIdle);
@@ -188,7 +188,7 @@ partial class LinxAsyncEnumerable
             }
 
             public readonly IAsyncEnumerable<T> Source;
-            public ManualResetValueTaskSource<bool>? TsIdle;
+            public ManualResetValueTaskCompleter<bool>? TsIdle;
             private ConfiguredCancelableAsyncEnumerable<T>.Enumerator _enumerator;
 
             public Producer(IAsyncEnumerable<T> source)

@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Linx.Tasking;
+using Linx.Async;
 
 namespace Linx.AsyncEnumerable;
 
@@ -64,8 +64,8 @@ partial class LinxAsyncEnumerable
         private readonly ProduceAsyncDelegate<T> _produceAsync;
         private readonly string? _displayName;
 
-        private readonly ManualResetValueTaskSource<bool> _tsMoving = new();
-        private readonly ManualResetValueTaskSource<bool> _tsYielding = new();
+        private readonly ManualResetValueTaskCompleter<bool> _tsMoving = new();
+        private readonly ManualResetValueTaskCompleter<bool> _tsYielding = new();
         private AsyncTaskMethodBuilder _atmbDisposed;
         private CancellationTokenRegistration _ctr;
         private int _state;
