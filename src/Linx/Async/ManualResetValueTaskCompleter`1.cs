@@ -11,7 +11,7 @@ namespace Linx.Async;
 [DebuggerNonUserCode]
 public sealed class ManualResetValueTaskCompleter<T> : IValueTaskCompleter<T>, IValueTaskSource<T>, IValueTaskSource
 {
-    private ManualResetValueTaskCompleterCore<T> _core;
+    private ManualResetValueTaskSourceCore<T> _core;
 
     /// <inheritdoc/>
     public ValueTask<T> ValueTask => new(this, _core.Version);
@@ -26,13 +26,7 @@ public sealed class ManualResetValueTaskCompleter<T> : IValueTaskCompleter<T>, I
     public void SetResult(T result) => _core.SetResult(result);
 
     /// <inheritdoc/>
-    public bool TrySetResult(T result) => _core.TrySetResult(result);
-
-    /// <inheritdoc/>
     public void SetException(Exception exception) => _core.SetException(exception);
-
-    /// <inheritdoc/>
-    public bool TrySetException(Exception exception) => _core.TrySetException(exception);
 
     ValueTaskSourceStatus IValueTaskSource<T>.GetStatus(short token) => _core.GetStatus(token);
     ValueTaskSourceStatus IValueTaskSource.GetStatus(short token) => _core.GetStatus(token);

@@ -31,15 +31,4 @@ public interface IValueTaskCompleter<T>
     /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
     /// <exception cref="InvalidOperationException">Already completed.</exception>
     void SetException(Exception exception);
-
-    /// <summary>
-    /// Try to set <see cref="ValueTaskSourceStatus.Succeeded"/>.
-    /// </summary>
-    bool TrySetResult(T result);
-
-    /// <summary>
-    /// Try to set <see cref="ValueTaskSourceStatus.Faulted"/> or <see cref="ValueTaskSourceStatus.Canceled"/>.
-    /// </summary>
-    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
-    bool TrySetException(Exception exception);
 }
