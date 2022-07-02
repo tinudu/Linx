@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace Linx.AsyncEnumerable;
+namespace Linx;
+
 /// <summary>
 /// Deferred access to a value of type <typeparamref name="T"/>.
 /// </summary>
@@ -8,7 +9,7 @@ public struct Deferred<T>
 {
     internal interface IProvider
     {
-        T GetResult(short version);
+        T GetResult(short token);
     }
 
     private readonly IProvider? _provider;
@@ -16,7 +17,7 @@ public struct Deferred<T>
 
     internal Deferred(IProvider provider, short version)
     {
-        _provider = provider;
+        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
         _version = version;
     }
 

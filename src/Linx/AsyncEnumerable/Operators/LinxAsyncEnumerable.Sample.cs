@@ -13,7 +13,7 @@ partial class LinxAsyncEnumerable
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (sampler == null) throw new ArgumentNullException(nameof(sampler));
 
-        return source.Latest().Zip(sampler.Latest(), (x, _) => x);
+        return source.Latest().Zip(sampler.Latest(), (x, _) => x.GetResult());
     }
 
     /// <summary>
