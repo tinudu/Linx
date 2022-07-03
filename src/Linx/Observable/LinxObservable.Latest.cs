@@ -18,18 +18,18 @@ partial class LinxObservable
 
     private sealed class LatestIterator<T> : IAsyncEnumerable<Deferred<T>>, IAsyncEnumerator<Deferred<T>>, Deferred<T>.IProvider
     {
-        private const int _sEnumerator = 0;
-        private const int _sIdle1st = 1;
-        private const int _sIdleCurrent = 2;
-        private const int _sIdleNoNext = 3;
-        private const int _sIdleNext = 4;
-        private const int _sMoving = 5;
-        private const int _sCanceled = 6;
-        private const int _sCompletedNext = 7;
-        private const int _sCompletedNoNext = 8;
-        private const int _sDisposing = 9;
-        private const int _sDisposingMoving = 10;
-        private const int _sDisposed = 11;
+        private const int _sEnumerator = 0; // not enumerated yet
+        private const int _sInitial = 1; // before 1st call to MoveNextAsync
+        private const int _sIdleCurrent = 2; // new items replace current
+        private const int _sIdleNoNext = 3; // no next, next item goes to next
+        private const int _sIdleNext = 4; // has next, new items replace it
+        private const int _sMoving = 5; // pending MoveNextAsync
+        private const int _sCanceled = 6; // canceled but not completed
+        private const int _sCompletedNext = 7; // completed, but one item yet to be emitted
+        private const int _sCompletedNoNext = 8; // completed
+        private const int _sDisposing = 9; // not completed, pending DisposeAsync
+        private const int _sDisposingMoving = 10; // not completed, pending MoveNextAsync
+        private const int _sDisposed = 11; // done
 
         private readonly ILinxObservable<T> _source;
 
@@ -50,7 +50,7 @@ partial class LinxObservable
 
         public IAsyncEnumerator<Deferred<T>> GetAsyncEnumerator(CancellationToken token)
         {
-            if (Atomic.CompareExchange(ref _state, _sIdle1st, _sEnumerator) != _sEnumerator)
+            if (Atomic.CompareExchange(ref _state, _sInitial, _sEnumerator) != _sEnumerator)
                 return new LatestIterator<T>(this).GetAsyncEnumerator(token);
 
             if (token.CanBeCanceled)
@@ -64,7 +64,7 @@ partial class LinxObservable
         T Deferred<T>.IProvider.GetResult(short token)
         {
             var state = Atomic.Lock(ref _state);
-            if (token != _version)
+            if (token != _version) // must be a previous version
             {
                 _state = state;
                 throw new InvalidOperationException();
@@ -85,7 +85,7 @@ partial class LinxObservable
                     _state = state;
                     throw new InvalidOperationException();
 
-                case _sIdle1st:
+                case _sInitial:
                     _vtcMoving.Reset();
                     _state = _sMoving;
                     Produce();
@@ -105,7 +105,7 @@ partial class LinxObservable
                     _vtcMoving.SetResult(true);
                     return _vtcMoving.ValueTask;
 
-                case _sCompletedNext:
+                case _sCompletedNext: // emit last item
                     _vtcMoving.Reset();
                     _current = Linx.Clear(ref _next);
                     Current = new(this, unchecked(++_version));
@@ -122,8 +122,9 @@ partial class LinxObservable
 
                 case _sCompletedNoNext:
                     _vtcMoving.Reset();
-                    Current = new();
                     _current = default;
+                    unchecked { ++_version; }
+                    Current = new();
                     _state = _sDisposed;
                     _atmbDisposed.SetResult();
                     _vtcMoving.SetExceptionOrResult(Linx.Clear(ref _error), false);
@@ -154,7 +155,7 @@ partial class LinxObservable
                     _state = _sEnumerator;
                     throw new InvalidOperationException();
 
-                case _sIdle1st: // Cancel or DisposeAsync before 1st MoveNextAsync
+                case _sInitial: // Cancel or DisposeAsync before 1st MoveNextAsync
                     _state = _sDisposed;
                     _ctr.Dispose();
                     _atmbDisposed.SetResult();
@@ -191,14 +192,15 @@ partial class LinxObservable
                 case _sCompletedNext:
                     if (disposing)
                     {
-                        Current = default;
                         _current = _next = default;
-                        _error = null;
+                        unchecked { ++_version; }
+                        Current = default;
+                        _error = null; // current error wins over previous
                         _vtcMoving.Reset();
                         _state = _sDisposed;
                         _ctr.Dispose();
                         _atmbDisposed.SetResult();
-                        _vtcMoving.SetExceptionOrResult(error, false);
+                        _vtcMoving.SetException(error);
                     }
                     else
                     {
@@ -212,8 +214,9 @@ partial class LinxObservable
                 case _sCompletedNoNext:
                     if (disposing)
                     {
-                        Current = default;
                         _current = default;
+                        unchecked { ++_version; }
+                        Current = default;
                         _vtcMoving.Reset();
                         _state = _sDisposed;
                         _atmbDisposed.SetResult();
@@ -238,9 +241,12 @@ partial class LinxObservable
             Exception? error = null;
             try
             {
+                // make 1st MoveNextAsync return incompleted
+                // stay on the same context for Subscribe
                 await LinxAsync.Yield();
+
                 _cts.Token.ThrowIfCancellationRequested();
-                await _source.Subscribe(Yield, _cts.Token);
+                await _source.Subscribe(Yield, _cts.Token).ConfigureAwait(false);
             }
             catch (Exception ex) { error = ex; }
             finally
@@ -263,8 +269,9 @@ partial class LinxObservable
                         break;
 
                     case _sMoving:
-                        Current = default;
                         _current = default;
+                        unchecked { ++_version; }
+                        Current = default;
                         _state = _sDisposed;
                         _ctr.Dispose();
                         _atmbDisposed.SetResult();
@@ -277,8 +284,9 @@ partial class LinxObservable
                         break;
 
                     case _sDisposing:
-                        Current = default;
                         _current = default;
+                        unchecked { ++_version; }
+                        Current = default;
                         _vtcMoving.Reset();
                         _state = _sDisposed;
                         _atmbDisposed.SetResult();
@@ -286,15 +294,16 @@ partial class LinxObservable
                         break;
 
                     case _sDisposingMoving:
-                        Current = default;
                         _current = default;
+                        unchecked { ++_version; }
+                        Current = default;
                         _state = _sDisposed;
                         _atmbDisposed.SetResult();
                         _vtcMoving.SetExceptionOrResult(error, false);
                         break;
 
                     case _sEnumerator:
-                    case _sIdle1st:
+                    case _sInitial:
                     case _sCompletedNext:
                     case _sCompletedNoNext:
                     case _sDisposed:
@@ -338,8 +347,8 @@ partial class LinxObservable
                     _state = state;
                     return false;
 
-                case _sEnumerator:
-                case _sIdle1st:
+                //case _sEnumerator:
+                //case _sInitial:
                 default:
                     _state = state;
                     throw new Exception(state + "???");
