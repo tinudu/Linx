@@ -10,7 +10,7 @@ partial class LinxAsyncEnumerable
     /// <summary>
     /// Determines whether a sequence contains any elements.
     /// </summary>
-    public static async Task<bool> Any<T>(this IAsyncEnumerable<T> source, CancellationToken token)
+    public static async ValueTask<bool> Any<T>(this IAsyncEnumerable<T> source, CancellationToken token)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         token.ThrowIfCancellationRequested();

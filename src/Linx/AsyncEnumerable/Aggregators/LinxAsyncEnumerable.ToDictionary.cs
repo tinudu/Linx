@@ -10,7 +10,7 @@ partial class LinxAsyncEnumerable
     /// <summary>
     /// Aggregate to a dictionary.
     /// </summary>
-    public static async Task<IDictionary<TKey, TSource>> ToDictionary<TSource, TKey>(
+    public static async ValueTask<IDictionary<TKey, TSource>> ToDictionary<TSource, TKey>(
         this IAsyncEnumerable<TSource> source,
         Func<TSource, TKey> keySelector,
         CancellationToken token,
@@ -29,7 +29,7 @@ partial class LinxAsyncEnumerable
     /// <summary>
     /// Aggregate to a dictionary.
     /// </summary>
-    public static async Task<IDictionary<TKey, TValue>> ToDictionary<TSource, TKey, TValue>(
+    public static async ValueTask<IDictionary<TKey, TValue>> ToDictionary<TSource, TKey, TValue>(
         this IAsyncEnumerable<TSource> source,
         Func<TSource, TKey> keySelector,
         Func<TSource, TValue> valueSelector,
@@ -50,7 +50,7 @@ partial class LinxAsyncEnumerable
     /// <summary>
     /// Aggregate to a dictionary.
     /// </summary>
-    public static async Task<IDictionary<TKey, TValue>> ToDictionary<TKey, TValue>(
+    public static async ValueTask<IDictionary<TKey, TValue>> ToDictionary<TKey, TValue>(
         this IAsyncEnumerable<KeyValuePair<TKey, TValue>> source,
         CancellationToken token,
         IEqualityComparer<TKey>? comparer = null) where TKey : notnull

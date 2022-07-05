@@ -11,7 +11,7 @@ partial class LinxAsyncEnumerable
     /// <summary>
     /// Compare two sequences for equality.
     /// </summary>
-    public static async Task<bool> SequenceEqual<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second, CancellationToken token, IEqualityComparer<T>? comparer = null)
+    public static async ValueTask<bool> SequenceEqual<T>(this IAsyncEnumerable<T> first, IAsyncEnumerable<T> second, CancellationToken token, IEqualityComparer<T>? comparer = null)
     {
         if (first == null) throw new ArgumentNullException(nameof(first));
         if (second == null) throw new ArgumentNullException(nameof(second));

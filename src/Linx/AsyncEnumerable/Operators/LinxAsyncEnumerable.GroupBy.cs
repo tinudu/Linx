@@ -223,7 +223,7 @@ partial class LinxAsyncEnumerable
                             case _sInitial:
                             case _sGroup:
                                 group.State = groupState;
-                                group.Dispose(AlreadyConnectedException.Instance);
+                                group.Dispose(SubjectAlreadyConnectedException.Instance);
                                 break;
 
                             case _sAccepting:

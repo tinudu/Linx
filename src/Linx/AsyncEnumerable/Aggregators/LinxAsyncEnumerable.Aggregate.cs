@@ -10,7 +10,7 @@ partial class LinxAsyncEnumerable
     /// <summary>
     /// Applies an accumulator function over a sequence.
     /// </summary>
-    public static async Task<TAccumulate> Aggregate<TSource, TAccumulate>(
+    public static async ValueTask<TAccumulate> Aggregate<TSource, TAccumulate>(
         this IAsyncEnumerable<TSource> source,
         TAccumulate seed,
         Func<TAccumulate, TSource, TAccumulate> accumulator,
@@ -28,7 +28,7 @@ partial class LinxAsyncEnumerable
     /// <summary>
     /// Applies an accumulator function over a sequence.
     /// </summary>
-    public static async Task<TResult> Aggregate<TSource, TAccumulate, TResult>(
+    public static async ValueTask<TResult> Aggregate<TSource, TAccumulate, TResult>(
         this IAsyncEnumerable<TSource> source,
         TAccumulate seed,
         Func<TAccumulate, TSource, TAccumulate> accumulator,

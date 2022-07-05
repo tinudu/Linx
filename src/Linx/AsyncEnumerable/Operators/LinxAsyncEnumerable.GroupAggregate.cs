@@ -13,7 +13,7 @@ partial class LinxAsyncEnumerable
     public static IAsyncEnumerable<KeyValuePair<TKey, TAggregate>> GroupAggregate<TSource, TKey, TAggregate>(
         this IAsyncEnumerable<TSource> source,
         Func<TSource, TKey> keySelector,
-        Func<IAsyncGrouping<TKey, TSource>, CancellationToken, Task<TAggregate>> aggregator,
+        Func<IAsyncGrouping<TKey, TSource>, CancellationToken, ValueTask<TAggregate>> aggregator,
         IEqualityComparer<TKey>? keyComparer = null)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));

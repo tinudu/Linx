@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,14 +21,9 @@ public delegate Task ProduceAsyncDelegate<out T>(YieldAsyncDelegate<T> yield, Ca
 /// <summary>
 /// Delegate to produce an aggregate from a sequence.
 /// </summary>
-public delegate Task<TAggregate> AggregatorDelegate<in TSource, TAggregate>(IAsyncEnumerable<TSource> source, CancellationToken token);
+public delegate ValueTask<TAggregate> AggregatorDelegate<in TSource, TAggregate>(IAsyncEnumerable<TSource> source, CancellationToken token);
 
 /// <summary>
 /// Delegate to consume a sequence.
 /// </summary>
-public delegate Task ConsumerDelegate<in TSource>(IAsyncEnumerable<TSource> source, CancellationToken token);
-
-/// <summary>
-/// Delegate to connect a connectable sequence to its source.
-/// </summary>
-public delegate void ConnectDelegate();
+public delegate ValueTask ConsumerDelegate<in TSource>(IAsyncEnumerable<TSource> source, CancellationToken token);

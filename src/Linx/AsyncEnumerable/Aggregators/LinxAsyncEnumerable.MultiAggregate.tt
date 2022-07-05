@@ -6,150 +6,50 @@
     const int min = 2;
     const int max = 8;
 #>
-namespace Linx.AsyncEnumerable
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Linx.AsyncEnumerable;
+
+partial class LinxAsyncEnumerable
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
-    using System.Threading.Tasks;
-
-    partial class LinxAsyncEnumerable
-    {
 <#
-    foreach(var n in Enumerable.Range(min, max - min + 1)) {
-        var names = Enumerable.Range(1, n)
-            .Select(i => new
-            {
-                GenArg = "TAggregate" + i,
-                Aggregator = "aggregator" + i,
-                Aggregate = "aggregate" + i
-            })
-            .ToList();
-        var genArgs = string.Join(", ", names.Select(x => x.GenArg));
+foreach(var n in Enumerable.Range(min, max - min + 1)) {
+    var names = Enumerable.Range(1, n)
+        .Select(i => new
+        {
+            GenArg = "TAggregate" + i,
+            Aggregator = "aggregator" + i,
+            Aggregate = "aggregate" + i
+        })
+        .ToList();
+    var genArgs = string.Join(", ", names.Select(x => x.GenArg));
 #>
-        /// <summary>
-        /// Build multiple aggregates in one enumeration.
-        /// </summary>
-        public static Task<TResult> MultiAggregate<TSource, <#= genArgs #>, TResult>(this
-            IAsyncEnumerable<TSource> source,
+    /// <summary>
+    /// Build multiple aggregates in one enumeration.
+    /// </summary>
+    public static ValueTask<TResult> MultiAggregate<TSource, <#= genArgs #>, TResult>(this
+        IAsyncEnumerable<TSource> source,
 <# foreach(var x in names) { #>
-            AggregatorDelegate<TSource, <#= x.GenArg #>> <#= x.Aggregator #>,
+        AggregatorDelegate<TSource, <#= x.GenArg #>> <#= x.Aggregator #>,
 <# } #>
-            Func<<#= genArgs #>, TResult> resultSelector,
-            CancellationToken token)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
+        Func<<#= genArgs #>, TResult> resultSelector,
+        CancellationToken token)
+        => source.Cold().MultiAggregate(<#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
+
+    /// <summary>
+    /// Build multiple aggregates in one enumeration.
+    /// </summary>
+    public static ValueTask<TResult> MultiAggregate<TSource, <#= genArgs #>, TResult>(this
+        IEnumerable<TSource> source,
 <# foreach(var x in names) { #>
-            if (<#= x.Aggregator #> == null) throw new ArgumentNullException(nameof(<#= x.Aggregator #>));
+        AggregatorDelegate<TSource, <#= x.GenArg #>> <#= x.Aggregator #>,
 <# } #>
-            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
-            return MultiAggregator<TSource, <#= genArgs #>, TResult>.Aggregate(source, <#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
-        }
-
-        /// <summary>
-        /// Build multiple aggregates in one enumeration.
-        /// </summary>
-        public static Task<TResult> MultiAggregate<TSource, <#= genArgs #>, TResult>(this
-            IEnumerable<TSource> source,
-<# foreach(var x in names) { #>
-            AggregatorDelegate<TSource, <#= x.GenArg #>> <#= x.Aggregator #>,
-<# } #>
-            Func<<#= genArgs #>, TResult> resultSelector,
-            CancellationToken token)
-        {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-<# foreach(var x in names) { #>
-            if (<#= x.Aggregator #> == null) throw new ArgumentNullException(nameof(<#= x.Aggregator #>));
-<# } #>
-            if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
-
-            return MultiAggregator<TSource, <#= genArgs #>, TResult>.Aggregate(source.ToAsyncEnumerable(), <#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
-        }
-
-        private sealed class MultiAggregator<TSource, <#= genArgs #>, TResult>
-        {
-            public static async Task<TResult> Aggregate(
-                IAsyncEnumerable<TSource> source,
-<# foreach(var x in names) { #>
-                AggregatorDelegate<TSource, <#= x.GenArg #>> <#= x.Aggregator #>,
-<# } #>
-                Func<<#= genArgs #>, TResult> resultSelector,
-                CancellationToken token)
-            {
-                token.ThrowIfCancellationRequested();
-                var multi = new MultiAggregator<TSource, <#= genArgs #>, TResult>(token);
-                var connectable = source.Connectable(out var connect);
-                // ReSharper disable PossibleMultipleEnumeration
-<# foreach(var x in names) { #>
-                multi.Subscribe(connectable, <#= x.Aggregator #>, (ma, a) => ma._<#= x.Aggregate #> = a);
-<# } #>
-                // ReSharper restore PossibleMultipleEnumeration
-                connect();
-                await multi._atmbWhenAll.Task.ConfigureAwait(false);
-                return resultSelector(<#= string.Join(", ", names.Select(x => $"multi._{x.Aggregate}!"))  #>);
-            }
-
-            private readonly CancellationTokenSource _cts = new();
-            private CancellationTokenRegistration _ctr;
-            private int _active = <#= n #>;
-            private Exception? _error;
-            private AsyncTaskMethodBuilder _atmbWhenAll = new();
-<# foreach(var x in names) { #>
-            private <#= x.GenArg #>? _<#= x.Aggregate #>;
-<# } #>
-
-            private MultiAggregator(CancellationToken token)
-            {
-                if (token.CanBeCanceled) _ctr = token.Register(() => OnError(new OperationCanceledException(token)));
-            }
-
-            private async void Subscribe<TAggregate>(IAsyncEnumerable<TSource> source, AggregatorDelegate<TSource, TAggregate> aggregator, Action<MultiAggregator<TSource, <#= genArgs #>, TResult>, TAggregate> setResult)
-            {
-                try
-                {
-                    _cts.Token.ThrowIfCancellationRequested();
-                    setResult(this, await aggregator(source, _cts.Token).ConfigureAwait(false));
-                }
-                catch (Exception ex) { OnError(ex); }
-                finally { OnCompleted(); }
-            }
-
-            private void OnError(Exception error)
-            {
-                var active = Atomic.Lock(ref _active);
-                if (_error != null || active == 0)
-                {
-                    _active = active;
-                    return;
-                }
-
-                _error = error;
-                _active = active;
-                _ctr.Dispose();
-                try { _cts.Cancel(); } catch { /**/ }
-            }
-
-            private void OnCompleted()
-            {
-                var active = Atomic.Lock(ref _active);
-                Debug.Assert(active > 0);
-                _active = --active;
-                if (active > 0) return;
-
-                if (_error == null)
-                {
-                    _ctr.Dispose();
-                    try { _cts.Cancel(); } catch { /**/ }
-                    _atmbWhenAll.SetResult();
-                }
-                else
-                    _atmbWhenAll.SetException(_error);
-            }
-        }
+        Func<<#= genArgs #>, TResult> resultSelector,
+        CancellationToken token)
+        => source.Cold().MultiAggregate(<#= string.Join(", ", names.Select(x => x.Aggregator)) #>, resultSelector, token);
 
 <# } #>
-    }
 }

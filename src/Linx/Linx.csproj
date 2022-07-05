@@ -18,6 +18,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxAsyncEnumerable.FirstLastSingle.tt</DependentUpon>
     </None>
+    <None Include="AsyncEnumerable\Connectable\LinxConnectable.MultiAggregate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxConnectable.MultiAggregate.tt</DependentUpon>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -29,6 +34,16 @@
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>LinxAsyncEnumerable.FirstLastSingle.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Connectable\LinxConnectable.MultiAggregate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxConnectable.MultiAggregate.tt</DependentUpon>
+    </Compile>
+    <Compile Update="AsyncEnumerable\Connectable\LinxConnectble.MultiAggregate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LinxConnectble.MultiAggregate.tt</DependentUpon>
     </Compile>
     <Compile Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.cs">
       <DesignTime>True</DesignTime>
@@ -81,6 +96,10 @@
     <None Update="AsyncEnumerable\Aggregators\LinxAsyncEnumerable.FirstLastSingle.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>LinxAsyncEnumerable.FirstLastSingle.cs</LastGenOutput>
+    </None>
+    <None Update="AsyncEnumerable\Connectable\LinxConnectable.MultiAggregate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LinxConnectable.MultiAggregate.cs</LastGenOutput>
     </None>
     <None Update="AsyncEnumerable\Operators\LinxAsyncEnumerable.Combine.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
